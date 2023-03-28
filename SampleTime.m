@@ -6,8 +6,13 @@ classdef SampleTime
 
     methods
         function obj = SampleTime(time)
-            obj.sample_diff = time.Value(1);
-            obj.sample_start = time.Value(2);
+            if isempty(time.Value)
+                obj.sample_start = -10;
+                obj.sample_diff = -10;
+            else
+                obj.sample_diff = time.Value(1);
+                obj.sample_start = time.Value(2);
+            end
         end
 
         function str = print(obj)

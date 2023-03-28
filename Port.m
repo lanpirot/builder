@@ -5,6 +5,7 @@ classdef Port
         type
         dimension
         sample_time
+        hsh
     end
 
     methods
@@ -14,10 +15,15 @@ classdef Port
             obj.sample_time = SampleTime(Simulink.Block.getSampleTimes(port));
             obj.type = Port.get_type(get_param(port,'CompiledPortDataTypes'));
             obj.dimension = Dimension(get_param(port, 'CompiledPortDimensions'));
+            obj.hsh = obj.hash();
+        end
+
+        function obj = update_bus(obj)
+            disp("")
         end
 
         function str = print(obj)
-            str = sprintf('%0.13f', obj.handle) + " " + obj.hash() + " " + string(obj.num) + ":" + get_param(obj.handle, 'Name');
+            str = obj.hsh + " # " + sprintf('%0.13f', obj.handle) + " " + string(obj.num) + ":" + get_param(obj.handle, 'Name');
         end
 
         function hsh = hash(obj)

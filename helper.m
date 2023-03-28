@@ -17,5 +17,14 @@ classdef helper
             str = split(str, ' ');
             str = str{1};
         end
+
+        function arr = sort_by_field(arr, field)
+            arr = []
+            if isempty(arr)
+                return
+            end
+            [~, sortIdx] = sort([arr.(field)]);
+            arr = arr(sortIdx);
+        end
     end
 end

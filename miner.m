@@ -2,72 +2,77 @@ function miner()
     %warning('on','all')
     warning('off','all')
     
-    modellist = tdfread(helper.modellist, 'tab');
-    %modellist = tdfread(helper.tmp_modellist, 'tab');
+    %modellist = tdfread(helper.modellist, 'tab');
+    modellist = tdfread(helper.tmp_modellist, 'tab');
     startat = readlines(helper.startat);
     startat = double(startat);
 
-    cd(helper.garbage_out)
+    
     
     for i = startat:height(modellist.model_url)
-        %cd(helper.project_dir)
+        cd(helper.project_dir)
         %rmdir(helper.garbage_out + "*", 's');
         %mkdir(helper.garbage_out)
+        %cd(helper.garbage_out)
         
 
         model = strip(modellist.model_url(i, :),"right");
-        try
+        %try
             m = load_system(model);
             model_name = get_param(m, 'Name');
             try
                 eval([model_name, '([],[],[],''compile'');']);
-                %disp("Evaluating " + model)
+                disp("Evaluating " + model)
             catch
-                %disp("Skipping " + model)
-                close_system(m)
+                disp("Skipping " + model)
+                try_close(model_name, m);
                 continue
             end
-            subsystems = find_system(m, 'BlockType', 'SubSystem');
-            for j = 1:length(subsystems)
-                interface = find_interface(subsystems(j));
-                %save_interface(interface);
-            end
-            try
-                while 1
-                    eval([model_name, '([],[],[],''term'');']);
-                end
-            catch
-                close_system(m);
-            end
-        catch
-        end
+            interfaces = compute_interfaces(m, model_name);
+            save_interfaces(interfaces)
+
+            try_close(model_name, m);
+        %catch
+        %    try_close(model_name, m);
+        %end
         %update startat
     end
 end
 
-function interface = find_interface(subsystem)
-    interface = [];
-    InportHandles = find_system(subsystem, 'FindAll','On', 'LookUnderMasks', 'on', 'SearchDepth',1, 'BlockType','Inport');
-    OutportHandles = find_system(subsystem, 'FindAll','On', 'LookUnderMasks', 'on', 'SearchDepth',1, 'BlockType','Outport');
-    disp("SS: " + get_param(subsystem, 'Name'))
-    for i=1:length(InportHandles)
-        
-        InputDimensions = get_param(InportHandles(i),'CompiledPortDimensions');
-        %InputDimensions = InputDimensions.Outport
-        
-        InputDataTypes = get_param(InportHandles(i),'CompiledPortDataTypes');
-        %InputDataTypes = InputDataTypes.Outport
-        %if length(InputDataTypes.Outport) > 1
-            
-            %disp(get_param(InportHandles(i), 'Name'))
-            %disp(InputDimensions.Outport)
-            %disp(InputDataTypes.Outport)
-            disp(Simulink.Block.getSampleTimes(InportHandles(i)))
-            disp(get_param(InportHandles(i), 'SampleTime'))
-            if get_param(InportHandles(i), 'SampleTime') ~= -1 || ~strcmp('-1', get_param(InportHandles(i), 'SampleTime'))
-                disp(get_param(InportHandles(i), 'SampleTime'))
-            end
-        %end
+function interfaces = compute_interfaces(m, model_name)
+    subsystems = find_system(m, 'BlockType', 'SubSystem');
+    interfaces = {};
+    for j = 1:length(subsystems)
+        interfaces{end + 1} = compute_interface(m, subsystems(j));
     end
+    try_end(model_name);
+    for j = 1:length(interfaces)
+        interfaces{j} = interfaces{j}.update_busses();
+    end
+end
 
+function interface = update_busses(interface)
+    interface = interface.update_busses();
+end
+
+function try_end(name)
+    try
+        while 1
+            eval([name, '([],[],[],''term'');']);
+        end
+    catch
+    end
+end
+
+function try_close(name, m)
+    try_end(name)
+    try
+        close_system(m)
+    catch
+    end
+end
+
+function interface = compute_interface(model, subsystem)
+    interface = Interface(model, subsystem);
+    disp(interface.print())
 end
