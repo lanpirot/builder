@@ -19,7 +19,6 @@ classdef helper
         end
 
         function arr = sort_by_field(arr, field)
-            arr = []
             if isempty(arr)
                 return
             end

@@ -43,12 +43,15 @@ function interfaces = compute_interfaces(m, model_name)
     subsystems = find_system(m, 'BlockType', 'SubSystem');
     interfaces = {};
     for j = 1:length(subsystems)
-        interfaces{end + 1} = compute_interface(m, subsystems(j));
+        i = compute_interface(m, subsystems(j));
+        if ~i.has_busses
+            interfaces{end + 1} = i;
+        end
     end
     try_end(model_name);
-    for j = 1:length(interfaces)
-        interfaces{j} = interfaces{j}.update_busses();
-    end
+    %for j = 1:length(interfaces)
+    %    interfaces{j} = interfaces{j}.update_busses();
+    %end
 end
 
 function interface = update_busses(interface)

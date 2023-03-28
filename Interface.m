@@ -1,43 +1,41 @@
 classdef Interface
     properties
         handle
+        model
         inports = [];
         outports = [];
+        has_busses = 0;
     end
     methods
         function obj = Interface(model, subsystem)
             obj.handle = subsystem;
-
-            inputs = find_system(subsystem, 'FindAll','On', 'LookUnderMasks','on', 'SearchDepth',1, 'BlockType','Inport');
-            outputs = find_system(subsystem, 'FindAll','On', 'LookUnderMasks','on', 'SearchDepth',1, 'BlockType','Outport');
-            for i = 1:length(inputs)
-                obj.inports = [obj.inports Port(inputs(i), i)];
+            obj.model = model;
+            obj.inports = Port.compute_ports(subsystem, 'Inport', obj.inports);
+            obj.outports = Port.compute_ports(subsystem, 'Outport', obj.outports);
+            if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
+                obj.has_busses = 1;
             end
-            obj.inports = helper.sort_by_field(obj.inports, 'hsh');
-            for i = 1:length(outputs)
-                obj.outports = [obj.outports Port(outputs(i), i)];
-            end
-            obj.outports = helper.sort_by_field(obj.outports, 'hsh');
         end
 
         function obj = update_busses(obj)
-            if strcmp(get_param(obj.handle, 'Name'), 'Subsystem')
-                disp("")
-            end
-            tmp_inports = [];
-            for i = 1:length(obj.inports)
-                tmp_inports = [tmp_inports obj.inports(i).update_bus()];
-            end
-            obj.inports = helper.sort_by_field(tmp_inports, 'hsh');
-            tmp_outports = [];
-            for i = 1:length(obj.outports)
-                tmp_outports = [tmp_outports obj.outports(i).update_bus()];
-            end
-            obj.outports = helper.sort_by_field(tmp_outports, 'hsh');
+            % tmp_inports = [];
+            % for i = 1:length(obj.inports)
+            %     tmp_inports = [tmp_inports obj.inports(i).update_bus(obj.model)];
+            % end
+            % obj.inports = helper.sort_by_field(tmp_inports, 'hsh');
+            % tmp_outports = [];
+            % for i = 1:length(obj.outports)
+            %     tmp_outports = [tmp_outports obj.outports(i).update_bus(obj.model)];
+            % end
+            % obj.outports = helper.sort_by_field(tmp_outports, 'hsh');
         end
 
         function str = print(obj)
             str = sprintf('%0.13f', obj.handle) + " " + get_param(obj.handle, 'Name') + newline;
+            if obj.has_busses
+                str = str + "Subsystem has busses as inputs or outputs" + newline;
+                return
+            end
             for i = 1:length(obj.inports)            
                 str = str + obj.inports(i).print() + newline;
             end
