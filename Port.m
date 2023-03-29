@@ -65,10 +65,6 @@ classdef Port
     end
     
     methods(Static)
-        function eq = equals(p1, p2)
-            eq = p1.type == p2.type && Dimensions.equals(p1.dimension, p2.dimension) && SampleTime.equals(p1.sample_time, p2.sample_time);
-        end
-
         function ports = compute_ports(subsystem, search_string, ports)
             port_handles = find_system(subsystem, 'FindAll','On', 'LookUnderMasks','on', 'SearchDepth',1, 'BlockType',search_string);
             for i = 1:length(port_handles)

@@ -40,18 +40,5 @@ classdef Dimensions
             end
             ibu = dims(1) < 0;
         end
-
-        function eq = equals(d1, d2)
-            eq = 0;
-            if d1.num_dimensions ~= d2.num_dimensions
-                return
-            end
-            for i = 1:length(d1)
-                if d1(i) ~= d2(i)
-                    return
-                end
-            end
-            eq = 1;
-        end
     end
 end

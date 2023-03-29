@@ -5,6 +5,7 @@ classdef Interface
         inports = [];
         outports = [];
         has_busses = 0;
+        empty_interface = 0;
     end
     methods
         function obj = Interface(model, subsystem)
@@ -14,6 +15,9 @@ classdef Interface
             obj.outports = Port.compute_ports(subsystem, 'Outport', obj.outports);
             if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
                 obj.has_busses = 1;
+            end
+            if length(obj.inports) + length(obj.outports) == 0
+                obj.empty_interface = 1;
             end
         end
 
@@ -39,7 +43,11 @@ classdef Interface
             for i = 1:length(obj.inports)            
                 str = str + obj.inports(i).print() + newline;
             end
-            str = str + "=======================" + newline;
+            if obj.empty_interface
+                str = str + "Subsystem has empty interface" + newline;
+            else
+                str = str + "=======================" + newline;
+            end
             for i = 1:length(obj.outports)            
                 str = str + obj.outports(i).print() + newline;
             end
@@ -48,34 +56,22 @@ classdef Interface
         function hash = hash(obj)
             hash = "";
             for i = 1:length(obj.inports)            
-                hash = hash + obj.inports(i).hsh;
+                hash = hash + obj.inports(i).hsh + ";";
             end
-            hash = hash + "==";
+            if ~obj.empty_interface
+                hash = hash + "==";
+            end
             for i = 1:length(obj.outports)            
-                hash = hash + obj.outports(i).hsh;
+                hash = hash + obj.outports(i).hsh + ";";
             end
+        end
+
+        function eq = same_as(obj, other_obj)
+            eq = strcmp(obj.hash(), other_obj.hash());
         end
     end
 
 
     methods (Static)
-        function eq = equals(i1, i2)
-            eq = length(i1.inports) == length(i2.inports) && length(i1.outports) == length(i2.outports);
-            if ~eq
-                return
-            end
-            for i = 1:length(i1.inports)
-                if ~Port.equals(i1.inports(i), i2.inports(i))
-                    eq = 0;
-                    return
-                end
-            end
-            for i = 1:length(i1.outports)
-                if ~Port.equals(i1.outports(i), i2.outports(i))
-                    eq = 0;
-                    return
-                end
-            end
-        end
     end
 end

@@ -27,8 +27,5 @@ classdef SampleTime
     end
 
     methods(Static)
-        function eq = equals(t1, t2)
-            eq = t1.sample_start == t2.sample_start && t1.sample_diff == t2.sample_diff;
-        end
     end
 end

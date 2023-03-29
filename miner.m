@@ -29,7 +29,6 @@ function miner()
                 continue
             end
             interfaces = compute_interfaces(m, model_name);
-            save_interfaces(interfaces)
 
             try_close(model_name, m);
         %catch
@@ -46,6 +45,15 @@ function interfaces = compute_interfaces(m, model_name)
         i = compute_interface(m, subsystems(j));
         if ~i.has_busses
             interfaces{end + 1} = i;
+        end
+    end
+    for i = 1:length(interfaces)-1
+        for j = i+1:length(interfaces)
+            if ~interfaces{i}.empty_interface && interfaces{i}.same_as(interfaces{j})
+                disp(string(i) + " " + string(j))
+                disp(interfaces{i}.print())
+                disp(interfaces{j}.print())
+            end
         end
     end
     try_end(model_name);
@@ -77,5 +85,4 @@ end
 
 function interface = compute_interface(model, subsystem)
     interface = Interface(model, subsystem);
-    disp(interface.print())
 end
