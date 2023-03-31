@@ -7,7 +7,7 @@ function miner()
     startat = readlines(helper.startat);
     startat = double(startat);
 
-    
+    hash_dic = dictionary(string([]), {});
 
     
     
@@ -18,21 +18,22 @@ function miner()
         %cd(helper.garbage_out)
         
 
-        model = strip(modellist.model_url(i, :),"right");
+        model_path = strip(modellist.model_url(i, :),"right");
         %try
-            m = load_system(model);
-            model_name = get_param(m, 'Name');
+            model_handle = load_system(model_path);
+            model_name = get_param(model_handle, 'Name');
             try
                 eval([model_name, '([],[],[],''compile'');']);
-                disp("Evaluating " + model)
+                disp("Evaluating " + model_path)
             catch
-                disp("Skipping " + model)
-                try_close(model_name, m);
+                disp("Skipping " + model_path)
+                try_close(model_name, model_handle);
                 continue
             end
-            compute_interfaces(m, model_name);
+            hash_dic = compute_interfaces(hash_dic, model_handle, model_path);
 
-            try_close(model_name, m);
+            try_end(model_name);
+            try_close(model_name, model_handle);
         %catch
         %    try_close(model_name, m);
         %end
@@ -40,13 +41,11 @@ function miner()
     end
 end
 
-function hash_dic = compute_interfaces(m, model_name)
-    subsystems = find_system(m, 'BlockType', 'SubSystem');
-    hash_dic = dictionary(string([]), {});
+function hash_dic = compute_interfaces(hash_dic, model_handle, model_path)
+    subsystems = find_system(model_handle, 'BlockType', 'SubSystem');
     for j = 1:length(subsystems)
-        hash_dic = compute_interface(hash_dic, m, subsystems(j));
+        hash_dic = compute_interface(hash_dic, model_handle, model_path, subsystems(j));
     end
-    try_end(model_name);
     %for j = 1:length(interfaces)
     %    interfaces{j} = interfaces{j}.update_busses();
     %end
@@ -73,8 +72,8 @@ function try_close(name, m)
     end
 end
 
-function hash_dic = compute_interface(hash_dic, model, subsystem)
-    subsystem = Subsystem(model, subsystem);
+function hash_dic = compute_interface(hash_dic, model_handle, model_path, subsystem)
+    subsystem = Subsystem(model_handle, model_path, subsystem);
     if subsystem.interface.has_busses()
         return
     end
