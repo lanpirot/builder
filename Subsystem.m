@@ -15,5 +15,9 @@ classdef Subsystem
         function hsh = hash(obj)
             hsh = obj.interface.hash();
         end
+
+        function hsh = md5(obj)
+            hsh = rptgen.hash(obj.hash());
+        end
     end
 end

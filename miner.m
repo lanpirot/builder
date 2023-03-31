@@ -8,6 +8,8 @@ function miner()
     startat = double(startat);
 
     
+
+    
     
     for i = startat:height(modellist.model_url)
         cd(helper.project_dir)
@@ -28,7 +30,7 @@ function miner()
                 try_close(model_name, m);
                 continue
             end
-            interfaces = compute_interfaces(m, model_name);
+            compute_interfaces(m, model_name);
 
             try_close(model_name, m);
         %catch
@@ -38,23 +40,11 @@ function miner()
     end
 end
 
-function interfaces = compute_interfaces(m, model_name)
+function hash_dic = compute_interfaces(m, model_name)
     subsystems = find_system(m, 'BlockType', 'SubSystem');
-    interfaces = {};
+    hash_dic = dictionary(string([]), {});
     for j = 1:length(subsystems)
-        i = compute_interface(m, subsystems(j));
-        if ~i.has_busses
-            interfaces{end + 1} = i;
-        end
-    end
-    for i = 1:length(interfaces)-1
-        for j = i+1:length(interfaces)
-            if ~interfaces{i}.empty_interface && interfaces{i}.same_as(interfaces{j})
-                disp(string(i) + " " + string(j))
-                disp(interfaces{i}.print())
-                disp(interfaces{j}.print())
-            end
-        end
+        hash_dic = compute_interface(hash_dic, m, subsystems(j));
     end
     try_end(model_name);
     %for j = 1:length(interfaces)
@@ -83,6 +73,16 @@ function try_close(name, m)
     end
 end
 
-function interface = compute_interface(model, subsystem)
-    interface = Interface(subsystem);
+function hash_dic = compute_interface(hash_dic, model, subsystem)
+    subsystem = Subsystem(model, subsystem);
+    if subsystem.interface.has_busses()
+        return
+    end
+    if hash_dic.isKey(subsystem.md5())
+        e = hash_dic{subsystem.md5()};
+    else
+        e = Equivalence_class();
+    end
+    e = e.add_subsystem(subsystem);
+    hash_dic{subsystem.md5()} = e;
 end
