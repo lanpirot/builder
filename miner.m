@@ -84,5 +84,5 @@ function try_close(name, m)
 end
 
 function interface = compute_interface(model, subsystem)
-    interface = Interface(model, subsystem);
+    interface = Interface(subsystem);
 end

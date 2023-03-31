@@ -1,16 +1,12 @@
 classdef Interface
     properties
-        handle
-        model
         inports = [];
         outports = [];
         has_busses = 0;
         empty_interface = 0;
     end
     methods
-        function obj = Interface(model, subsystem)
-            obj.handle = subsystem;
-            obj.model = model;
+        function obj = Interface(subsystem)
             obj.inports = Port.compute_ports(subsystem, 'Inport', obj.inports);
             obj.outports = Port.compute_ports(subsystem, 'Outport', obj.outports);
             if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
