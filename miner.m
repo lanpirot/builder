@@ -74,7 +74,7 @@ end
 
 function hash_dic = compute_interface(hash_dic, model_handle, model_path, subsystem)
     subsystem = Subsystem(model_handle, model_path, subsystem);
-    if subsystem.interface.has_busses()
+    if subsystem.skip_it
         return
     end
     if hash_dic.isKey(subsystem.md5())

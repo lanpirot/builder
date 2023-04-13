@@ -5,6 +5,13 @@ classdef Dimensions
 
     methods
         function obj = Dimensions(dims)
+            if isempty(dims)
+                return
+            end
+            if ischar(dims)
+                obj.dimensions{1} = str2num(dims);
+                return
+            end
             if isempty(dims.Inport)
                 dims = dims.Outport;
             else

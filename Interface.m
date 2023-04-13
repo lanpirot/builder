@@ -2,15 +2,19 @@ classdef Interface
     properties
         inports = [];
         outports = [];
-        has_busses = 0;
+        specialports = [];
+        has_buses = 0;
         empty_interface = 0;
     end
     methods
         function obj = Interface(subsystem)
             obj.inports = Port.compute_ports(subsystem, 'Inport', obj.inports);
             obj.outports = Port.compute_ports(subsystem, 'Outport', obj.outports);
+            obj.specialports = Port.compute_ports(subsystem, 'ActionPort', obj.specialports);
+            obj.specialports = Port.compute_ports(subsystem, 'EnablePort', obj.specialports);
+            obj.specialports = Port.compute_ports(subsystem, 'TriggerPort', obj.specialports);
             if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
-                obj.has_busses = 1;
+                obj.has_buses = 1;
             end
             if length(obj.inports) + length(obj.outports) == 0
                 obj.empty_interface = 1;
@@ -32,7 +36,7 @@ classdef Interface
 
         function str = print(obj)
             str = sprintf('%0.13f', obj.handle) + " " + get_param(obj.handle, 'Name') + newline;
-            if obj.has_busses
+            if obj.has_buses
                 str = str + "Subsystem has busses as inputs or outputs" + newline;
                 return
             end
@@ -59,6 +63,12 @@ classdef Interface
             end
             for i = 1:length(obj.outports)            
                 hash = hash + obj.outports(i).hsh + ";";
+            end
+            if ~isempty(obj.specialports)
+                hash = hash + "==";
+            end
+            for i = 1:length(obj.specialports)            
+                hash = hash + obj.specialports(i).hsh + ";";
             end
         end
 

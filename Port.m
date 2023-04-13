@@ -6,33 +6,36 @@ classdef Port
         dimensions
         sample_time
         hsh
+
+        is_special_port = 0;
     end
 
     methods
-        function obj = Port(port, num)
-            if Dimensions.is_bus(get_param(port, 'CompiledPortDimensions'))
-                obj.handle = -1;
-                return
-            end
+        function obj = Port(port, num, port_type)
 
 
             obj.handle = port;
             obj.num = num;
 
-
-            obj.dimensions = Dimensions(get_param(port, 'CompiledPortDimensions'));
-            % if length(obj.dimensions.dimensions) > 1
-            %     disp(obj.dimensions.print())
-            %     disp(get_param(port, 'CompiledSampleTime'))
-            %     if height(get_param(port, 'CompiledSampleTime')) > 1
-            %         disp("")
-            %     end
-            %     disp(get_param(port,'CompiledPortDataTypes'))
-            %     disp("")
-            % end
-
             obj.sample_time = SampleTime(get_param(port, 'CompiledSampleTime'));
-            obj.type = Port.get_type(get_param(port,'CompiledPortDataTypes'));
+            obj.is_special_port = any(ismember(["ActionPort", "EnablePort", "TriggerPort"], port_type));
+            if obj.is_special_port
+                obj.type = port_type;
+                %get Data Type of TriggerPort https://www.mathworks.com/help/simulink/slref/trigger.html
+                if strcmp(port_type, "ActionPort")
+                    obj.dimensions = Dimensions([]);
+                else
+                    obj.dimensions = Dimensions(get_param(port, 'PortDimensions'));
+                end
+
+            else
+                if Dimensions.is_bus(get_param(port, 'CompiledPortDimensions'))
+                    obj.handle = -1;
+                    return
+                end
+                obj.dimensions = Dimensions(get_param(port, 'CompiledPortDimensions'));
+                obj.type = Port.get_type(get_param(port,'CompiledPortDataTypes'));
+            end
             obj.hsh = obj.hash();
         end
 
@@ -67,8 +70,9 @@ classdef Port
     methods(Static)
         function ports = compute_ports(subsystem, search_string, ports)
             port_handles = find_system(subsystem, 'FindAll','On', 'LookUnderMasks','on', 'SearchDepth',1, 'BlockType',search_string);
+            
             for i = 1:length(port_handles)
-                next_port = Port(port_handles(i), i);
+                next_port = Port(port_handles(i), i, search_string);
                 if next_port.handle == -1
                     ports = -1;
                     return

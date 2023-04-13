@@ -25,5 +25,9 @@ classdef helper
             [~, sortIdx] = sort([arr.(field)]);
             arr = arr(sortIdx);
         end
+
+        function depth = get_depth(parent_str)
+            depth = 1 + count(parent_str,"/");
+        end
     end
 end
