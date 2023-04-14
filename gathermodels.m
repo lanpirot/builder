@@ -1,9 +1,11 @@
 function gathermodels()
     modellist = [dir(fullfile(helper.models_path, '**\*.slx')); dir(fullfile(helper.models_path, '**\*.mdl'))];
+    project_dir = helper.project_dir;
     project_info = tdfread(helper.project_info, 'tab');
     fileID = fopen(helper.modellist, "w+");
     fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "closable" + newline)
-    for i = 1:length(modellist)
+    for i = 3267:length(modellist)
+        cd(project_dir)
         model = modellist(i);
         folder = strsplit(model.folder, '\');
         project_id = double(string(folder{8}));
@@ -13,15 +15,9 @@ function gathermodels()
 
         model_url = string(model.folder) + filesep + model.name;
 
-        %model_handle = load_system(model_path);
-        %model_name = get_param(model_handle, 'Name');
-        %eval([model_name, '([],[],[],''compile'');']);
-        %eval([name, '([],[],[],''term'');']);
-        %close_system(model_handle)
         loadable = 0;
         compilable = 0;
         closable = 0;
-
         try
             model_handle = load_system(model_url);
             model_name = get_param(model_handle, 'Name');
