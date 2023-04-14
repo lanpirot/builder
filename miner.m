@@ -2,29 +2,34 @@ function miner()
     %warning('on','all')
     warning('off','all')
     
-    %modellist = tdfread(helper.modellist, 'tab');
-    modellist = tdfread(helper.tmp_modellist, 'tab');
+    project_dir = helper.project_dir;
+    modellist = tdfread(helper.modellist, 'tab');
+    %modellist = tdfread(helper.tmp_modellist, 'tab');
     startat = readlines(helper.startat);
     startat = double(startat);
 
     hash_dic = dictionary(string([]), {});
+    global fileID
+    fileID = fopen("doubled interfaces", "w+");
 
+    evaluated = 0;
     
-    
-    for i = startat:height(modellist.model_url)
-        cd(helper.project_dir)
+    for i = 1:height(modellist.model_url)
+        disp(i)
+        cd(project_dir)
         %rmdir(helper.garbage_out + "*", 's');
         %mkdir(helper.garbage_out)
         %cd(helper.garbage_out)
         
 
         model_path = strip(modellist.model_url(i, :),"right");
-        %try
+        try
             model_handle = load_system(model_path);
             model_name = get_param(model_handle, 'Name');
             try
                 eval([model_name, '([],[],[],''compile'');']);
                 disp("Evaluating " + model_path)
+                
             catch
                 disp("Skipping " + model_path)
                 try_close(model_name, model_handle);
@@ -34,11 +39,15 @@ function miner()
 
             try_end(model_name);
             try_close(model_name, model_handle);
-        %catch
-        %    try_close(model_name, m);
-        %end
+            evaluated = evaluated + 1;
+        catch
+            try_close(model_name, model_handle);
+        end
         %update startat
     end
+    disp(evaluated)
+    disp("Models evaluated of ")
+    disp(height(modellist.model_url))
 end
 
 function hash_dic = compute_interfaces(hash_dic, model_handle, model_path)
@@ -73,6 +82,7 @@ function try_close(name, m)
 end
 
 function hash_dic = compute_interface(hash_dic, model_handle, model_path, subsystem)
+    global fileID
     subsystem = Subsystem(model_handle, model_path, subsystem);
     if subsystem.skip_it
         return
@@ -82,6 +92,11 @@ function hash_dic = compute_interface(hash_dic, model_handle, model_path, subsys
     else
         e = Equivalence_class();
     end
+    if ~isempty(e.subsystems) && ~any(count(e.model_paths(), subsystem.model_path))
+        fprintf(fileID, subsystem.hash + newline);
+        disp(subsystem.hash)
+    end
+
     e = e.add_subsystem(subsystem);
     hash_dic{subsystem.md5()} = e;
 end

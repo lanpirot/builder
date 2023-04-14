@@ -19,5 +19,12 @@ classdef Equivalence_class
         function hsh = md5(obj)
             hsh = rptgen.hash(obj.hash());
         end
+
+        function paths = model_paths(obj)
+            paths = {};
+            for i = 1:length(obj.subsystems)
+                paths = [paths ; obj.subsystems{i}.model_path];
+            end
+        end
     end
 end
