@@ -5,43 +5,50 @@ classdef Subsystem
         qualified_name
         model_name
         model_path
+        project_path
         interface
         skip_it
-        it_or_ancestors_have_buses
+        buses_present %either in subsystem itself, or in decendants
         
-        max_depth %relative max depth in model tree from this Subsystem to its leaves
-        block_types
-        complexity
+        %currently broken?
+        %max_depth %relative max depth in model tree from this Subsystem to its leaves
+        %block_types
+        %complexity
     end
     
     methods
-        function obj = Subsystem(model_handle, model_path, subsystem)
+        function obj = Subsystem(model_handle, model_path, project_path, subsystem)
             obj.handle = subsystem;
             obj.name = get_param(subsystem, 'Name');
-            obj.qualified_name = string(get_param(subsystem, 'Parent')) + "/" + obj.name;
+            if strlength(string(get_param(subsystem, 'Parent'))) > 0
+                obj.qualified_name = string(get_param(subsystem, 'Parent')) + "/" + obj.name;
+            else
+                obj.qualified_name = obj.name;
+            end
             obj.model_name = get_param(model_handle, 'Name');
             obj.model_path = model_path;
+            obj.project_path = project_path;
             obj.interface = Interface(subsystem);
-            obj.it_or_ancestors_have_buses = obj.buses_in_obj_or_ancestors();
-            obj.skip_it = obj.it_or_ancestors_have_buses || obj.interface.empty_interface;
+            obj.buses_present = obj.buses_in_obj_or_ancestors();
+            obj.skip_it = obj.buses_present || obj.interface.empty_interface;
             if ~obj.skip_it
                 obj.compute_meta_data()
             end
         end
 
         function compute_meta_data(obj)
-            own_depth = helper.get_depth(get_param(obj.handle, 'Parent'));
-            contained_blocks = find_system(obj.handle, 'Type', 'Block');
-            obj.max_depth = 0;
-            obj.block_types = {};
-            for i = 1:length(contained_blocks)
-                block = contained_blocks(i);
-                obj.max_depth = max(obj.max_depth, helper.get_depth(get_param(block, 'Parent')) - own_depth);
-                block_type = get_param(block, 'BlockType');
-                if ~any(count(obj.block_types, block_type))
-                    obj.block_types = [obj.block_types ; block_type];
-                end
-            end
+            %own_depth = helper.get_depth(get_param(obj.handle, 'Parent'));
+            %contained_blocks = find_system(obj.handle, 'Type', 'Block');
+            % obj.max_depth = 0;
+            % obj.block_types = {};
+            % for i = 1:length(contained_blocks)
+            %     block = contained_blocks(i);
+            %     obj.max_depth = max(obj.max_depth, helper.get_depth(get_param(block, 'Parent')) - own_depth);
+            %     block_type = get_param(block, 'BlockType');
+            %     if ~any(count(obj.block_types, block_type))
+            %         obj.block_types = [obj.block_types ; block_type];
+            %     end
+            % end
             %obj.complexity = 0;
         end
 
@@ -61,9 +68,7 @@ classdef Subsystem
         end
 
         function str = print(obj)
-            str = "";
-            str = str + obj.model_name + newline;
-            str = str + obj.hash();
+            str = "" + obj.qualified_name + "," + obj.model_path + "," + obj.project_path + "," + obj.hash();
         end
 
         function hsh = hash(obj)

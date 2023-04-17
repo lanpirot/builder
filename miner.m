@@ -10,19 +10,19 @@ function miner()
 
     hash_dic = dictionary(string([]), {});
     global fileID
-    fileID = fopen("doubled interfaces", "w+");
+    fileID = fopen("subsystem interfaces", "w+");
+    fprintf(fileID,"Subsystem Path,Model Path,Project URL,Interface")
 
     evaluated = 0;
     
     for i = 1:height(modellist.model_url)
-        disp(i)
         if ~modellist.closable(i)
             continue
         end
         cd(project_dir)
-        %rmdir(helper.garbage_out + "*", 's');
-        %mkdir(helper.garbage_out)
-        %cd(helper.garbage_out)
+        rmdir(helper.garbage_out + "*", 's');
+        mkdir(helper.garbage_out)
+        cd(helper.garbage_out)
         
 
         model_path = strip(modellist.model_url(i, :),"right");
@@ -31,20 +31,21 @@ function miner()
             model_name = get_param(model_handle, 'Name');
             try
                 eval([model_name, '([],[],[],''compile'');']);
-                disp("Evaluating " + model_path)
+                cd(project_dir)
+                disp("Evaluating number " + string(i) + " " + model_path)
                 
             catch
                 disp("Skipping " + model_path)
-                try_close(model_name, model_handle);
+                try_close(model_name, model_path);
                 continue
             end
-            hash_dic = compute_interfaces(hash_dic, model_handle, model_path);
+            hash_dic = compute_interfaces(hash_dic, model_handle, model_path, strip(modellist.project_url(i, :),"right"));
 
             try_end(model_name);
-            try_close(model_name, model_handle);
+            try_close(model_name, model_path);
             evaluated = evaluated + 1;
         catch
-            try_close(model_name, model_handle);
+            try_close(model_name, model_path);
         end
         %update startat
     end
@@ -53,12 +54,13 @@ function miner()
     disp(height(modellist.model_url))
 end
 
-function hash_dic = compute_interfaces(hash_dic, model_handle, model_path)
+function hash_dic = compute_interfaces(hash_dic, model_handle, model_path, project_path)
     subsystems = find_system(model_handle, 'BlockType', 'SubSystem');
     subsystems(end + 1) = model_handle;
     for j = 1:length(subsystems)
-        hash_dic = compute_interface(hash_dic, model_handle, model_path, subsystems(j));
+        hash_dic = compute_interface(hash_dic, model_handle, model_path, project_path, subsystems(j));
     end
+    disp("#subsystems analyzed: " + string(length(subsystems)) + " #equivalence classes: " + string(length(keys(hash_dic))))
     %for j = 1:length(interfaces)
     %    interfaces{j} = interfaces{j}.update_busses();
     %end
@@ -85,9 +87,9 @@ function try_close(name, m)
     end
 end
 
-function hash_dic = compute_interface(hash_dic, model_handle, model_path, subsystem)
+function hash_dic = compute_interface(hash_dic, model_handle, model_path, project_path, subsystem)
     global fileID
-    subsystem = Subsystem(model_handle, model_path, subsystem);
+    subsystem = Subsystem(model_handle, model_path, project_path, subsystem);
     if subsystem.skip_it
         return
     end
@@ -96,9 +98,10 @@ function hash_dic = compute_interface(hash_dic, model_handle, model_path, subsys
     else
         e = Equivalence_class();
     end
+
+    fprintf(fileID, subsystem.print() + newline);
     if ~isempty(e.subsystems) && ~any(count(e.model_paths(), subsystem.model_path))
-        fprintf(fileID, subsystem.hash + newline);
-        disp(subsystem.hash)
+        disp("Doubled Interface found with: " + subsystem.hash)
     end
 
     e = e.add_subsystem(subsystem);
