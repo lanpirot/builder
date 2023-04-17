@@ -30,7 +30,7 @@ classdef Subsystem
             obj.project_path = project_path;
             obj.interface = Interface(subsystem);
             obj.buses_present = obj.buses_in_obj_or_ancestors();
-            obj.skip_it = obj.buses_present || obj.interface.empty_interface;
+            obj.skip_it = obj.buses_present || length(find_system(obj.handle)) == 1;
             if ~obj.skip_it
                 obj.compute_meta_data()
             end

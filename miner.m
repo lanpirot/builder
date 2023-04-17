@@ -11,7 +11,7 @@ function miner()
     hash_dic = dictionary(string([]), {});
     global fileID
     fileID = fopen("subsystem interfaces", "w+");
-    fprintf(fileID,"Subsystem Path,Model Path,Project URL,Interface" + newline)
+    fprintf(fileID,"Subsystem Path,Model Path,Project URL,Interface" + newline);
 
     evaluated = 0;
     
@@ -20,7 +20,10 @@ function miner()
             continue
         end
         cd(project_dir)
-        rmdir(helper.garbage_out + "*", 's');
+        try
+            rmdir(helper.garbage_out + "*", 's');
+        catch
+        end
         mkdir(helper.garbage_out)
         cd(helper.garbage_out)
         
