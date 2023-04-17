@@ -3,8 +3,8 @@ function gathermodels()
     project_dir = helper.project_dir;
     project_info = tdfread(helper.project_info, 'tab');
     fileID = fopen(helper.modellist, "w+");
-    fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "closable" + newline)
-    for i = 3267:length(modellist)
+    fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "closable" + newline);
+    for i = 142:length(modellist)
         cd(project_dir)
         model = modellist(i);
         folder = strsplit(model.folder, '\');
@@ -33,11 +33,13 @@ function gathermodels()
                 end
 
                 try
-                    close_system(model_handle)
+                    close_system(model_url);
                     closable = 1;
                 catch
                 end
             catch
+                close_system(model_url);
+                closable = 1;
             end
         catch
         end

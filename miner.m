@@ -16,6 +16,9 @@ function miner()
     
     for i = 1:height(modellist.model_url)
         disp(i)
+        if ~modellist.closable(i)
+            continue
+        end
         cd(project_dir)
         %rmdir(helper.garbage_out + "*", 's');
         %mkdir(helper.garbage_out)
@@ -52,6 +55,7 @@ end
 
 function hash_dic = compute_interfaces(hash_dic, model_handle, model_path)
     subsystems = find_system(model_handle, 'BlockType', 'SubSystem');
+    subsystems(end + 1) = model_handle;
     for j = 1:length(subsystems)
         hash_dic = compute_interface(hash_dic, model_handle, model_path, subsystems(j));
     end
