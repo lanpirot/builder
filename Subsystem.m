@@ -68,7 +68,7 @@ classdef Subsystem
         end
 
         function str = print(obj)
-            str = "" + obj.qualified_name + "," + obj.model_path + "," + obj.project_path + "," + obj.hash();
+            str = """" + obj.qualified_name + """" + "," + obj.model_path + "," + obj.project_path + "," + obj.hash();
         end
 
         function hsh = hash(obj)

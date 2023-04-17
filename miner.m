@@ -11,7 +11,7 @@ function miner()
     hash_dic = dictionary(string([]), {});
     global fileID
     fileID = fopen("subsystem interfaces", "w+");
-    fprintf(fileID,"Subsystem Path,Model Path,Project URL,Interface")
+    fprintf(fileID,"Subsystem Path,Model Path,Project URL,Interface" + newline)
 
     evaluated = 0;
     
