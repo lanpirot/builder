@@ -4,6 +4,8 @@ classdef helper
         tmp_models_path = "C:\svns\simucomp2\models\SLNET_v1\SLNET\SLNET_GitHub\7269901";
         project_info = "C:\svns\alex projects\builder\project_info.tsv";
 
+        subsystem_interfaces = "C:\svns\alex projects\builder\subsystem interfaces";
+
         project_dir = "C:\svns\alex projects\builder";
         garbage_out = "C:\svns\alex projects\builder\garbage_out";
 

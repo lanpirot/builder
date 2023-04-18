@@ -9,13 +9,13 @@ function miner()
     startat = double(startat);
 
     hash_dic = dictionary(string([]), {});
-    global fileID
-    fileID = fopen("subsystem interfaces", "w+");
-    fprintf(fileID,"Subsystem Path,Model Path,Project URL,Interface" + newline);
+    my_fileID = fopen(helper.subsystem_interfaces, "w+");
+    fprintf(my_fileID,"Subsystem Path,Model Path,Project URL,Interface" + newline);
+    fclose(my_fileID);
 
     evaluated = 0;
     
-    for i = 1:height(modellist.model_url)
+    for i = 3192:3198 %height(modellist.model_url)
         if ~modellist.closable(i)
             continue
         end
@@ -58,7 +58,7 @@ function miner()
 end
 
 function hash_dic = compute_interfaces(hash_dic, model_handle, model_path, project_path)
-    subsystems = find_system(model_handle, 'BlockType', 'SubSystem');
+    subsystems = find_system(model_handle, 'LookUnderMasks', 'On', 'BlockType', 'SubSystem');
     subsystems(end + 1) = model_handle;
     for j = 1:length(subsystems)
         hash_dic = compute_interface(hash_dic, model_handle, model_path, project_path, subsystems(j));
@@ -91,7 +91,6 @@ function try_close(name, m)
 end
 
 function hash_dic = compute_interface(hash_dic, model_handle, model_path, project_path, subsystem)
-    global fileID
     subsystem = Subsystem(model_handle, model_path, project_path, subsystem);
     if subsystem.skip_it
         return
@@ -102,7 +101,9 @@ function hash_dic = compute_interface(hash_dic, model_handle, model_path, projec
         e = Equivalence_class();
     end
 
-    fprintf(fileID, subsystem.print() + newline);
+    my_fileID = fopen(helper.subsystem_interfaces, "a+");
+    fprintf(my_fileID, subsystem.print() + newline);
+    fclose(my_fileID);
     if ~isempty(e.subsystems) && ~any(count(e.model_paths(), subsystem.model_path))
         disp("Doubled Interface found with: " + subsystem.hash)
     end

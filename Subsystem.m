@@ -30,7 +30,7 @@ classdef Subsystem
             obj.project_path = project_path;
             obj.interface = Interface(subsystem);
             obj.buses_present = obj.buses_in_obj_or_ancestors();
-            obj.skip_it = obj.buses_present || length(find_system(obj.handle)) == 1;
+            obj.skip_it = obj.buses_present || length(find_system(obj.handle,'LookUnderMasks','on')) == 1;
             if ~obj.skip_it
                 obj.compute_meta_data()
             end
@@ -38,7 +38,7 @@ classdef Subsystem
 
         function compute_meta_data(obj)
             %own_depth = helper.get_depth(get_param(obj.handle, 'Parent'));
-            %contained_blocks = find_system(obj.handle, 'Type', 'Block');
+            %contained_blocks = find_system(obj.handle,'LookUnderMasks','on', 'Type', 'Block');
             % obj.max_depth = 0;
             % obj.block_types = {};
             % for i = 1:length(contained_blocks)
@@ -57,7 +57,7 @@ classdef Subsystem
             if obj.interface.has_buses
                 return
             end
-            contained_subsystems = find_system(obj.handle, 'SearchDepth', 1, 'BlockType', 'SubSystem');
+            contained_subsystems = find_system(obj.handle, 'SearchDepth', 1,'LookUnderMasks','on', 'BlockType', 'SubSystem');
             for i = 1:length(contained_subsystems)
                 inner_interface = Interface(contained_subsystems(i));
                 if inner_interface.has_buses
@@ -68,7 +68,7 @@ classdef Subsystem
         end
 
         function str = print(obj)
-            str = """" + obj.qualified_name + """" + "," + obj.model_path + "," + obj.project_path + "," + obj.hash();
+            str = """" + obj.qualified_name + """" + "," + obj.model_path + "," + obj.project_path + "," + """" + obj.hash() + """";
         end
 
         function hsh = hash(obj)
