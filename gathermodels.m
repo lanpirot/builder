@@ -1,5 +1,5 @@
 function gathermodels()
-    modellist = [dir(fullfile(helper.models_path, '**\*.slx')); dir(fullfile(helper.models_path, '**\*.mdl'))];
+    modellist = [dir(fullfile(helper.models_path, "**" + filesep + "*.slx")); dir(fullfile(helper.models_path, "**" + filesep + "*.mdl"))];
     project_dir = helper.project_dir;
     project_info = tdfread(helper.project_info, 'tab');
     fileID = fopen(helper.modellist, "w+");
