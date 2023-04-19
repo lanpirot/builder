@@ -5,8 +5,6 @@ function miner()
     project_dir = helper.project_dir;
     modellist = tdfread(helper.modellist, 'tab');
     %modellist = tdfread(helper.tmp_modellist, 'tab');
-    startat = readlines(helper.startat);
-    startat = double(startat);
 
     hash_dic = dictionary(string([]), {});
     my_fileID = fopen(helper.subsystem_interfaces, "w+");
