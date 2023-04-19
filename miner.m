@@ -15,7 +15,7 @@ function miner()
 
     evaluated = 0;
     
-    for i = 3192:3198 %height(modellist.model_url)
+    for i = 1:height(modellist.model_url)
         if ~modellist.closable(i)
             continue
         end

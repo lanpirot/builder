@@ -8,7 +8,7 @@ function gathermodels()
         cd(project_dir)
         model = modellist(i);
         folder = strsplit(model.folder, filesep);
-        project_id = double(string(folder{length(folder)}));
+        project_id = double(string(folder{helper.project_id_pwd_number}));
         project_info_row = find(project_info.path == project_id);
         project_url = project_info.url(project_info_row,:);
         project_url = helper.rstrip(project_url);

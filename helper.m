@@ -12,6 +12,7 @@ classdef helper
         modellist = "C:\svns\alex projects\builder\modellist.csv";
         tmp_modellist = "C:\svns\alex projects\builder\tmp_modellist.csv";
         startat = "C:\svns\alex projects\builder\startat.txt";
+        project_id_pwd_number = 8;
     end
     
     methods(Static)
