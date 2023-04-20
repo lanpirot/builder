@@ -14,7 +14,7 @@ function miner()
     evaluated = 0;
     
     for i = 1:height(modellist.model_url)
-        if ~modellist.closable(i)
+        if ~modellist.compilable(i)
             continue
         end
         cd(project_dir)
