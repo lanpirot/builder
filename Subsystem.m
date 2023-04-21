@@ -37,7 +37,7 @@ classdef Subsystem
         end
 
         function subsystems = get_contained_subsystems(obj)
-            pot_subsystems = find_system(obj.handle, 'SearchDepth', 1,'LookUnderMasks','on', 'BlockType', 'SubSystem');
+            pot_subsystems = helper.find_subsystems(obj.handle);
             subsystems = [];
             for i = 2:length(pot_subsystems)
                 if Subsystem.is_subsystem(pot_subsystems(i))
@@ -78,7 +78,7 @@ classdef Subsystem
         end
 
         function str = print(obj)
-            str = """" + obj.qualified_name + """" + "," + obj.model_path + "," + obj.project_path + "," + """" + obj.hash() + """";
+            str = obj.uuid + " """ + obj.qualified_name + """" + "," + obj.model_path + "," + obj.project_path + "," + """" + obj.hash() + """";
         end
 
         function hsh = hash(obj)
