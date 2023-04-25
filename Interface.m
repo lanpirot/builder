@@ -54,22 +54,8 @@ classdef Interface
         end
 
         function hash = hash(obj)
-            hash = "";
-            for i = 1:length(obj.inports)            
-                hash = hash + obj.inports(i).hsh + ";";
-            end
-            if ~obj.empty_interface
-                hash = hash + "==";
-            end
-            for i = 1:length(obj.outports)            
-                hash = hash + obj.outports(i).hsh + ";";
-            end
-            if ~isempty(obj.specialports)
-                hash = hash + "==";
-            end
-            for i = 1:length(obj.specialports)            
-                hash = hash + obj.specialports(i).hsh + ";";
-            end
+            ports = [helper.get_hash(obj.inports) helper.get_hash(obj.outports) helper.get_hash(obj.specialports)];
+            hash = join(ports, helper.first_level_divider);
         end
 
         function eq = same_as(obj, other_obj)

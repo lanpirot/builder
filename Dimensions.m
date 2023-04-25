@@ -33,7 +33,7 @@ classdef Dimensions
         function str = print(obj)
             str = "";
             for i = 1:length(obj.dimensions)
-                str = str + " " + join(string(obj.dimensions{i}), ",");
+                str = str + " " + join(string(obj.dimensions{i}), helper.third_level_divider);
             end
         end
     end

@@ -20,6 +20,19 @@ classdef Subsystem
     
     methods
         function obj = Subsystem(model_handle, model_path, project_path, subsystem)
+            if isstruct(model_handle) %if called by builder.m, while parsing the serialized interfaces
+                %UUID,ChildUUIDs,Subsystem Path,Model Path,Project URL,Inports,Outports,...
+                sub = model_handle;
+
+                obj.uuid = sub.UUID;
+                obj.contained_uuids = sub.ChildUUIDs;
+                obj.qualified_name = sub.Subsystem_Path;
+                obj.model_path = sub.Model_Path;
+                obj.project_path = sub.Project_URL;
+                %obj.interface = helper.parse_interface(sub.Inports, outports.Outports);
+                return
+            end
+
             obj.handle = subsystem;
             obj.name = Subsystem.get_name(obj.handle);
             obj.qualified_name = Subsystem.get_qualified_name(obj.handle);
@@ -78,15 +91,15 @@ classdef Subsystem
         end
 
         function str = print(obj)
-            str = obj.uuid + " """ + obj.qualified_name + """" + "," + obj.model_path + "," + obj.project_path + "," + """" + obj.hash() + """";
+            uuids = join(Subsystem.get_uuids(obj.get_contained_subsystems(), obj.model_path), helper.second_level_divider);
+            if isempty(uuids)
+                uuids = "";
+            end
+            str = join([obj.uuid uuids """"+obj.qualified_name+"""" obj.model_path obj.project_path obj.interface_hash()], helper.first_level_divider);
         end
 
-        function hsh = hash(obj)
+        function hsh = interface_hash(obj)
             hsh = obj.interface.hash();
-        end
-
-        function hsh = md5(obj)
-            hsh = rptgen.hash(obj.hash());
         end
     end
 

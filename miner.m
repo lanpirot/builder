@@ -7,8 +7,9 @@ function miner()
 
     hash_dic = dictionary(string([]), {});
 
-    reset_logs([helper.subsystem_interfaces, helper.log_garbage_out, helper.log_eval, helper.log_close])
-    log(project_dir, 'subsystem_interfaces', "Subsystem Path,Model Path,Project URL,Interface")
+    reset_logs([helper.equivalence_classes, helper.equivalence_classes_no_clones, helper.root_interfaces, helper.interfaces, helper.log_garbage_out, helper.log_eval, helper.log_close])
+    log(project_dir, 'root_interfaces', helper.interface_header)
+    log(project_dir, 'interfaces', helper.interface_header)
 
     evaluated = 0;
     
@@ -32,7 +33,7 @@ function miner()
             model_name = get_param(model_handle, 'Name');
             eval([model_name, '([],[],[],''compile'');']);
             cd(project_dir)
-            disp("Evaluating number " + string(i) + " " + model_path)
+            %disp("Evaluating number " + string(i) + " " + model_path)
             hash_dic = compute_interfaces(project_dir, hash_dic, model_handle, model_path, strip(modellist.project_url(i, :),"right"));
 
             try_end(model_name);
@@ -43,7 +44,26 @@ function miner()
             try_close(model_name, model_path);
         end
     end
+    cd(project_dir)
+    serialize(hash_dic, project_dir);
     fprintf("\nFinished! %i models evaluated out of %i\n", evaluated, height(modellist.model_url))
+end
+
+function serialize(hash_dic, project_dir)
+    hash_dic_keys = keys(hash_dic);
+    for i = 1:length(hash_dic_keys)
+        eq = hash_dic{hash_dic_keys(i)};
+        subsystems = eq.subsystems;
+        
+        %print hash_dic_keys(i) and md5s of each contained subsystem
+        %write into helper.equivalence_classes
+        log(project_dir, "equivalence_classes", eq.string_hash_subsystems());
+
+        %weed out subsystems with same names and heuristically equal content
+        %write into helper.equivalence_classes_no_clones
+        %eq = eq.weed_out_clones();
+        %log(project_dir, "equivalence_classes_no_clones", eq.string_hash_subsystems());
+    end
 end
 
 function hash_dic = compute_interfaces(project_dir, hash_dic, model_handle, model_path, project_path)
@@ -52,14 +72,28 @@ function hash_dic = compute_interfaces(project_dir, hash_dic, model_handle, mode
     for j = 1:length(subsystems)
         hash_dic = compute_interface(project_dir, hash_dic, model_handle, model_path, project_path, subsystems(j));
     end
-    disp("#subsystems analyzed: " + string(length(subsystems)) + " #equivalence classes: " + string(length(keys(hash_dic))))
-    %for j = 1:length(interfaces)
-    %    interfaces{j} = interfaces{j}.update_busses();
-    %end
+    %disp("#subsystems analyzed: " + string(length(subsystems)) + " #equivalence classes: " + string(length(keys(hash_dic))))
 end
 
-function interface = update_busses(interface)
-    interface = interface.update_busses();
+function hash_dic = compute_interface(project_dir, hash_dic, model_handle, model_path, project_path, subsystem)
+    subsystem = Subsystem(model_handle, model_path, project_path, subsystem);
+    if subsystem.skip_it
+        return
+    end
+    if hash_dic.isKey(subsystem.interface_hash())
+        e = hash_dic{subsystem.interface_hash()};
+    else
+        e = Equivalence_class();
+    end
+
+    if count(subsystem.qualified_name, "/") == 0
+        log(project_dir, 'root_interfaces', subsystem.print());
+        
+    end
+    log(project_dir, 'interfaces', subsystem.print());
+
+    e = e.add_subsystem(subsystem);
+    hash_dic{subsystem.interface_hash()} = e;
 end
 
 function try_end(name)
@@ -78,26 +112,6 @@ function try_close(name, model_path)
     catch ME
         log(project_dir, 'log_close', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
     end
-end
-
-function hash_dic = compute_interface(project_dir, hash_dic, model_handle, model_path, project_path, subsystem)
-    subsystem = Subsystem(model_handle, model_path, project_path, subsystem);
-    if subsystem.skip_it
-        return
-    end
-    if hash_dic.isKey(subsystem.md5())
-        e = hash_dic{subsystem.md5()};
-    else
-        e = Equivalence_class();
-    end
-
-    log(project_dir, 'subsystem_interfaces', subsystem.print());
-    if ~isempty(e.subsystems) && ~any(count(e.model_paths(), subsystem.model_path))
-        disp("Doubled Interface found with: " + subsystem.hash)
-    end
-
-    e = e.add_subsystem(subsystem);
-    hash_dic{subsystem.md5()} = e;
 end
 
 function log(project_dir, file_name, message)

@@ -13,11 +13,7 @@ classdef Equivalence_class
         end
 
         function hsh = hash(obj)
-            hsh = obj.subsystems{1}.hash();
-        end
-
-        function hsh = md5(obj)
-            hsh = rptgen.hash(obj.hash());
+            hsh = obj.subsystems{1}.interface_hash();
         end
 
         function paths = model_paths(obj)
@@ -25,6 +21,19 @@ classdef Equivalence_class
             for i = 1:length(obj.subsystems)
                 paths = [paths ; obj.subsystems{i}.model_path];
             end
+        end
+
+        function str = string_hash_subsystems(obj)
+            uuids = "";
+            for i = 1:length(obj.subsystems)
+                uuids = uuids + obj.subsystems{i}.uuid + helper.second_level_divider;
+            end
+            str = join([obj.hash uuids], helper.first_level_divider);
+            %str = str + newline;
+        end
+
+        function str = weed_out_clones(obj)
+            %weed out
         end
     end
 end
