@@ -101,6 +101,10 @@ classdef Subsystem
         function hsh = interface_hash(obj)
             hsh = obj.interface.hash();
         end
+
+        function r = is_root(obj)
+            r = count(obj.qualified_name,"/") == 0;
+        end
     end
 
 

@@ -5,15 +5,15 @@ function miner()
     modellist = tdfread(helper.modellist, 'tab');
     %modellist = tdfread(helper.tmp_modellist, 'tab');
 
-    hash_dic = dictionary(string([]), {});
+    eqc_dic = dictionary(string([]), {});
 
     reset_logs([helper.equivalence_classes, helper.equivalence_classes_no_clones, helper.root_interfaces, helper.interfaces, helper.log_garbage_out, helper.log_eval, helper.log_close])
-    log(project_dir, 'root_interfaces', helper.interface_header)
-    log(project_dir, 'interfaces', helper.interface_header)
+    %log(project_dir, 'root_interfaces', helper.interface_header)
+    %log(project_dir, 'interfaces', helper.interface_header)
 
     evaluated = 0;
     
-    for i = 1:100%height(modellist.model_url)
+    for i = 1:30%height(modellist.model_url)
         if ~modellist.compilable(i)
             continue
         end
@@ -34,7 +34,7 @@ function miner()
             eval([model_name, '([],[],[],''compile'');']);
             cd(project_dir)
             %disp("Evaluating number " + string(i) + " " + model_path)
-            hash_dic = compute_interfaces(project_dir, hash_dic, model_handle, model_path, strip(modellist.project_url(i, :),"right"));
+            [eqc_dic, subsystems] = compute_interfaces(eqc_dic, model_handle, model_path, strip(modellist.project_url(i, :),"right"));
 
             try_end(model_name);
             try_close(model_name, model_path);
@@ -45,14 +45,15 @@ function miner()
         end
     end
     cd(project_dir)
-    serialize(hash_dic, project_dir);
+    serialize(eqc_dic, subsystems, project_dir);
     fprintf("\nFinished! %i models evaluated out of %i\n", evaluated, height(modellist.model_url))
 end
 
-function serialize(hash_dic, project_dir)
-    hash_dic_keys = keys(hash_dic);
+function serialize(eqc_dic, subs, project_dir)
+    %serialize eqc_dic
+    hash_dic_keys = keys(eqc_dic);
     for i = 1:length(hash_dic_keys)
-        eq = hash_dic{hash_dic_keys(i)};
+        eq = eqc_dic{hash_dic_keys(i)};
         subsystems = eq.subsystems;
         
         %print hash_dic_keys(i) and md5s of each contained subsystem
@@ -64,18 +65,30 @@ function serialize(hash_dic, project_dir)
         %eq = eq.weed_out_clones();
         %log(project_dir, "equivalence_classes_no_clones", eq.string_hash_subsystems());
     end
+
+    %serialize subs
+    helper.file_print(helper.interfaces, jsonencode(subs));
+    %remove all non-root subsystems and serialize them
+    roots = {};
+    for i=1:length(subs)
+        if subs{i}.is_root()
+            roots{end + 1} = subs{i};
+        end
+    end
+    helper.file_print(helper.root_interfaces, jsonencode(roots));
 end
 
-function hash_dic = compute_interfaces(project_dir, hash_dic, model_handle, model_path, project_path)
+function [hash_dic, subs] = compute_interfaces(hash_dic, model_handle, model_path, project_path)
     subsystems = helper.find_subsystems(model_handle);
     subsystems(end + 1) = model_handle;
+    subs = {};
     for j = 1:length(subsystems)
-        hash_dic = compute_interface(project_dir, hash_dic, model_handle, model_path, project_path, subsystems(j));
+        [hash_dic, subs] = compute_interface(hash_dic, subs, model_handle, model_path, project_path, subsystems(j));
     end
     %disp("#subsystems analyzed: " + string(length(subsystems)) + " #equivalence classes: " + string(length(keys(hash_dic))))
 end
 
-function hash_dic = compute_interface(project_dir, hash_dic, model_handle, model_path, project_path, subsystem)
+function [hash_dic, subs] = compute_interface(hash_dic, subs, model_handle, model_path, project_path, subsystem)
     subsystem = Subsystem(model_handle, model_path, project_path, subsystem);
     if subsystem.skip_it
         return
@@ -86,11 +99,8 @@ function hash_dic = compute_interface(project_dir, hash_dic, model_handle, model
         e = Equivalence_class();
     end
 
-    if count(subsystem.qualified_name, "/") == 0
-        log(project_dir, 'root_interfaces', subsystem.print());
-        
-    end
-    log(project_dir, 'interfaces', subsystem.print());
+
+    subs{end + 1} = subsystem;
 
     e = e.add_subsystem(subsystem);
     hash_dic{subsystem.interface_hash()} = e;
