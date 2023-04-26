@@ -12,20 +12,13 @@ function miner()
     %log(project_dir, 'interfaces', helper.interface_header)
 
     evaluated = 0;
+    subs = {};
     
-    for i = 1:30%height(modellist.model_url)
+    for i = 1:100%height(modellist.model_url)
         if ~modellist.compilable(i)
             continue
         end
-        cd(project_dir)
-        try
-            rmdir(helper.garbage_out + "*", 's');
-        catch ME
-            log(project_dir, 'log_garbage_out', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
-        end
-        mkdir(helper.garbage_out)
-        cd(helper.garbage_out)
-        
+        helper.make_garbage();
 
         model_path = string(strip(modellist.model_url(i, :),"right"));
         try
@@ -34,7 +27,7 @@ function miner()
             eval([model_name, '([],[],[],''compile'');']);
             cd(project_dir)
             %disp("Evaluating number " + string(i) + " " + model_path)
-            [eqc_dic, subsystems] = compute_interfaces(eqc_dic, model_handle, model_path, strip(modellist.project_url(i, :),"right"));
+            [eqc_dic, subs] = compute_interfaces(eqc_dic, subs, model_handle, model_path, strip(modellist.project_url(i, :),"right"));
 
             try_end(model_name);
             try_close(model_name, model_path);
@@ -43,31 +36,35 @@ function miner()
             log(project_dir, 'log_eval', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
             try_close(model_name, model_path);
         end
+
+        cd(project_dir)
+        helper.clear_garbage()
     end
     cd(project_dir)
-    serialize(eqc_dic, subsystems, project_dir);
+    serialize(eqc_dic, subs, project_dir);
     fprintf("\nFinished! %i models evaluated out of %i\n", evaluated, height(modellist.model_url))
 end
 
 function serialize(eqc_dic, subs, project_dir)
     %serialize eqc_dic
+    eqs = {};
     hash_dic_keys = keys(eqc_dic);
     for i = 1:length(hash_dic_keys)
-        eq = eqc_dic{hash_dic_keys(i)};
-        subsystems = eq.subsystems;
-        
-        %print hash_dic_keys(i) and md5s of each contained subsystem
-        %write into helper.equivalence_classes
-        log(project_dir, "equivalence_classes", eq.string_hash_subsystems());
-
-        %weed out subsystems with same names and heuristically equal content
-        %write into helper.equivalence_classes_no_clones
-        %eq = eq.weed_out_clones();
-        %log(project_dir, "equivalence_classes_no_clones", eq.string_hash_subsystems());
+        eqs{end +1} = eqc_dic{hash_dic_keys(i)};
     end
+    log(project_dir, "equivalence_classes", jsonencode(eqs));
+
+    %remove subsystems that are clones of others
+    eqs = {};
+    hash_dic_keys = keys(eqc_dic);
+    for i = 1:length(hash_dic_keys)
+        eqs{end + 1} = Subsystem.remove_clones(subs, eqc_dic{hash_dic_keys(i)});
+    end
+    log(project_dir, "equivalence_classes_no_clones", jsonencode(eqs));
 
     %serialize subs
     helper.file_print(helper.interfaces, jsonencode(subs));
+
     %remove all non-root subsystems and serialize them
     roots = {};
     for i=1:length(subs)
@@ -78,10 +75,9 @@ function serialize(eqc_dic, subs, project_dir)
     helper.file_print(helper.root_interfaces, jsonencode(roots));
 end
 
-function [hash_dic, subs] = compute_interfaces(hash_dic, model_handle, model_path, project_path)
+function [hash_dic, subs] = compute_interfaces(hash_dic, subs, model_handle, model_path, project_path)
     subsystems = helper.find_subsystems(model_handle);
     subsystems(end + 1) = model_handle;
-    subs = {};
     for j = 1:length(subsystems)
         [hash_dic, subs] = compute_interface(hash_dic, subs, model_handle, model_path, project_path, subsystems(j));
     end
@@ -128,7 +124,7 @@ function log(project_dir, file_name, message)
     cd(project_dir)
     file_name = helper.(file_name);
     my_fileID = fopen(file_name, "a+");
-    fprintf(my_fileID, replace(message, "\", "/") + newline);
+    fprintf(my_fileID, replace(string(message), "\", "/") + newline);
     fclose(my_fileID);
 end
 

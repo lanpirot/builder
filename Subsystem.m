@@ -8,6 +8,8 @@ classdef Subsystem
         project_path
         uuid            %uuid of the subsystem itself
         contained_uuids %uuids of direct children of the subsytem
+        num_contained_elements
+
         interface
         skip_it
         buses_present   %either in subsystem itself, or in decendants
@@ -41,6 +43,7 @@ classdef Subsystem
             obj.project_path = project_path;
             obj.uuid = Subsystem.get_uuid(obj.model_path, obj.qualified_name);
             obj.contained_uuids = Subsystem.get_uuids(obj.get_contained_subsystems(), obj.model_path);
+            obj.num_contained_elements = length(find_system(obj.handle, 'LookUnderMasks', 'on', 'FollowLinks','on'));
             obj.interface = Interface(obj.handle);
             obj.buses_present = obj.buses_in_obj_or_ancestors();
             obj.skip_it = obj.buses_present || ~Subsystem.is_subsystem(obj.handle);
@@ -135,6 +138,35 @@ classdef Subsystem
             for i = 1:length(handles)
                 uuids{end + 1} = Subsystem.get_uuid(model_path, Subsystem.get_qualified_name(handles(i)));
             end
+        end
+
+        function eqc = remove_clones(subsystems, eqc)
+            matches = []; %we match each eqc.subsystem (a UUID) to the suitable subsystem in subsystems (using their UUID)
+            out_subsystems = {};
+            for i = 1:length(eqc.subsystems)
+                for j = 1:length(subsystems)+1      %+1 to cause errors, if no suitable subsystem could be matched
+                    if strcmp(subsystems{j}.uuid, eqc.subsystems{i})
+                        matches(end + 1) = j;
+                        break
+                    end
+                end
+            end
+            
+            for i = 1:length(matches)
+                unique = 1;
+                for j = 1:i-1
+                    s1 = subsystems{matches(i)};
+                    s2 = subsystems{matches(j)};
+                    if s1.num_contained_elements == s2.num_contained_elements
+                        unique = 0;
+                        break;
+                    end
+                end
+                if unique
+                    out_subsystems{end + 1} = subsystems{matches(i)}.uuid;
+                end
+            end
+            eqc.subsystems = out_subsystems;
         end
     end
 end

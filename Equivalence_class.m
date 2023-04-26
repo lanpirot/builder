@@ -1,5 +1,6 @@
 classdef Equivalence_class
     properties
+        hsh
         subsystems;
     end
 
@@ -9,11 +10,12 @@ classdef Equivalence_class
         end
 
         function obj = add_subsystem(obj, subsystem)
-            obj.subsystems{end + 1} = subsystem;
+            obj.subsystems{end + 1} = subsystem.uuid;
+            obj.hsh = subsystem.interface_hash();
         end
 
         function hsh = hash(obj)
-            hsh = obj.subsystems{1}.interface_hash();
+            hsh = obj.hsh;
         end
 
         function paths = model_paths(obj)
