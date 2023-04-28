@@ -43,16 +43,6 @@ classdef Subsystem
             end
         end
 
-        function subsystems = get_contained_subsystems(obj)
-            pot_subsystems = helper.find_subsystems(obj.handle);
-            subsystems = [];
-            for i = 2:length(pot_subsystems)
-                if Subsystem.is_subsystem(pot_subsystems(i))
-                    subsystems(end + 1) = pot_subsystems(i);
-                end
-            end
-        end
-
         function compute_meta_data(obj)
             %own_depth = helper.get_depth(get_param(obj.handle, 'Parent'));
             %contained_blocks = find_system(obj.handle,'LookUnderMasks','on', 'Type', 'Block');
@@ -74,7 +64,7 @@ classdef Subsystem
             if obj.interface.has_buses
                 return
             end
-            contained_subsystems = obj.get_contained_subsystems();
+            contained_subsystems = Subsystem.get_contained_subsystems(obj.handle);
             for i = 1:length(contained_subsystems)
                 inner_interface = Interface(contained_subsystems(i));
                 if inner_interface.has_buses
@@ -85,7 +75,7 @@ classdef Subsystem
         end
 
         function str = print(obj)
-            uuids = join(Subsystem.get_uuids(obj.get_contained_subsystems(), obj.model_path), helper.second_level_divider);
+            uuids = join(Subsystem.get_uuids(Subsystem.get_contained_subsystems(obj.handle), obj.model_path), helper.second_level_divider);
             if isempty(uuids)
                 uuids = "";
             end
@@ -96,8 +86,29 @@ classdef Subsystem
             hsh = obj.interface.hash();
         end
 
+        function hsh = name_hash(obj)
+            hsh = helper.name_hash(obj.model_path, obj.qualified_name);
+        end
+        
+        function n2i = name2interface(obj)
+            n2i = struct;
+            n2i.name = obj.name_hash();
+            n2i.model_path = obj.model_path;
+            n2i.ntrf = obj.interface_hash();
+        end
+
         function r = is_root(obj)
             r = count(obj.qualified_name,"/") == 0;
+        end
+
+        function bool = is_in_subs(obj, sub_index, subs)
+            for i = 1:length(subs)
+                if i~=sub_index && obj.num_contained_elements == subs{i}.num_contained_elements
+                    bool = 1;
+                    return
+                end
+            end
+            bool = 0;
         end
     end
 
@@ -131,33 +142,14 @@ classdef Subsystem
             end
         end
 
-        function eqc = remove_clones(subsystems, eqc)
-            matches = []; %we match each eqc.subsystem (a UUID) to the suitable subsystem in subsystems (using their UUID)
-            out_subsystems = {};
-            for i = 1:length(eqc.subsystems)
-                for j = 1:length(subsystems)+1      %+1 to cause errors, if no suitable subsystem could be matched
-                    if strcmp(subsystems{j}.model_path, eqc.subsystems{i}.model_path) && strcmp(subsystems{j}.qualified_name, eqc.subsystems{i}.qualified_name)
-                        matches(end + 1) = j;
-                        break
-                    end
+        function subsystems = get_contained_subsystems(handle)
+            pot_subsystems = helper.find_subsystems(handle);
+            subsystems = [];
+            for i = 2:length(pot_subsystems)
+                if Subsystem.is_subsystem(pot_subsystems(i))
+                    subsystems(end + 1) = pot_subsystems(i);
                 end
             end
-            
-            for i = 1:length(matches)
-                unique = 1;
-                for j = 1:i-1
-                    s1 = subsystems{matches(i)};
-                    s2 = subsystems{matches(j)};
-                    if s1.num_contained_elements == s2.num_contained_elements
-                        unique = 0;
-                        break;
-                    end
-                end
-                if unique
-                    out_subsystems{end + 1} = subsystems{matches(i)}.uuid;
-                end
-            end
-            eqc.subsystems = out_subsystems;
         end
     end
 end

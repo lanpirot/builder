@@ -5,11 +5,7 @@ function miner()
     modellist = tdfread(helper.modellist, 'tab');
     %modellist = tdfread(helper.tmp_modellist, 'tab');
 
-    eqc_dic = dictionary(string([]), {});
-
-    reset_logs([helper.equivalence_classes, helper.equivalence_classes_no_clones, helper.root_interfaces, helper.interfaces, helper.log_garbage_out, helper.log_eval, helper.log_close])
-    %log(project_dir, 'root_interfaces', helper.interface_header)
-    %log(project_dir, 'interfaces', helper.interface_header)
+    reset_logs([helper.interface2name, helper.interface2name_unique, helper.name2interface, helper.name2interface_roots, helper.log_garbage_out, helper.log_eval, helper.log_close])
 
     evaluated = 0;
     subs = {};
@@ -27,7 +23,7 @@ function miner()
             eval([model_name, '([],[],[],''compile'');']);
             cd(project_dir)
             %disp("Evaluating number " + string(i) + " " + model_path)
-            [eqc_dic, subs] = compute_interfaces(eqc_dic, subs, model_handle, model_path, strip(modellist.project_url(i, :),"right"));
+            subs = compute_interfaces(subs, model_handle, model_path, strip(modellist.project_url(i, :),"right"));
 
             try_end(model_name);
             try_close(model_name, model_path);
@@ -41,66 +37,75 @@ function miner()
         helper.clear_garbage()
     end
     cd(project_dir)
-    serialize(eqc_dic, subs, project_dir);
+    serialize(subs);
     fprintf("\nFinished! %i models evaluated out of %i\n", evaluated, height(modellist.model_url))
 end
 
-function serialize(eqc_dic, subs, project_dir)
-    %serialize eqc_dic
-    eqs = {};
-    hash_dic_keys = keys(eqc_dic);
-    for i = 1:length(hash_dic_keys)
-        eqs{end +1} = eqc_dic{hash_dic_keys(i)};
-    end
-    log(project_dir, "equivalence_classes", jsonencode(eqs));
+function serialize(subs)
+    %serialize name --> interface
+    name2interface = {};
+    name2interface_roots = {};
 
-    %remove subsystems that are clones of others
-    eqs = {};
-    hash_dic_keys = keys(eqc_dic);
-    for i = 1:length(hash_dic_keys)
-        eqs{end + 1} = Subsystem.remove_clones(subs, eqc_dic{hash_dic_keys(i)});
-    end
-    log(project_dir, "equivalence_classes_no_clones", jsonencode(eqs));
-
-    %serialize subs
-    helper.file_print(helper.interfaces, jsonencode(subs));
-
-    %remove all non-root subsystems and serialize them
-    roots = {};
-    for i=1:length(subs)
+    for i = 1:length(subs)
+        name2interface{end + 1} = subs{i}.name2interface();
         if subs{i}.is_root()
-            roots{end + 1} = subs{i};
+            name2interface_roots{end + 1} = subs{i}.name2interface();
         end
     end
-    helper.file_print(helper.root_interfaces, jsonencode(roots));
+    helper.file_print(helper.name2interface, jsonencode(name2interface));
+    helper.file_print(helper.name2interface_roots, jsonencode(name2interface_roots));
+
+    %serialize interface --> names
+    interface2name = dictionary();
+    interface2name_unique = dictionary();
+
+    for i = 1:length(subs)
+        ntrf_hash = subs{i}.interface_hash();
+        if isConfigured(interface2name) && interface2name.isKey(ntrf_hash)
+            eq = interface2name(ntrf_hash);
+        else
+            eq = Equivalence_class();
+        end
+        eq = eq.add_subsystem(subs{i});
+        interface2name(ntrf_hash) = eq;
+    end
+    %transfrom Subsystem into full subsystem path in interface2name_unique
+    
+    interface2name_struct = {};
+    interface2name_unique_struct = {};
+    keys = interface2name.keys;
+
+    for i = 1:length(keys)
+        interface2name_struct{end + 1} = struct;
+        interface2name_struct{end}.ntrf = keys(i);
+        interface2name_struct{end}.names = interface2name(keys(i)).name_hashes();
+
+        interface2name_unique_struct{end + 1} = struct;
+        interface2name_unique_struct{end}.ntrf = keys(i);
+        interface2name_unique_struct{end}.names = interface2name(keys(i)).unique_name_hashes();
+    end
+
+    helper.file_print(helper.interface2name, jsonencode(interface2name_struct));
+    helper.file_print(helper.interface2name_unique, jsonencode(interface2name_unique_struct));
 end
 
-function [hash_dic, subs] = compute_interfaces(hash_dic, subs, model_handle, model_path, project_path)
+function subs = compute_interfaces(subs, model_handle, model_path, project_path)
     subsystems = helper.find_subsystems(model_handle);
     subsystems(end + 1) = model_handle;
     for j = 1:length(subsystems)
-        [hash_dic, subs] = compute_interface(hash_dic, subs, model_handle, model_path, project_path, subsystems(j));
+        subs = compute_interface(subs, model_handle, model_path, project_path, subsystems(j));
     end
     %disp("#subsystems analyzed: " + string(length(subsystems)) + " #equivalence classes: " + string(length(keys(hash_dic))))
 end
 
-function [hash_dic, subs] = compute_interface(hash_dic, subs, model_handle, model_path, project_path, subsystem_handle)
+function subs = compute_interface(subs, model_handle, model_path, project_path, subsystem_handle)
     subsystem = Subsystem(subsystem_handle, model_handle, model_path, project_path);
     subsystem = subsystem.construct2();
     if subsystem.skip_it
         return
     end
-    if hash_dic.isKey(subsystem.interface_hash())
-        e = hash_dic{subsystem.interface_hash()};
-    else
-        e = Equivalence_class();
-    end
-
 
     subs{end + 1} = subsystem;
-
-    e = e.add_subsystem(subsystem);
-    hash_dic{subsystem.interface_hash()} = e;
 end
 
 function try_end(name)
