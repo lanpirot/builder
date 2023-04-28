@@ -34,7 +34,7 @@ classdef Interface
             % obj.outports = helper.sort_by_field(tmp_outports, 'hsh');
         end
 
-        function str = print(obj)
+        function str = report(obj) %needs updates to current version
             str = sprintf('%0.13f', obj.handle) + " " + get_param(obj.handle, 'Name') + newline;
             if obj.has_buses
                 str = str + "Subsystem has busses as inputs or outputs" + newline;

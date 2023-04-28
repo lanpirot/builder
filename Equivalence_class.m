@@ -10,32 +10,13 @@ classdef Equivalence_class
         end
 
         function obj = add_subsystem(obj, subsystem)
-            obj.subsystems{end + 1} = subsystem.uuid;
+            obj.subsystems{end + 1}.model_path = subsystem.model_path;
+            obj.subsystems{end}.qualified_name = subsystem.qualified_name;
             obj.hsh = subsystem.interface_hash();
         end
 
         function hsh = hash(obj)
             hsh = obj.hsh;
-        end
-
-        function paths = model_paths(obj)
-            paths = {};
-            for i = 1:length(obj.subsystems)
-                paths = [paths ; obj.subsystems{i}.model_path];
-            end
-        end
-
-        function str = string_hash_subsystems(obj)
-            uuids = "";
-            for i = 1:length(obj.subsystems)
-                uuids = uuids + obj.subsystems{i}.uuid + helper.second_level_divider;
-            end
-            str = join([obj.hash uuids], helper.first_level_divider);
-            %str = str + newline;
-        end
-
-        function str = weed_out_clones(obj)
-            %weed out
         end
     end
 end

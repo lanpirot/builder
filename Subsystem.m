@@ -21,30 +21,21 @@ classdef Subsystem
     end
     
     methods
-        function obj = Subsystem(model_handle, model_path, project_path, subsystem)
-            if isstruct(model_handle) %if called by builder.m, while parsing the serialized interfaces
-                %UUID,ChildUUIDs,Subsystem Path,Model Path,Project URL,Inports,Outports,...
-                sub = model_handle;
-
-                obj.uuid = sub.UUID;
-                obj.contained_uuids = sub.ChildUUIDs;
-                obj.qualified_name = sub.Subsystem_Path;
-                obj.model_path = sub.Model_Path;
-                obj.project_path = sub.Project_URL;
-                %obj.interface = helper.parse_interface(sub.Inports, outports.Outports);
-                return
-            end
-
-            obj.handle = subsystem;
+        function obj = Subsystem(subsystem_handle, model_handle, model_path, project_path)
+            obj.handle = subsystem_handle;
             obj.name = Subsystem.get_name(obj.handle);
             obj.qualified_name = Subsystem.get_qualified_name(obj.handle);
             obj.model_name = get_param(model_handle, 'Name');
             obj.model_path = model_path;
             obj.project_path = project_path;
+
+            obj.interface = Interface(obj.handle);
+        end
+
+        function obj = construct2(obj)
             obj.uuid = Subsystem.get_uuid(obj.model_path, obj.qualified_name);
             obj.contained_uuids = Subsystem.get_uuids(obj.get_contained_subsystems(), obj.model_path);
             obj.num_contained_elements = length(find_system(obj.handle, 'LookUnderMasks', 'on', 'FollowLinks','on'));
-            obj.interface = Interface(obj.handle);
             obj.buses_present = obj.buses_in_obj_or_ancestors();
             obj.skip_it = obj.buses_present || ~Subsystem.is_subsystem(obj.handle);
             if ~obj.skip_it
@@ -145,7 +136,7 @@ classdef Subsystem
             out_subsystems = {};
             for i = 1:length(eqc.subsystems)
                 for j = 1:length(subsystems)+1      %+1 to cause errors, if no suitable subsystem could be matched
-                    if strcmp(subsystems{j}.uuid, eqc.subsystems{i})
+                    if strcmp(subsystems{j}.model_path, eqc.subsystems{i}.model_path) && strcmp(subsystems{j}.qualified_name, eqc.subsystems{i}.qualified_name)
                         matches(end + 1) = j;
                         break
                     end

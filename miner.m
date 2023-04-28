@@ -84,8 +84,9 @@ function [hash_dic, subs] = compute_interfaces(hash_dic, subs, model_handle, mod
     %disp("#subsystems analyzed: " + string(length(subsystems)) + " #equivalence classes: " + string(length(keys(hash_dic))))
 end
 
-function [hash_dic, subs] = compute_interface(hash_dic, subs, model_handle, model_path, project_path, subsystem)
-    subsystem = Subsystem(model_handle, model_path, project_path, subsystem);
+function [hash_dic, subs] = compute_interface(hash_dic, subs, model_handle, model_path, project_path, subsystem_handle)
+    subsystem = Subsystem(subsystem_handle, model_handle, model_path, project_path);
+    subsystem = subsystem.construct2();
     if subsystem.skip_it
         return
     end
@@ -122,10 +123,7 @@ end
 
 function log(project_dir, file_name, message)
     cd(project_dir)
-    file_name = helper.(file_name);
-    my_fileID = fopen(file_name, "a+");
-    fprintf(my_fileID, replace(string(message), "\", "/") + newline);
-    fclose(my_fileID);
+    helper.log(file_name, message);
 end
 
 function reset_logs(file_list)
