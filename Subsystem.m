@@ -34,7 +34,7 @@ classdef Subsystem
 
         function obj = construct2(obj)
             obj.uuid = Subsystem.get_uuid(obj.model_path, obj.qualified_name);
-            obj.contained_uuids = Subsystem.get_uuids(obj.get_contained_subsystems(), obj.model_path);
+            obj.contained_uuids = Subsystem.get_uuids(Subsystem.get_contained_subsystems(obj.handle), obj.model_path);
             obj.num_contained_elements = length(find_system(obj.handle, 'LookUnderMasks', 'on', 'FollowLinks','on'));
             obj.buses_present = obj.buses_in_obj_or_ancestors();
             obj.skip_it = obj.buses_present || ~Subsystem.is_subsystem(obj.handle);
@@ -44,13 +44,13 @@ classdef Subsystem
         end
 
         function compute_meta_data(obj)
-            %own_depth = helper.get_depth(get_param(obj.handle, 'Parent'));
+            %own_depth = Helper.get_depth(get_param(obj.handle, 'Parent'));
             %contained_blocks = find_system(obj.handle,'LookUnderMasks','on', 'Type', 'Block');
             % obj.max_depth = 0;
             % obj.block_types = {};
             % for i = 1:length(contained_blocks)
             %     block = contained_blocks(i);
-            %     obj.max_depth = max(obj.max_depth, helper.get_depth(get_param(block, 'Parent')) - own_depth);
+            %     obj.max_depth = max(obj.max_depth, Helper.get_depth(get_param(block, 'Parent')) - own_depth);
             %     block_type = get_param(block, 'BlockType');
             %     if ~any(count(obj.block_types, block_type))
             %         obj.block_types = [obj.block_types ; block_type];
@@ -75,11 +75,11 @@ classdef Subsystem
         end
 
         function str = print(obj)
-            uuids = join(Subsystem.get_uuids(Subsystem.get_contained_subsystems(obj.handle), obj.model_path), helper.second_level_divider);
+            uuids = join(Subsystem.get_uuids(Subsystem.get_contained_subsystems(obj.handle), obj.model_path), Helper.second_level_divider);
             if isempty(uuids)
                 uuids = "";
             end
-            str = join([obj.uuid uuids """"+obj.qualified_name+"""" obj.model_path obj.project_path obj.interface_hash()], helper.first_level_divider);
+            str = join([obj.uuid uuids """"+obj.qualified_name+"""" obj.model_path obj.project_path obj.interface_hash()], Helper.first_level_divider);
         end
 
         function hsh = interface_hash(obj)
@@ -87,13 +87,12 @@ classdef Subsystem
         end
 
         function hsh = name_hash(obj)
-            hsh = helper.name_hash(obj.model_path, obj.qualified_name);
+            hsh = Helper.name_hash(obj.model_path, obj.qualified_name);
         end
         
         function n2i = name2interface(obj)
             n2i = struct;
             n2i.name = obj.name_hash();
-            n2i.model_path = obj.model_path;
             n2i.ntrf = obj.interface_hash();
         end
 
@@ -143,7 +142,7 @@ classdef Subsystem
         end
 
         function subsystems = get_contained_subsystems(handle)
-            pot_subsystems = helper.find_subsystems(handle);
+            pot_subsystems = Helper.find_subsystems(handle);
             subsystems = [];
             for i = 2:length(pot_subsystems)
                 if Subsystem.is_subsystem(pot_subsystems(i))

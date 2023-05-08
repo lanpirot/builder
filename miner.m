@@ -1,20 +1,20 @@
 function miner()
     warning('off','all')
     
-    project_dir = helper.project_dir;
-    modellist = tdfread(helper.modellist, 'tab');
-    %modellist = tdfread(helper.tmp_modellist, 'tab');
+    project_dir = Helper.project_dir;
+    modellist = tdfread(Helper.modellist, 'tab');
+    %modellist = tdfread(Helper.tmp_modellist, 'tab');
 
-    reset_logs([helper.interface2name, helper.interface2name_unique, helper.name2interface, helper.name2interface_roots, helper.log_garbage_out, helper.log_eval, helper.log_close])
+    reset_logs([Helper.interface2name, Helper.interface2name_unique, Helper.name2interface, Helper.name2interface_roots, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
 
     evaluated = 0;
     subs = {};
     
-    for i = 1:100%height(modellist.model_url)
+    for i = 1:1000%height(modellist.model_url)
         if ~modellist.compilable(i)
             continue
         end
-        helper.make_garbage();
+        Helper.make_garbage();
 
         model_path = string(strip(modellist.model_url(i, :),"right"));
         try
@@ -34,7 +34,7 @@ function miner()
         end
 
         cd(project_dir)
-        helper.clear_garbage()
+        Helper.clear_garbage()
     end
     cd(project_dir)
     serialize(subs);
@@ -52,8 +52,8 @@ function serialize(subs)
             name2interface_roots{end + 1} = subs{i}.name2interface();
         end
     end
-    helper.file_print(helper.name2interface, jsonencode(name2interface));
-    helper.file_print(helper.name2interface_roots, jsonencode(name2interface_roots));
+    Helper.file_print(Helper.name2interface, jsonencode(name2interface));
+    Helper.file_print(Helper.name2interface_roots, jsonencode(name2interface_roots));
 
     %serialize interface --> names
     interface2name = dictionary();
@@ -85,12 +85,12 @@ function serialize(subs)
         interface2name_unique_struct{end}.names = interface2name(keys(i)).unique_name_hashes();
     end
 
-    helper.file_print(helper.interface2name, jsonencode(interface2name_struct));
-    helper.file_print(helper.interface2name_unique, jsonencode(interface2name_unique_struct));
+    Helper.file_print(Helper.interface2name, jsonencode(interface2name_struct));
+    Helper.file_print(Helper.interface2name_unique, jsonencode(interface2name_unique_struct));
 end
 
 function subs = compute_interfaces(subs, model_handle, model_path, project_path)
-    subsystems = helper.find_subsystems(model_handle);
+    subsystems = Helper.find_subsystems(model_handle);
     subsystems(end + 1) = model_handle;
     for j = 1:length(subsystems)
         subs = compute_interface(subs, model_handle, model_path, project_path, subsystems(j));
@@ -128,7 +128,7 @@ end
 
 function log(project_dir, file_name, message)
     cd(project_dir)
-    helper.log(file_name, message);
+    Helper.log(file_name, message);
 end
 
 function reset_logs(file_list)

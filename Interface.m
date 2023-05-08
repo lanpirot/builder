@@ -26,12 +26,12 @@ classdef Interface
             % for i = 1:length(obj.inports)
             %     tmp_inports = [tmp_inports obj.inports(i).update_bus(obj.model)];
             % end
-            % obj.inports = helper.sort_by_field(tmp_inports, 'hsh');
+            % obj.inports = Helper.sort_by_field(tmp_inports, 'hsh');
             % tmp_outports = [];
             % for i = 1:length(obj.outports)
             %     tmp_outports = [tmp_outports obj.outports(i).update_bus(obj.model)];
             % end
-            % obj.outports = helper.sort_by_field(tmp_outports, 'hsh');
+            % obj.outports = Helper.sort_by_field(tmp_outports, 'hsh');
         end
 
         function str = report(obj) %needs updates to current version
@@ -54,8 +54,8 @@ classdef Interface
         end
 
         function hash = hash(obj)
-            ports = [helper.get_hash(obj.inports) helper.get_hash(obj.outports) helper.get_hash(obj.specialports)];
-            hash = join(ports, helper.first_level_divider);
+            ports = [Helper.get_hash(obj.inports) Helper.get_hash(obj.outports) Helper.get_hash(obj.specialports)];
+            hash = join(ports, Helper.first_level_divider);
         end
 
         function eq = same_as(obj, other_obj)

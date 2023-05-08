@@ -1,8 +1,8 @@
 function builder()
     clean_up()
-    name2interface_roots = helper.parse_json(helper.name2interface_roots);
-    name2interface = helper.parse_json(helper.name2interface);
-    interface2name = helper.parse_json(helper.interface2name);
+    name2interface_roots = Helper.parse_json(Helper.name2interface_roots);
+    name2interface = Helper.parse_json(Helper.name2interface);
+    interface2name = Helper.parse_json(Helper.interface2name_unique);
 
     name2interface = dictionary(extractfield(name2interface, 'name'), extractfield(name2interface, 'ntrf'));
     interface2name = dictionary(extractfield(interface2name, 'ntrf'), extractfield(interface2name, 'names'));
@@ -12,17 +12,16 @@ function builder()
         model = model.check_models_correctness();
         models{end + 1} = model;
     end
+    disp(string(Helper.found_alt()) + " subsystems could have been changed")
 end
 
 function clean_up()
-    delete(helper.playground + filesep + "*");
+    warning('off','all')
+    clear('all');
+    delete(Helper.playground + filesep + "*");
 end
 
 function model = build_model(uuid, start_system, name2interface, interface2name)
     model = BuilderModel(uuid, start_system);
     model = model.switch_subs_in_model(name2interface, interface2name);
-end
-
-function model = check_models_correctness(model)
-    model = model.check_correctness();
 end

@@ -79,7 +79,7 @@ classdef Port
                 end
                 ports = [ports next_port];
             end
-            ports = helper.sort_by_field(ports, 'hsh');
+            ports = Helper.sort_by_field(ports, 'hsh');
         end
 
         function type = get_type(type_field)
