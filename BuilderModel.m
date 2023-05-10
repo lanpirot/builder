@@ -1,6 +1,7 @@
 classdef BuilderModel
     properties
         uuid
+        version = 1;
         original_model_name
         original_model_path
         model_name
@@ -20,28 +21,38 @@ classdef BuilderModel
             %    disp("a")
             %end
             obj.original_model_name = string(tmp{end});
-            obj.model_name = "model" + string(obj.uuid);
-
             obj.original_model_path = tmp{1};
-            obj.root_model_path = Helper.playground + filesep + obj.model_name + extractAfter(obj.original_model_path,strlength(obj.original_model_path)-4);
-            copyfile(obj.original_model_path, obj.root_model_path);
+
+            obj = obj.copy_version();
+
             load_system(obj.root_model_path)
             obj.num_original_subsystems = length(Subsystem.get_contained_subsystems(get_param(obj.model_name, 'Handle')));
             close_system(obj.root_model_path, 0)
+        end
+
+        function obj = save_version(obj)
+            obj.version = obj.version + 1;
+            save_system(obj.model_name, obj.root_model_path + "v" + string(obj.version))
+        end
+
+        function obj = copy_version(obj)            
+            obj.model_name = "model" + string(obj.uuid);
+            obj.root_model_path = Helper.playground + filesep + obj.model_name + extractAfter(obj.original_model_path,strlength(obj.original_model_path)-4);
+            copyfile(obj.original_model_path, obj.root_model_path);
         end
 
         function obj = switch_subs_in_model(obj, name2interface, interface2name)
             %try
                 load_system(obj.root_model_path);
                 
-                curr_depth = 1;
+                curr_depth = 0;
                 while 1
                     sub_at_depth_found = 0;
                     sub_names = Helper.find_subsystems(obj.model_name);
                     sub_names{end + 1} = obj.model_name;
                     for i = 1:length(sub_names)
                         sub_name = sub_names{i};
-                        if count(get_param(sub_name, 'Parent'), "/") == curr_depth - 1 && Subsystem.is_subsystem(sub_name)
+                        if curr_depth == 0 && Subsystem.is_root_static(sub_name) || count(get_param(sub_name, 'Parent'), "/") == curr_depth - 1 && Subsystem.is_subsystem(sub_name)
                             sub_at_depth_found = 1;
                             obj = obj.switch_sub(obj.model_name, sub_name, name2interface, interface2name);
                         end
@@ -51,7 +62,7 @@ classdef BuilderModel
                     end
                     curr_depth = curr_depth + 1;
                 end
-                close_system(obj.root_model_path);
+                close_system(obj.root_model_path, 0);
             %catch ME
                 %Helper.log('log_switch_up', string(jsonencode(obj)) + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
                 %throw(ME) 
@@ -69,7 +80,12 @@ classdef BuilderModel
                 while 1
                     rindex = randi(length(alternate_sub_names));
                     if ~strcmp(sub_complete_name, alternate_sub_names{rindex})
-                        obj = obj.switch_sub_with_sub(model_name, sub_name, alternate_sub_names{rindex});
+                        try
+                            obj = obj.switch_sub_with_sub(model_name, sub_name, alternate_sub_names{rindex});
+                            obj = obj.save_version();
+                        catch ME
+                            Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alternate_sub_names{rindex} + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                        end
                         break
                     end
                 end
@@ -90,14 +106,13 @@ classdef BuilderModel
 
             copied_name = SimulinkName(join([copy_to.ancestor_names "sub" + string(Helper.found_alt())], "/"));
             if copy_to.is_root
+                Simulink.BlockDiagram.deleteContents(copy_to.full_name)
                 if copy_from.is_root
                     %copy from root to root
                     switch_model_name
-                    Simulink.BlockDiagram.deleteContents(copy_to.full_name)
                     Simulink.BlockDiagram.copyContentsToBlockDiagram(copy_from.full_name, copy_to.full_name)
                 else
                     %copy from subsystem to root
-                    Simulink.BlockDiagram.deleteContents(copy_to.full_name)
                     Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.full_name, copy_to.full_name)
                 end
                 %we don't need to rewire the inputs/outputs after copying
@@ -115,10 +130,11 @@ classdef BuilderModel
                 end
                 %now, rewire
             end
-            a = Simulink.Annotation(copy_to.full_name,"Copied a subsystem from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.full_name));
+            annotation_text = "Copied a subsystem from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.full_name);
+            a = Simulink.Annotation(copy_to.full_name,annotation_text);
             a.FontSize = 18;
             a.BackgroundColor = 'lightBlue';
-            
+            disp(annotation_text)
         end
 
         function obj = check_models_correctness(obj)

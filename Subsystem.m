@@ -97,7 +97,7 @@ classdef Subsystem
         end
 
         function r = is_root(obj)
-            r = count(obj.qualified_name,"/") == 0;
+            r = count(obj.qualified_name, "/") == 0;
         end
 
         function bool = is_in_subs(obj, sub_index, subs)
@@ -149,6 +149,10 @@ classdef Subsystem
                     subsystems(end + 1) = pot_subsystems(i);
                 end
             end
+        end
+
+        function bool = is_root_static(subsystem)
+            bool = strlength(get_param(subsystem, 'Parent')) == 0;
         end
     end
 end
