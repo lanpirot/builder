@@ -1,7 +1,7 @@
 classdef BuilderModel
     properties
         uuid
-        version = 1;
+        version = 0;
         original_model_name
         original_model_path
         model_name
@@ -17,9 +17,6 @@ classdef BuilderModel
         function obj = BuilderModel(uuid, root_model)
             obj.uuid = uuid;
             tmp = split(root_model.name, Helper.second_level_divider);
-            %if length(tmp) > 2
-            %    disp("a")
-            %end
             obj.original_model_name = string(tmp{end});
             obj.original_model_path = tmp{1};
 
@@ -32,7 +29,10 @@ classdef BuilderModel
 
         function obj = save_version(obj)
             obj.version = obj.version + 1;
-            save_system(obj.model_name, obj.root_model_path + "v" + string(obj.version))
+            new_suffix = "v" + string(obj.version);
+            save_system(obj.model_name, extractBefore(obj.root_model_path, strlength(obj.root_model_path)-3) + new_suffix + extractAfter(obj.root_model_path, strlength(obj.root_model_path)-4))
+            close_system(obj.model_name + new_suffix)
+            load_system(obj.root_model_path)
         end
 
         function obj = copy_version(obj)            
@@ -41,7 +41,7 @@ classdef BuilderModel
             copyfile(obj.original_model_path, obj.root_model_path);
         end
 
-        function obj = switch_subs_in_model(obj, name2interface, interface2name)
+        function obj = switch_subs_in_model(obj, name2interface, name2mapping, interface2name)
             %try
                 load_system(obj.root_model_path);
                 
@@ -49,12 +49,12 @@ classdef BuilderModel
                 while 1
                     sub_at_depth_found = 0;
                     sub_names = Helper.find_subsystems(obj.model_name);
-                    sub_names{end + 1} = obj.model_name;
+                    sub_names{end + 1} = char(obj.model_name);
                     for i = 1:length(sub_names)
                         sub_name = sub_names{i};
-                        if curr_depth == 0 && Subsystem.is_root_static(sub_name) || count(get_param(sub_name, 'Parent'), "/") == curr_depth - 1 && Subsystem.is_subsystem(sub_name)
+                        if curr_depth == 0 && Subsystem.is_root_static(sub_name) || count(get_param(sub_name, 'Parent'), "/") == curr_depth - 1 && Subsystem.is_subsystem(sub_name) && ~Subsystem.is_root_static(sub_name)
                             sub_at_depth_found = 1;
-                            obj = obj.switch_sub(obj.model_name, sub_name, name2interface, interface2name);
+                            obj = obj.switch_sub(obj.model_name, sub_name, name2interface, name2mapping, interface2name);
                         end
                     end
                     if ~sub_at_depth_found
@@ -67,24 +67,27 @@ classdef BuilderModel
                 %Helper.log('log_switch_up', string(jsonencode(obj)) + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
                 %throw(ME) 
             %end
+            delete(obj.root_model_path)
         end
 
-        function obj = switch_sub(obj, model_name, sub_name, name2interface, interface2name)
+        function obj = switch_sub(obj, model_name, sub_name, name2interface, name2mapping, interface2name)
             qualified_name = Helper.get_qualified_name_from_handle(obj.original_model_name, sub_name);
             sub_complete_name = Helper.name_hash(obj.original_model_path, qualified_name);
             sub_interface = name2interface({char(sub_complete_name)});
-            alternate_sub_names = interface2name(sub_interface);
-            alternate_sub_names = alternate_sub_names{1};
+            alt_complete_names = interface2name(sub_interface);
+            alt_complete_names = alt_complete_names{1};
 
-            if length(alternate_sub_names) > 1
+            if length(alt_complete_names) > 1
                 while 1
-                    rindex = randi(length(alternate_sub_names));
-                    if ~strcmp(sub_complete_name, alternate_sub_names{rindex})
+                    rindex = randi(length(alt_complete_names));
+                    if ~strcmp(sub_complete_name, alt_complete_names{rindex})
+                        sub_mapping = name2mapping({char(sub_complete_name)});
+                        alt_mapping = name2mapping({char(alt_complete_names{rindex})});
                         try
-                            obj = obj.switch_sub_with_sub(model_name, sub_name, alternate_sub_names{rindex});
+                            obj = obj.switch_sub_with_sub(model_name, sub_name, alt_complete_names{rindex}, sub_mapping, alt_mapping);
                             obj = obj.save_version();
                         catch ME
-                            Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alternate_sub_names{rindex} + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                            Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alt_complete_names{rindex} + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
                         end
                         break
                     end
@@ -92,27 +95,30 @@ classdef BuilderModel
             end
         end
 
-        function obj = switch_sub_with_sub(obj, model_name, sub_name, alternate_sub_name)
+        function obj = switch_sub_with_sub(obj, model_name, sub_name, alternate_sub_name, sub_mapping, alt_mapping)
 
-            [switch_model_name, switch_sub_qualified_name] = Helper.unfuse_hash(alternate_sub_name);
-            switch_model_handle = load_system(switch_model_name);
-            load_system(switch_sub_qualified_name)
-            switch_sub_handle = get_param(switch_sub_qualified_name, 'Handle');
+            [alt_model_path, alt_sub_qualified_name] = Helper.unfuse_hash(alternate_sub_name);
+            switch_model_handle = load_system(alt_model_path);
+            load_system(alt_sub_qualified_name)
+            switch_sub_handle = get_param(alt_sub_qualified_name, 'Handle');
 
             % 
             % 
-            copy_from = SimulinkName(Helper.get_qualified_name_from_handle(get_param(switch_model_handle, 'Name'), switch_sub_handle));
-            copy_to = SimulinkName(Helper.get_qualified_name_from_handle(get_param(model_name, 'Name'), sub_name));
+            copy_from = SimulinkName(Helper.get_qualified_name_from_handle(get_param(switch_model_handle, 'Name'), switch_sub_handle), get_param(switch_model_handle, 'Name'));
+            copy_to = SimulinkName(Helper.get_qualified_name_from_handle(get_param(model_name, 'Name'), sub_name), obj.original_model_name);
 
-            copied_name = SimulinkName(join([copy_to.ancestor_names "sub" + string(Helper.found_alt())], "/"));
+            copied_name = SimulinkName(join([copy_to.ancestor_names "sub" + string(Helper.found_alt(1))], "/"), obj.original_model_name);
             if copy_to.is_root
-                Simulink.BlockDiagram.deleteContents(copy_to.full_name)
+                
                 if copy_from.is_root
                     %copy from root to root
-                    switch_model_name
-                    Simulink.BlockDiagram.copyContentsToBlockDiagram(copy_from.full_name, copy_to.full_name)
+                    close_system(obj.model_name)
+                    delete(obj.root_model_path)
+                    copyfile(alt_model_path, obj.root_model_path);
+                    load_system(obj.root_model_path);
                 else
                     %copy from subsystem to root
+                    Simulink.BlockDiagram.deleteContents(copy_to.full_name)
                     Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.full_name, copy_to.full_name)
                 end
                 %we don't need to rewire the inputs/outputs after copying
@@ -129,8 +135,12 @@ classdef BuilderModel
                     add_block(copy_from.full_name, copy_to.full_name)
                 end
                 %now, rewire
+                %inports = get_ports_of_sub(copy_to.full_name, 'Inports')
+                %^^^^^^ handles of other elements/signals connected to each port
+                %rewire first inport: 
+                %outports = get_ports_of_sub(copy_to.full_name, 'Outports')
             end
-            annotation_text = "Copied a subsystem from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.full_name);
+            annotation_text = "Copied system from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.original_full_name);
             a = Simulink.Annotation(copy_to.full_name,annotation_text);
             a.FontSize = 18;
             a.BackgroundColor = 'lightBlue';

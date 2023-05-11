@@ -86,6 +86,10 @@ classdef Subsystem
             hsh = obj.interface.hash();
         end
 
+        function mapping = interface_mapping(obj)
+            mapping = obj.interface.mapping();
+        end
+
         function hsh = name_hash(obj)
             hsh = Helper.name_hash(obj.model_path, obj.qualified_name);
         end
@@ -94,6 +98,7 @@ classdef Subsystem
             n2i = struct;
             n2i.name = obj.name_hash();
             n2i.ntrf = obj.interface_hash();
+            n2i.mapping = obj.interface_mapping();
         end
 
         function r = is_root(obj)

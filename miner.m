@@ -3,14 +3,13 @@ function miner()
     
     project_dir = Helper.project_dir;
     modellist = tdfread(Helper.modellist, 'tab');
-    %modellist = tdfread(Helper.tmp_modellist, 'tab');
 
-    reset_logs([Helper.interface2name, Helper.interface2name_unique, Helper.name2interface, Helper.name2interface_roots, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
+    Helper.reset_logs([Helper.interface2name, Helper.interface2name_unique, Helper.name2interface, Helper.name2interface_roots, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
 
     evaluated = 0;
     subs = {};
     
-    for i = 1:1000%height(modellist.model_url)
+    for i = 1:30%height(modellist.model_url)
         if ~modellist.compilable(i)
             continue
         end
@@ -45,6 +44,7 @@ function serialize(subs)
     %serialize name --> interface
     name2interface = {};
     name2interface_roots = {};
+
 
     for i = 1:length(subs)
         name2interface{end + 1} = subs{i}.name2interface();
@@ -129,13 +129,4 @@ end
 function log(project_dir, file_name, message)
     cd(project_dir)
     Helper.log(file_name, message);
-end
-
-function reset_logs(file_list)
-    for i = 1:length(file_list)
-        file = file_list(i);
-        my_fileID = fopen(file, "w+");
-        fprintf(my_fileID, "");
-        fclose(my_fileID);
-    end
 end

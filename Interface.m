@@ -1,15 +1,18 @@
 classdef Interface
     properties
         inports = [];
+        in_mapping
         outports = [];
+        out_mapping
         specialports = [];
         has_buses = 0;
         empty_interface = 0;
+        
     end
     methods
         function obj = Interface(subsystem)
-            obj.inports = Port.compute_ports(subsystem, 'Inport', obj.inports);
-            obj.outports = Port.compute_ports(subsystem, 'Outport', obj.outports);
+            [obj.inports, obj.in_mapping] = Port.compute_ports(subsystem, 'Inport', obj.inports);
+            [obj.outports, obj.out_mapping] = Port.compute_ports(subsystem, 'Outport', obj.outports);
             obj.specialports = Port.compute_ports(subsystem, 'ActionPort', obj.specialports);
             obj.specialports = Port.compute_ports(subsystem, 'EnablePort', obj.specialports);
             obj.specialports = Port.compute_ports(subsystem, 'TriggerPort', obj.specialports);
@@ -56,6 +59,12 @@ classdef Interface
         function hash = hash(obj)
             ports = [Helper.get_hash(obj.inports) Helper.get_hash(obj.outports) Helper.get_hash(obj.specialports)];
             hash = join(ports, Helper.first_level_divider);
+        end
+
+        function map = mapping(obj)
+            map = struct;
+            map.in_mapping = obj.in_mapping;
+            map.out_mapping = obj.out_mapping;
         end
 
         function eq = same_as(obj, other_obj)

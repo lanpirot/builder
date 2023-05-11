@@ -68,7 +68,7 @@ classdef Port
     end
     
     methods(Static)
-        function ports = compute_ports(subsystem, search_string, ports)
+        function [ports, sortIDx] = compute_ports(subsystem, search_string, ports)
             port_handles = find_system(subsystem, 'FindAll','On', 'LookUnderMasks','on', 'SearchDepth',1, 'BlockType',search_string);
             
             for i = 1:length(port_handles)
@@ -79,7 +79,7 @@ classdef Port
                 end
                 ports = [ports next_port];
             end
-            ports = Helper.sort_by_field(ports, 'hsh');
+            [ports, sortIDx] = Helper.sort_by_field(ports, 'hsh');
         end
 
         function type = get_type(type_field)
