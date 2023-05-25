@@ -151,10 +151,9 @@ classdef BuilderModel
                 %now, rewire
                 BuilderModel.add_lines(copy_to, connected_blocks)
             end
-            annotation_text = "Copied system from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.original_full_name);
-            a = Simulink.Annotation(copy_to.full_name, annotation_text);
-            a.FontSize = 18;
-            a.BackgroundColor = 'lightBlue';
+            BuilderModel.annotate(copy_to.full_name, "Copied system from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.original_full_name))
+            %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
+            BuilderModel.annotate(copy_to.model_name, "Copied " + copy_from.element_name + " into: " + copy_to.ancestor_names)
         end
 
         function obj = check_models_correctness(obj)
@@ -246,6 +245,14 @@ classdef BuilderModel
                     add_line(system.model_name, ph.Outport(i), outports(j),  'autorouting','on')
                 end
             end
+        end
+
+        function annotate(system, text)
+            a = Simulink.Annotation(system, '');
+            a.FontSize = 18;
+            a.BackgroundColor = 'lightBlue';
+            a.Interpreter = 'rich';
+            a.Text = text;
         end
     end
 end
