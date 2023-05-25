@@ -1,3 +1,7 @@
+
+%could handle all functions of providing either Name, Model Name, Handle,
+%Ancestor, qualified Name etc.
+
 classdef SimulinkName
     properties
         original_model_name
@@ -21,8 +25,12 @@ classdef SimulinkName
             obj.full_name = full_name;
             split_name = split(full_name, "/");
 
-            obj.model_name = split_name{1};
-            obj.ancestor_names = join(split_name(1:end-1), "/");
+            try
+                obj.model_name = split_name{1};
+            catch
+                obj.model_name = split_name{1};
+            end
+            obj.ancestor_names = join(split_name(1:max(1, end-1)), "/");
             obj.element_name = split_name(end);
             obj.is_root = count(full_name,"/") == 0;
 

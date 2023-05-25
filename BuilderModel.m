@@ -11,6 +11,8 @@ classdef BuilderModel
         num_switched_subsystems
 
         built_correct
+
+        skip_save = 0;
     end
     
     methods
@@ -30,6 +32,7 @@ classdef BuilderModel
         function obj = save_version(obj)
             obj.version = obj.version + 1;
             new_suffix = "v" + string(obj.version);
+            %check whether the system with new system name is currently open
             save_system(obj.model_name, extractBefore(obj.root_model_path, strlength(obj.root_model_path)-3) + new_suffix + extractAfter(obj.root_model_path, strlength(obj.root_model_path)-4))
             close_system(obj.model_name + new_suffix)
             load_system(obj.root_model_path)
@@ -83,12 +86,14 @@ classdef BuilderModel
                     if ~strcmp(sub_complete_name, alt_complete_names{rindex})
                         sub_mapping = name2mapping({char(sub_complete_name)});
                         alt_mapping = name2mapping({char(alt_complete_names{rindex})});
-                        try
+                        %try
                             obj = obj.switch_sub_with_sub(model_name, sub_name, alt_complete_names{rindex}, sub_mapping, alt_mapping);
-                            obj = obj.save_version();
-                        catch ME
-                            Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alt_complete_names{rindex} + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
-                        end
+                            if obj.skip_save == 0
+                                obj = obj.save_version();
+                            end
+                        %catch ME
+                        %    Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alt_complete_names{rindex} + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                        %end
                         break
                     end
                 end
@@ -119,13 +124,22 @@ classdef BuilderModel
                 else
                     %copy from subsystem to root
                     Simulink.BlockDiagram.deleteContents(copy_to.full_name)
-                    Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.full_name, copy_to.full_name)
+                    try
+                        Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.full_name, copy_to.full_name)
+                    catch ME
+                        obj.skip_save = 1;
+                        Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alternate_sub_name + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                        return
+                    end
                 end
                 %we don't need to rewire the inputs/outputs after copying
             else
+                %get prior wiring
+                connected_blocks = BuilderModel.get_wiring(copy_to.full_name);
+                BuilderModel.remove_lines(copy_to.full_name);
                 if copy_from.is_root
                     %copy from root to subsystem
-                    Simulink.BlockDiagram.createSubsystem(get_param(sub_name, 'Handle'), 'Name', copied_name.element_name)
+                    Simulink.BlockDiagram.createSubsystem(get_param(sub_name, 'Handle'), 'Name', copied_name.element_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
                     Simulink.SubSystem.deleteContents(copied_name.full_name)
                     Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.full_name, copied_name.full_name)
                     set_param(copied_name.full_name, 'Name', copy_to.element_name)
@@ -135,16 +149,12 @@ classdef BuilderModel
                     add_block(copy_from.full_name, copy_to.full_name)
                 end
                 %now, rewire
-                %inports = get_ports_of_sub(copy_to.full_name, 'Inports')
-                %^^^^^^ handles of other elements/signals connected to each port
-                %rewire first inport: 
-                %outports = get_ports_of_sub(copy_to.full_name, 'Outports')
+                BuilderModel.add_lines(copy_to, connected_blocks)
             end
             annotation_text = "Copied system from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.original_full_name);
-            a = Simulink.Annotation(copy_to.full_name,annotation_text);
+            a = Simulink.Annotation(copy_to.full_name, annotation_text);
             a.FontSize = 18;
             a.BackgroundColor = 'lightBlue';
-            disp(annotation_text)
         end
 
         function obj = check_models_correctness(obj)
@@ -182,6 +192,60 @@ classdef BuilderModel
             hash = sub.interface_hash();
             
 
+        end
+
+
+        function connections = get_wiring(subsystem)
+            connections = struct;
+            connections.in_source_ports = {};
+            connections.out_destination_ports = {};
+            lines = get_param(subsystem, 'LineHandles');            
+            for i=1:length(lines.Inport)
+                line = lines.Inport(i);
+                if line == -1
+                    connections.in_source_ports{end + 1} = -1;
+                else
+                    connections.in_source_ports{end + 1} = get_param(line, "SrcPortHandle");
+                end
+            end
+
+            for i=1:length(lines.Outport)
+                line = lines.Outport(i);
+                if line == -1
+                    connections.in_source_ports{end + 1} = -1;
+                else
+                    connections.out_destination_ports{end + 1} = get_param(line, "DstPortHandle");
+                end
+            end
+        end
+
+        function remove_lines(subsystem)
+            line_handles = get_param(subsystem, "LineHandles");
+            BuilderModel.remove_lines2(line_handles.Inport);
+            BuilderModel.remove_lines2(line_handles.Outport);
+        end
+
+        function remove_lines2(lines)
+            for i = 1:length(lines)
+                if lines(i) ~= -1
+                    delete_line(lines(i))
+                end
+            end
+        end
+
+        function add_lines(system, ports)
+            ph = get_param(system.full_name, "PortHandles");
+            for i=1:length(ports.in_source_ports)
+                if ports.in_source_ports{i} ~= -1
+                    add_line(system.model_name, ports.in_source_ports{i}, ph.Inport(i), 'autorouting','on')
+                end
+            end
+            for i=1:length(ports.out_destination_ports)
+                outports = ports.out_destination_ports{i};
+                for j=1:length(outports)
+                    add_line(system.model_name, ph.Outport(i), outports(j),  'autorouting','on')
+                end
+            end
         end
     end
 end
