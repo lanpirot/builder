@@ -47,6 +47,7 @@ classdef BuilderModel
             delete(obj.root_model_path)
             copyfile(obj.original_model_path, obj.root_model_path);
             load_system(obj.root_model_path)
+            set_param(obj.model_name, "LockLinksToLibrary", "off")
         end
 
         function obj = switch_subs_in_model(obj, name2interface, name2mapping, interface2name)
@@ -103,6 +104,17 @@ classdef BuilderModel
         end
 
         function obj = switch_sub_with_sub(obj, model_name, sub_name, alternate_sub_name, sub_mapping, alt_mapping)
+            if ~all(sub_mapping.in_mapping == alt_mapping.in_mapping) || ~all(sub_mapping.out_mapping == alt_mapping.out_mapping)
+                disp(obj)
+                disp(model_name)
+                disp(sub_name)
+                disp(alternate_sub_name)
+                disp(sub_mapping.in_mapping)
+                disp(sub_mapping.out_mapping)
+                disp(alt_mapping.in_mapping)
+                disp(alt_mapping.out_mapping)
+            end
+
 
             [alt_model_path, alt_sub_qualified_name] = Helper.unfuse_hash(alternate_sub_name);
             switch_model_handle = load_system(alt_model_path);
@@ -151,7 +163,7 @@ classdef BuilderModel
                     add_block(copy_from.full_name, copy_to.full_name)
                 end
                 %now, rewire
-                BuilderModel.add_lines(copy_to, connected_blocks)
+                BuilderModel.add_lines(copy_to, connected_blocks, sub_mapping, alt_mapping)
             end
             BuilderModel.annotate(copy_to.full_name, "Copied system from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.original_full_name))
             %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
@@ -221,8 +233,19 @@ classdef BuilderModel
 
         function remove_lines(subsystem)
             line_handles = get_param(subsystem, "LineHandles");
+
+            BuilderModel.make_subsystem_editable(subsystem)
             BuilderModel.remove_lines2(line_handles.Inport);
             BuilderModel.remove_lines2(line_handles.Outport);
+        end
+
+        function make_subsystem_editable(subsystem)
+            while get_param(subsystem, "LinkStatus") ~= "none"
+                disp(subsystem)
+                disp(get_param(subsystem, "LinkStatus"))
+                set_param(subsystem, "LinkStatus", "none")
+                subsystem = get_param(subsystem, "Parent");
+            end
         end
 
         function remove_lines2(lines)
@@ -233,7 +256,7 @@ classdef BuilderModel
             end
         end
 
-        function add_lines(system, ports)
+        function add_lines(system, ports, sub_mapping, alt_mapping)
             ph = get_param(system.full_name, "PortHandles");
             for i=1:length(ports.in_source_ports)
                 if ports.in_source_ports{i} ~= -1

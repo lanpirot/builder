@@ -9,7 +9,7 @@ function builder()
     name2interface = dictionary(extractfield(name2interface, 'name'), extractfield(name2interface, 'ntrf'));
     interface2name = dictionary(extractfield(interface2name, 'ntrf'), extractfield(interface2name, 'names'));
     models = {};
-    for i = 1:length(name2interface_roots)
+    for i = 49:length(name2interface_roots)
         model = build_model(string(i), name2interface_roots(i), name2interface, name2mapping, interface2name);
         models{end + 1} = model;
     end

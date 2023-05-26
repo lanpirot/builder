@@ -9,7 +9,7 @@ function miner()
     evaluated = 0;
     subs = {};
     
-    for i = 1:250%height(modellist.model_url)
+    for i = 1:1000%height(modellist.model_url)
         if ~modellist.compilable(i)
             continue
         end
