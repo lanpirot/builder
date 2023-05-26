@@ -1,18 +1,15 @@
-
-%could handle all functions of providing either Name, Model Name, Handle,
-%Ancestor, qualified Name etc.
-
 classdef SimulinkName
     properties
         original_model_name
         original_full_name
 
         model_name
+        
+        handle
         full_name
-
-
-        ancestor_names
         element_name
+        ancestor_names
+        
         is_root
     end
     

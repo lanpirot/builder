@@ -22,9 +22,9 @@ classdef BuilderModel
             obj.original_model_name = string(tmp{end});
             obj.original_model_path = tmp{1};
 
-            obj = obj.copy_version();
+            obj = obj.copy_version(0);
 
-            load_system(obj.root_model_path)
+            
             obj.num_original_subsystems = length(Subsystem.get_contained_subsystems(get_param(obj.model_name, 'Handle')));
             close_system(obj.root_model_path, 0)
         end
@@ -35,41 +35,41 @@ classdef BuilderModel
             %check whether the system with new system name is currently open
             save_system(obj.model_name, extractBefore(obj.root_model_path, strlength(obj.root_model_path)-3) + new_suffix + extractAfter(obj.root_model_path, strlength(obj.root_model_path)-4))
             close_system(obj.model_name + new_suffix)
+        end
+
+        function obj = copy_version(obj, close_first)            
+            obj.model_name = "model" + string(obj.uuid);
+            obj.root_model_path = Helper.playground + filesep + obj.model_name + extractAfter(obj.original_model_path,strlength(obj.original_model_path)-4);
+            obj.root_model_path = char(obj.root_model_path.replace("\", "/"));
+            if close_first
+                close_system(obj.root_model_path, 0)
+            end
+            delete(obj.root_model_path)
+            copyfile(obj.original_model_path, obj.root_model_path);
             load_system(obj.root_model_path)
         end
 
-        function obj = copy_version(obj)            
-            obj.model_name = "model" + string(obj.uuid);
-            obj.root_model_path = Helper.playground + filesep + obj.model_name + extractAfter(obj.original_model_path,strlength(obj.original_model_path)-4);
-            copyfile(obj.original_model_path, obj.root_model_path);
-        end
-
         function obj = switch_subs_in_model(obj, name2interface, name2mapping, interface2name)
-            %try
-                load_system(obj.root_model_path);
-                
-                curr_depth = 0;
-                while 1
-                    sub_at_depth_found = 0;
-                    sub_names = Helper.find_subsystems(obj.model_name);
-                    sub_names{end + 1} = char(obj.model_name);
-                    for i = 1:length(sub_names)
-                        sub_name = sub_names{i};
-                        if curr_depth == 0 && Subsystem.is_root_static(sub_name) || count(get_param(sub_name, 'Parent'), "/") == curr_depth - 1 && Subsystem.is_subsystem(sub_name) && ~Subsystem.is_root_static(sub_name)
-                            sub_at_depth_found = 1;
-                            obj = obj.switch_sub(obj.model_name, sub_name, name2interface, name2mapping, interface2name);
-                        end
+            load_system(obj.root_model_path);
+            
+            curr_depth = 0;
+            while 1
+                sub_at_depth_found = 0;
+                sub_names = Helper.find_subsystems(obj.model_name);
+                sub_names{end + 1} = char(obj.model_name);
+                for i = 1:length(sub_names)
+                    sub_name = sub_names{i};
+                    if curr_depth == 0 && Subsystem.is_root_static(sub_name) || count(get_param(sub_name, 'Parent'), "/") == curr_depth - 1 && Subsystem.is_subsystem(sub_name) && ~Subsystem.is_root_static(sub_name)
+                        sub_at_depth_found = 1;
+                        obj = obj.switch_sub(obj.model_name, sub_name, name2interface, name2mapping, interface2name);
                     end
-                    if ~sub_at_depth_found
-                        break;
-                    end
-                    curr_depth = curr_depth + 1;
                 end
-                close_system(obj.root_model_path, 0);
-            %catch ME
-                %Helper.log('log_switch_up', string(jsonencode(obj)) + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
-                %throw(ME) 
-            %end
+                if ~sub_at_depth_found
+                    break;
+                end
+                curr_depth = curr_depth + 1;
+            end
+            close_system(obj.root_model_path, 0);
             delete(obj.root_model_path)
         end
 
@@ -87,10 +87,12 @@ classdef BuilderModel
                         sub_mapping = name2mapping({char(sub_complete_name)});
                         alt_mapping = name2mapping({char(alt_complete_names{rindex})});
                         %try
-                            obj = obj.switch_sub_with_sub(model_name, sub_name, alt_complete_names{rindex}, sub_mapping, alt_mapping);
+                            obj = obj.switch_sub_with_sub(model_name, sub_name, alt_complete_names{rindex}, sub_mapping{1}, alt_mapping{1});
+                            obj = obj.check_models_correctness();
                             if obj.skip_save == 0
                                 obj = obj.save_version();
                             end
+                            obj = obj.copy_version(1);
                         %catch ME
                         %    Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alt_complete_names{rindex} + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
                         %end
@@ -153,11 +155,14 @@ classdef BuilderModel
             end
             BuilderModel.annotate(copy_to.full_name, "Copied system from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.original_full_name))
             %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
-            BuilderModel.annotate(copy_to.model_name, "Copied " + copy_from.element_name + " into: " + copy_to.ancestor_names)
+            BuilderModel.annotate(copy_to.model_name, "Copied " + copy_from.full_name + " to: " + copy_to.full_name)
         end
 
         function obj = check_models_correctness(obj)
             obj.built_correct = obj.loadable() && obj.compilable();
+            if ~obj.built_correct
+                obj.skip_save = 1;
+            end
         end
 
         function ld = loadable(obj)
@@ -175,8 +180,12 @@ classdef BuilderModel
             try
                 eval([char(obj.model_name), '([],[],[],''compile'');']);
                 cp = 1;
-                eval([char(obj.model_name), '([],[],[],''term'');']);
-                close_system(obj.path)
+                try
+                    while 1
+                        eval([char(obj.model_name), '([],[],[],''term'');']);
+                    end
+                catch
+                end
             catch
                 cp = 0;
             end
@@ -186,14 +195,6 @@ classdef BuilderModel
     end
 
     methods (Static)
-        function eq_sub = find_eq_sub(sub, eq_classes)
-            eq_sub = [];
-            hash = sub.interface_hash();
-            
-
-        end
-
-
         function connections = get_wiring(subsystem)
             connections = struct;
             connections.in_source_ports = {};
@@ -236,13 +237,13 @@ classdef BuilderModel
             ph = get_param(system.full_name, "PortHandles");
             for i=1:length(ports.in_source_ports)
                 if ports.in_source_ports{i} ~= -1
-                    add_line(system.model_name, ports.in_source_ports{i}, ph.Inport(i), 'autorouting','on')
+                    add_line(system.ancestor_names, ports.in_source_ports{i}, ph.Inport(i), 'autorouting','on')
                 end
             end
             for i=1:length(ports.out_destination_ports)
                 outports = ports.out_destination_ports{i};
                 for j=1:length(outports)
-                    add_line(system.model_name, ph.Outport(i), outports(j),  'autorouting','on')
+                    add_line(system.ancestor_names, ph.Outport(i), outports(j),  'autorouting','on')
                 end
             end
         end

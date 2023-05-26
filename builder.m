@@ -11,7 +11,6 @@ function builder()
     models = {};
     for i = 1:length(name2interface_roots)
         model = build_model(string(i), name2interface_roots(i), name2interface, name2mapping, interface2name);
-        model = model.check_models_correctness();
         models{end + 1} = model;
     end
     disp(string(Helper.found_alt(0)) + " subsystems could have been changed")
