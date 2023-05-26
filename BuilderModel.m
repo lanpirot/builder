@@ -240,7 +240,7 @@ classdef BuilderModel
         end
 
         function make_subsystem_editable(subsystem)
-            while get_param(subsystem, "LinkStatus") ~= "none"
+            while count(subsystem,"/") > 0 && get_param(subsystem, "LinkStatus") ~= "none"
                 disp(subsystem)
                 disp(get_param(subsystem, "LinkStatus"))
                 set_param(subsystem, "LinkStatus", "none")
@@ -260,13 +260,13 @@ classdef BuilderModel
             ph = get_param(system.full_name, "PortHandles");
             for i=1:length(ports.in_source_ports)
                 if ports.in_source_ports{i} ~= -1
-                    add_line(system.ancestor_names, ports.in_source_ports{i}, ph.Inport(i), 'autorouting','on')
+                    add_line(system.ancestor_names, ports.in_source_ports{sub_mapping.in_mapping(i)}, ph.Inport(alt_mapping.in_mapping(i)), 'autorouting','on')
                 end
             end
             for i=1:length(ports.out_destination_ports)
-                outports = ports.out_destination_ports{i};
+                outports = ports.out_destination_ports{sub_mapping.out_mapping(i)};
                 for j=1:length(outports)
-                    add_line(system.ancestor_names, ph.Outport(i), outports(j),  'autorouting','on')
+                    add_line(system.ancestor_names, ph.Outport(alt_mapping.out_mapping(i)), outports(j), 'autorouting','on')
                 end
             end
         end

@@ -6,6 +6,7 @@ classdef Port
         dimensions
         sample_time
         hsh
+        hshpn
 
         is_special_port = 0;
     end
@@ -37,6 +38,7 @@ classdef Port
                 obj.type = Port.get_type(get_param(port,'CompiledPortDataTypes'));
             end
             obj.hsh = obj.hash();
+            obj.hshpn = obj.hashplusname();
         end
 
         function obj = update_bus(obj, model)
@@ -65,6 +67,10 @@ classdef Port
         function hsh = hash(obj)
             hsh = obj.type + " " + obj.dimensions.print() + " # " + obj.sample_time.print();
         end
+
+        function hshpn = hashplusname(obj)
+            hshpn = obj.type + " " + obj.dimensions.print() + " # " + obj.sample_time.print() + get_param(obj.handle, 'Name');
+        end
     end
     
     methods(Static)
@@ -79,7 +85,7 @@ classdef Port
                 end
                 ports = [ports next_port];
             end
-            [ports, sortIDx] = Helper.sort_by_field(ports, 'hsh');
+            [ports, sortIDx] = Helper.sort_by_field(ports, 'hshpn');
         end
 
         function type = get_type(type_field)
