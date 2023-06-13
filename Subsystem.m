@@ -9,6 +9,7 @@ classdef Subsystem
         uuid            %uuid of the subsystem itself
         contained_uuids %uuids of direct children of the subsytem
         num_contained_elements
+        is_root
 
         interface
         skip_it
@@ -24,7 +25,7 @@ classdef Subsystem
         function obj = Subsystem(subsystem_handle, model_handle, model_path, project_path)
             obj.handle = subsystem_handle;
             obj.name = Subsystem.get_name(obj.handle);
-            obj.qualified_name = Subsystem.get_qualified_name(obj.handle);
+            obj.qualified_name = SimulinkName.get_qualified_name(obj.handle);
             obj.model_name = get_param(model_handle, 'Name');
             obj.model_path = model_path;
             obj.project_path = project_path;
@@ -32,25 +33,26 @@ classdef Subsystem
             obj.interface = Interface(obj.handle);
         end
 
-        function obj = construct2(obj)
+        function obj = constructor2(obj)
             obj.uuid = Subsystem.get_uuid(obj.model_path, obj.qualified_name);
-            obj.contained_uuids = Subsystem.get_uuids(Subsystem.get_contained_subsystems(obj.handle), obj.model_path);
-            obj.num_contained_elements = length(find_system(obj.handle, 'LookUnderMasks', 'on', 'FollowLinks','on'));
+            obj.contained_uuids = Subsystem.get_uuids(Helper.get_contained_subsystems(obj.handle), obj.model_path);
+            obj.num_contained_elements = length(Helper.find_elements(obj.handle));
             obj.buses_present = obj.buses_in_obj_or_ancestors();
             obj.skip_it = obj.buses_present || ~Subsystem.is_subsystem(obj.handle);
+            obj.is_root = SimulinkName.is_root(obj.handle);
             if ~obj.skip_it
                 obj.compute_meta_data()
             end
         end
 
         function compute_meta_data(obj)
-            %own_depth = Helper.get_depth(get_param(obj.handle, 'Parent'));
-            %contained_blocks = find_system(obj.handle,'LookUnderMasks','on', 'Type', 'Block');
+            %own_depth = Helper.get_depth(obj.handle);
+            %contained_blocks = %%find_system(obj.handle,'LookUnderMasks','on', 'Type', 'Block');%%
             % obj.max_depth = 0;
             % obj.block_types = {};
             % for i = 1:length(contained_blocks)
             %     block = contained_blocks(i);
-            %     obj.max_depth = max(obj.max_depth, Helper.get_depth(get_param(block, 'Parent')) - own_depth);
+            %     obj.max_depth = max(obj.max_depth, Helper.get_depth(block) - own_depth);
             %     block_type = get_param(block, 'BlockType');
             %     if ~any(count(obj.block_types, block_type))
             %         obj.block_types = [obj.block_types ; block_type];
@@ -64,7 +66,7 @@ classdef Subsystem
             if obj.interface.has_buses
                 return
             end
-            contained_subsystems = Subsystem.get_contained_subsystems(obj.handle);
+            contained_subsystems = Helper.get_contained_subsystems(obj.handle);
             for i = 1:length(contained_subsystems)
                 inner_interface = Interface(contained_subsystems(i));
                 if inner_interface.has_buses
@@ -75,7 +77,7 @@ classdef Subsystem
         end
 
         function str = print(obj)
-            uuids = join(Subsystem.get_uuids(Subsystem.get_contained_subsystems(obj.handle), obj.model_path), Helper.second_level_divider);
+            uuids = join(Subsystem.get_uuids(Helper.get_contained_subsystems(obj.handle), obj.model_path), Helper.second_level_divider);
             if isempty(uuids)
                 uuids = "";
             end
@@ -91,7 +93,7 @@ classdef Subsystem
         end
 
         function hsh = name_hash(obj)
-            hsh = Helper.name_hash(obj.model_path, obj.qualified_name);
+            hsh = SimulinkName.name_hash(obj.model_path, obj.qualified_name);
         end
         
         function n2i = name2interface(obj)
@@ -99,10 +101,6 @@ classdef Subsystem
             n2i.name = obj.name_hash();
             n2i.ntrf = obj.interface_hash();
             n2i.mapping = obj.interface_mapping();
-        end
-
-        function r = is_root(obj)
-            r = count(obj.qualified_name, "/") == 0;
         end
 
         function bool = is_in_subs(obj, sub_index, subs)
@@ -123,16 +121,8 @@ classdef Subsystem
             name = get_param(handle, 'Name');
         end
 
-        function qname = get_qualified_name(handle)
-            if strlength(string(get_param(handle, 'Parent'))) > 0
-                qname = string(get_param(handle, 'Parent')) + "/" + Subsystem.get_name(handle);
-            else
-                qname = Subsystem.get_name(handle);
-            end
-        end
-
         function bool = is_subsystem(handle)
-            bool = length(find_system(handle,'LookUnderMasks','on')) > 1;
+            bool = length(Helper.find_elements(handle)) > 1;
         end
 
         function uuid = get_uuid(model_path, qname)
@@ -142,22 +132,8 @@ classdef Subsystem
         function uuids = get_uuids(handles, model_path)
             uuids = {};
             for i = 1:length(handles)
-                uuids{end + 1} = Subsystem.get_uuid(model_path, Subsystem.get_qualified_name(handles(i)));
+                uuids{end + 1} = Subsystem.get_uuid(model_path, SimulinkName.get_qualified_name(handles(i)));
             end
-        end
-
-        function subsystems = get_contained_subsystems(handle)
-            pot_subsystems = Helper.find_subsystems(handle);
-            subsystems = [];
-            for i = 2:length(pot_subsystems)
-                if Subsystem.is_subsystem(pot_subsystems(i))
-                    subsystems(end + 1) = pot_subsystems(i);
-                end
-            end
-        end
-
-        function bool = is_root_static(subsystem)
-            bool = strlength(get_param(subsystem, 'Parent')) == 0;
         end
     end
 end

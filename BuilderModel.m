@@ -25,7 +25,7 @@ classdef BuilderModel
             obj = obj.copy_version(0);
 
             
-            obj.num_original_subsystems = length(Subsystem.get_contained_subsystems(get_param(obj.model_name, 'Handle')));
+            obj.num_original_subsystems = length(Helper.get_contained_subsystems(get_param(obj.model_name, 'Handle')));
             close_system(obj.root_model_path, 0)
         end
 
@@ -60,7 +60,7 @@ classdef BuilderModel
                 sub_names{end + 1} = char(obj.model_name);
                 for i = 1:length(sub_names)
                     sub_name = sub_names{i};
-                    if curr_depth == 0 && Subsystem.is_root_static(sub_name) || count(get_param(sub_name, 'Parent'), "/") == curr_depth - 1 && Subsystem.is_subsystem(sub_name) && ~Subsystem.is_root_static(sub_name)
+                    if curr_depth == 0 && SimulinkName.is_root(sub_name) || Helper.get_depth(sub_name) == curr_depth && Subsystem.is_subsystem(sub_name) && ~SimulinkName.is_root(sub_name)
                         sub_at_depth_found = 1;
                         obj = obj.switch_sub(obj.model_name, sub_name, name2interface, name2mapping, interface2name);
                     end
@@ -75,8 +75,8 @@ classdef BuilderModel
         end
 
         function obj = switch_sub(obj, model_name, sub_name, name2interface, name2mapping, interface2name)
-            qualified_name = Helper.get_qualified_name_from_handle(obj.original_model_name, sub_name);
-            sub_complete_name = Helper.name_hash(obj.original_model_path, qualified_name);
+            qualified_name = SimulinkName.get_qualified_name_from_handle(obj.original_model_name, sub_name);
+            sub_complete_name = SimulinkName.name_hash(obj.original_model_path, qualified_name);
             sub_interface = name2interface({char(sub_complete_name)});
             alt_complete_names = interface2name(sub_interface);
             alt_complete_names = alt_complete_names{1};
@@ -116,20 +116,20 @@ classdef BuilderModel
             end
 
 
-            [alt_model_path, alt_sub_qualified_name] = Helper.unfuse_hash(alternate_sub_name);
+            [alt_model_path, alt_sub_qualified_name] = SimulinkName.unfuse_hash(alternate_sub_name);
             switch_model_handle = load_system(alt_model_path);
             load_system(alt_sub_qualified_name)
             switch_sub_handle = get_param(alt_sub_qualified_name, 'Handle');
 
             % 
             % 
-            copy_from = SimulinkName(Helper.get_qualified_name_from_handle(get_param(switch_model_handle, 'Name'), switch_sub_handle), get_param(switch_model_handle, 'Name'));
-            copy_to = SimulinkName(Helper.get_qualified_name_from_handle(get_param(model_name, 'Name'), sub_name), obj.original_model_name);
+            copy_from = SimulinkName(SimulinkName.get_qualified_name_from_handle(get_param(switch_model_handle, 'Name'), switch_sub_handle), get_param(switch_model_handle, 'Name'));
+            copy_to = SimulinkName(SimulinkName.get_qualified_name_from_handle(get_param(model_name, 'Name'), sub_name), obj.original_model_name);
 
             copied_name = SimulinkName(join([copy_to.ancestor_names "sub" + string(Helper.found_alt(1))], "/"), obj.original_model_name);
-            if copy_to.is_root
+            if copy_to.root_bool
                 
-                if copy_from.is_root
+                if copy_from.root_bool
                     %copy from root to root
                     close_system(obj.model_name)
                     delete(obj.root_model_path)
@@ -151,7 +151,7 @@ classdef BuilderModel
                 %get prior wiring
                 connected_blocks = BuilderModel.get_wiring(copy_to.full_name);
                 BuilderModel.remove_lines(copy_to.full_name);
-                if copy_from.is_root
+                if copy_from.root_bool
                     %copy from root to subsystem
                     Simulink.BlockDiagram.createSubsystem(get_param(sub_name, 'Handle'), 'Name', copied_name.element_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
                     Simulink.SubSystem.deleteContents(copied_name.full_name)
@@ -165,7 +165,7 @@ classdef BuilderModel
                 %now, rewire
                 BuilderModel.add_lines(copy_to, connected_blocks, sub_mapping, alt_mapping)
             end
-            BuilderModel.annotate(copy_to.full_name, "Copied system from: " + alternate_sub_name + newline + " into: " + Helper.name_hash(obj.original_model_path, copy_to.original_full_name))
+            BuilderModel.annotate(copy_to.full_name, "Copied system from: " + alternate_sub_name + newline + " into: " + SimulinkName.name_hash(obj.original_model_path, copy_to.original_full_name))
             %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
             BuilderModel.annotate(copy_to.model_name, "Copied " + copy_from.full_name + " to: " + copy_to.full_name)
         end
@@ -187,7 +187,7 @@ classdef BuilderModel
         end
 
         function cp = compilable(obj)
-            Helper.make_garbage()
+            Helper.create_garbage_dir()
             project_dir = Helper.project_dir;
             try
                 eval([char(obj.model_name), '([],[],[],''compile'');']);

@@ -1,28 +1,25 @@
 function miner()
     warning('off','all')
-    
-    project_dir = Helper.project_dir;
-    modellist = tdfread(Helper.modellist, 'tab');
-
     Helper.reset_logs([Helper.interface2name, Helper.interface2name_unique, Helper.name2interface, Helper.name2interface_roots, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
-
     evaluated = 0;
     subs = {};
-    
-    for i = 1:100%height(modellist.model_url)
+    project_dir = Helper.project_dir;
+
+    modellist = tdfread(Helper.modellist, 'tab');
+    for i = 1:height(modellist.model_url)
         if ~modellist.compilable(i)
             continue
         end
-        Helper.make_garbage();
+        Helper.create_garbage_dir();
 
-        model_path = string(strip(modellist.model_url(i, :),"right"));
+        model_path = string(strip(modellist.model_url(i, :), "right"));
         try
             model_handle = load_system(model_path);
             model_name = get_param(model_handle, 'Name');
             eval([model_name, '([],[],[],''compile'');']);
             cd(project_dir)
-            %disp("Evaluating number " + string(i) + " " + model_path)
-            subs = compute_interfaces(subs, model_handle, model_path, strip(modellist.project_url(i, :),"right"));
+            disp("Evaluating model no. " + string(i) + " " + model_path)
+            subs = compute_interfaces(subs, model_handle, model_path, strip(modellist.project_url(i, :), "right"));
 
             try_end(model_name);
             try_close(model_name, model_path);
@@ -45,19 +42,18 @@ function serialize(subs)
     name2interface = {};
     name2interface_roots = {};
 
-
     for i = 1:length(subs)
         name2interface{end + 1} = subs{i}.name2interface();
-        if subs{i}.is_root()
+        if subs{i}.is_root
             name2interface_roots{end + 1} = subs{i}.name2interface();
         end
     end
     Helper.file_print(Helper.name2interface, jsonencode(name2interface));
     Helper.file_print(Helper.name2interface_roots, jsonencode(name2interface_roots));
 
+
     %serialize interface --> names
     interface2name = dictionary();
-    interface2name_unique = dictionary();
 
     for i = 1:length(subs)
         ntrf_hash = subs{i}.interface_hash();
@@ -69,7 +65,7 @@ function serialize(subs)
         eq = eq.add_subsystem(subs{i});
         interface2name(ntrf_hash) = eq;
     end
-    %transfrom Subsystem into full subsystem path in interface2name_unique
+    
     
     interface2name_struct = {};
     interface2name_unique_struct = {};
@@ -91,16 +87,16 @@ end
 
 function subs = compute_interfaces(subs, model_handle, model_path, project_path)
     subsystems = Helper.find_subsystems(model_handle);
-    subsystems(end + 1) = model_handle;
+    subsystems(end + 1) = model_handle;%the root subsystem
     for j = 1:length(subsystems)
-        subs = compute_interface(subs, model_handle, model_path, project_path, subsystems(j));
+        subs = compute_interface(subs, subsystems(j), model_handle, model_path, project_path);
     end
     %disp("#subsystems analyzed: " + string(length(subsystems)) + " #equivalence classes: " + string(length(keys(hash_dic))))
 end
 
-function subs = compute_interface(subs, model_handle, model_path, project_path, subsystem_handle)
+function subs = compute_interface(subs, subsystem_handle, model_handle, model_path, project_path)
     subsystem = Subsystem(subsystem_handle, model_handle, model_path, project_path);
-    subsystem = subsystem.construct2();
+    subsystem = subsystem.constructor2();
     if subsystem.skip_it
         return
     end

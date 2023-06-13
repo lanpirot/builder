@@ -1,17 +1,17 @@
 function gathermodels()
-    modellist = [dir(fullfile(helper.models_path, "**" + filesep + "*.slx")); dir(fullfile(helper.models_path, "**" + filesep + "*.mdl"))];
-    project_dir = helper.project_dir;
-    project_info = tdfread(helper.project_info, 'tab');
-    fileID = fopen(helper.modellist, "w+");
+    modellist = [dir(fullfile(Helper.models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.models_path, "**" + filesep + "*.mdl"))];
+    project_dir = Helper.project_dir;
+    project_info = tdfread(Helper.project_info, 'tab');
+    fileID = fopen(Helper.modellist, "w+");
     fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "closable" + newline);
     for i = 1:length(modellist)
         cd(project_dir)
         model = modellist(i);
         folder = strsplit(model.folder, filesep);
-        project_id = double(string(folder{helper.project_id_pwd_number}));
+        project_id = double(string(folder{Helper.project_id_pwd_number}));
         project_info_row = find(project_info.path == project_id);
         project_url = project_info.url(project_info_row,:);
-        project_url = helper.rstrip(project_url);
+        project_url = Helper.rstrip(project_url);
 
         model_url = string(model.folder) + filesep + model.name;
 
@@ -48,5 +48,6 @@ function gathermodels()
         fprintf(fileID, row);
     end
     fclose(fileID);
+    disp("Saved gathered model info to " + string(Helper.modellist))
 end
         

@@ -75,7 +75,7 @@ classdef Port
     
     methods(Static)
         function [ports, sortIDx] = compute_ports(subsystem, search_string, ports)
-            port_handles = find_system(subsystem, 'FindAll','On', 'LookUnderMasks','on', 'SearchDepth',1, 'BlockType',search_string);
+            port_handles = Helper.find_ports(subsystem, search_string);
             
             for i = 1:length(port_handles)
                 next_port = Port(port_handles(i), i, search_string);

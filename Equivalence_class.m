@@ -1,4 +1,7 @@
 classdef Equivalence_class
+    %Equivalency classes get created that hold 'equivalent' interfaces of
+    %subsystems
+    %'equivalent' being that the subsystems could be exchanged in the model
     properties
         hsh
         subsystems;
@@ -10,8 +13,14 @@ classdef Equivalence_class
         end
 
         function obj = add_subsystem(obj, subsystem)
+            if length(obj.subsystems) < 1
+                obj.hsh = subsystem.interface_hash();
+            else
+                if obj.hsh ~= subsystem.interface_hash()
+                    throw(MException('Equivalence_class', 'This subsystem is not equivalent ot others in class')) 
+                end
+            end
             obj.subsystems{end + 1} = subsystem;
-            obj.hsh = subsystem.interface_hash();
         end
 
         function hsh = hash(obj)
