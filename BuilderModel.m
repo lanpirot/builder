@@ -17,16 +17,22 @@ classdef BuilderModel
     
     methods
         function obj = BuilderModel(uuid, root_model)
-            obj.uuid = uuid;
-            tmp = split(root_model.name, Helper.second_level_divider);
-            obj.original_model_name = string(tmp{end});
-            obj.original_model_path = tmp{1};
-
-            obj = obj.copy_version(0);
-
-            
-            obj.num_original_subsystems = length(Helper.get_contained_subsystems(get_param(obj.model_name, 'Handle')));
-            close_system(obj.root_model_path, 0)
+            try
+                obj.uuid = uuid;
+                tmp = split(root_model.name, Helper.second_level_divider);
+                obj.original_model_name = string(tmp{end});
+                obj.original_model_path = tmp{1};
+    
+                obj = obj.copy_version(0);
+    
+    
+                
+                obj.num_original_subsystems = length(Helper.get_contained_subsystems(get_param(obj.model_name, 'Handle')));
+                close_system(obj.root_model_path, 0)
+            catch ME
+                Helper.log('log_construct', string(jsonencode(obj)) + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
+                obj.version = -1;
+            end
         end
 
         function obj = save_version(obj)
@@ -47,7 +53,6 @@ classdef BuilderModel
             delete(obj.root_model_path)
             copyfile(obj.original_model_path, obj.root_model_path);
             load_system(obj.root_model_path)
-            disp(obj)
             set_param(obj.model_name, "LockLinksToLibrary", "off")%sometimes causes errors
         end
 
@@ -241,8 +246,6 @@ classdef BuilderModel
 
         function make_subsystem_editable(subsystem)
             while Helper.get_depth(subsystem) > 0 && get_param(subsystem, "LinkStatus") ~= "none"
-                disp(subsystem)
-                disp(get_param(subsystem, "LinkStatus"))
                 set_param(subsystem, "LinkStatus", "none")
                 subsystem = get_param(subsystem, "Parent");
             end

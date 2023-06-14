@@ -25,5 +25,7 @@ end
 
 function model = build_model(uuid, start_system, name2interface, name2mapping, interface2name)
     model = BuilderModel(uuid, start_system);
-    model = model.switch_subs_in_model(name2interface, name2mapping, interface2name);
+    if model.version >= 0 
+        model = model.switch_subs_in_model(name2interface, name2mapping, interface2name);
+    end
 end
