@@ -5,7 +5,7 @@ classdef Dimensions
 
     methods
         function obj = Dimensions(dims)
-            if isempty(dims)
+            if ~exist('dims', 'var')
                 return
             end
             if ischar(dims)
@@ -40,6 +40,10 @@ classdef Dimensions
 
     methods (Static)
         function ibu = is_bus(dims)
+            if ~exist('dims', 'var') || length(dims) == 0
+                ibu = 0;
+                return
+            end
             if isempty(dims.Inport)
                 dims = dims.Outport;
             else

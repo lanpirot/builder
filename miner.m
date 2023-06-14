@@ -6,8 +6,8 @@ function miner()
     project_dir = Helper.project_dir;
 
     modellist = tdfread(Helper.modellist, 'tab');
-    for i = 1:height(modellist.model_url)
-        if ~modellist.compilable(i)
+    for i = 1:30%height(modellist.model_url)
+        if Helper.needs_to_be_compilable && ~modellist.compilable(i)
             continue
         end
         Helper.create_garbage_dir();
@@ -16,12 +16,17 @@ function miner()
         try
             model_handle = load_system(model_path);
             model_name = get_param(model_handle, 'Name');
-            eval([model_name, '([],[],[],''compile'');']);
+
+            if Helper.needs_to_be_compilable
+                eval([model_name, '([],[],[],''compile'');']);
+            end
             cd(project_dir)
             disp("Evaluating model no. " + string(i) + " " + model_path)
             subs = compute_interfaces(subs, model_handle, model_path, strip(modellist.project_url(i, :), "right"));
 
-            try_end(model_name);
+            if Helper.needs_to_be_compilable
+                try_end(model_name);
+            end
             try_close(model_name, model_path);
             evaluated = evaluated + 1;
         catch ME

@@ -18,27 +18,67 @@ classdef Port
             obj.handle = port;
             obj.num = num;
 
-            obj.sample_time = SampleTime(get_param(port, 'CompiledSampleTime'));
-            obj.is_special_port = any(ismember(["ActionPort", "EnablePort", "TriggerPort"], port_type));
-            if obj.is_special_port
-                obj.type = port_type;
-                %get Data Type of TriggerPort https://www.mathworks.com/help/simulink/slref/trigger.html
-                if strcmp(port_type, "ActionPort")
-                    obj.dimensions = Dimensions([]);
-                else
-                    obj.dimensions = Dimensions(get_param(port, 'PortDimensions'));
-                end
+            obj.sample_time = obj.get_sample_time();
 
-            else
-                if Dimensions.is_bus(get_param(port, 'CompiledPortDimensions'))
-                    obj.handle = -1;
-                    return
-                end
-                obj.dimensions = Dimensions(get_param(port, 'CompiledPortDimensions'));
-                obj.type = Port.get_type(get_param(port,'CompiledPortDataTypes'));
-            end
+            
+            obj.handle = obj.check_if_bus();
+            
+            obj.is_special_port = any(ismember(["ActionPort", "EnablePort", "TriggerPort"], port_type));
+            obj.dimensions = obj.get_dimensions();
+            obj.type = obj.get_datatype();
+
+            
             obj.hsh = obj.hash();
             obj.hshpn = obj.hashplusname();
+        end
+
+        function handle = check_if_bus(obj)
+            handle = obj.handle;
+            if Helper.dimensions && Dimensions.is_bus(get_param(obj.handle, 'CompiledPortDimensions'))
+                handle = -1;
+            end
+        end
+
+        function sample_time = get_sample_time(obj)
+            if Helper.sample_times
+                sample_time = SampleTime(get_param(obj.handle, 'CompiledSampleTime'));
+            else
+                sample_time = SampleTime();
+            end
+        end
+
+        function type = get_datatype(obj)
+            if Helper.data_types
+                if obj.is_special_port
+                    type = port_type;
+                    %get Data Type of TriggerPort https://www.mathworks.com/help/simulink/slref/trigger.html    
+                else
+                    if Dimensions.is_bus(get_param(obj.handle, 'CompiledPortDimensions'))
+                        obj.handle = -1;
+                        return
+                    end
+                    type = Port.get_type(get_param(obj.handle,'CompiledPortDataTypes'));
+                end
+            else
+                type = '';
+            end
+        end
+
+        function dims = get_dimensions(obj)
+            if Helper.dimensions
+                if obj.is_special_port
+                    if strcmp(port_type, "ActionPort")
+                        dims = Dimensions([]);
+                    else
+                        dims = Dimensions(get_param(obj.handle, 'PortDimensions'));
+                    end
+    
+                else
+                    dims = Dimensions(get_param(obj.handle, 'CompiledPortDimensions'));
+                end
+            else
+                dims = Dimensions();
+            end
         end
 
         function obj = update_bus(obj, model)

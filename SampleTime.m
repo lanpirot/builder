@@ -6,6 +6,12 @@ classdef SampleTime
 
     methods
         function obj = SampleTime(time)
+            if ~exist('time', 'var')
+                obj.sample_start = 0;
+                obj.sample_diff = 0;
+                return
+            end
+
             if height(time) == 1
                 obj.sample_start = time(1);
                 obj.sample_diff = time(2);

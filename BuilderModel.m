@@ -47,7 +47,8 @@ classdef BuilderModel
             delete(obj.root_model_path)
             copyfile(obj.original_model_path, obj.root_model_path);
             load_system(obj.root_model_path)
-            set_param(obj.model_name, "LockLinksToLibrary", "off")
+            disp(obj)
+            set_param(obj.model_name, "LockLinksToLibrary", "off")%sometimes causes errors
         end
 
         function obj = switch_subs_in_model(obj, name2interface, name2mapping, interface2name)
@@ -104,16 +105,16 @@ classdef BuilderModel
         end
 
         function obj = switch_sub_with_sub(obj, model_name, sub_name, alternate_sub_name, sub_mapping, alt_mapping)
-            if ~all(sub_mapping.in_mapping == alt_mapping.in_mapping) || ~all(sub_mapping.out_mapping == alt_mapping.out_mapping)
-                disp(obj)
-                disp(model_name)
-                disp(sub_name)
-                disp(alternate_sub_name)
-                disp(sub_mapping.in_mapping)
-                disp(sub_mapping.out_mapping)
-                disp(alt_mapping.in_mapping)
-                disp(alt_mapping.out_mapping)
-            end
+            %if ~all(sub_mapping.in_mapping == alt_mapping.in_mapping) || ~all(sub_mapping.out_mapping == alt_mapping.out_mapping)
+            %    disp(obj)
+            %    disp(model_name)
+            %    disp(sub_name)
+            %    disp(alternate_sub_name)
+            %    disp(sub_mapping.in_mapping)
+            %    disp(sub_mapping.out_mapping)
+            %    disp(alt_mapping.in_mapping)
+            %    disp(alt_mapping.out_mapping)
+            %end
 
 
             [alt_model_path, alt_sub_qualified_name] = SimulinkName.unfuse_hash(alternate_sub_name);
@@ -121,8 +122,7 @@ classdef BuilderModel
             load_system(alt_sub_qualified_name)
             switch_sub_handle = get_param(alt_sub_qualified_name, 'Handle');
 
-            % 
-            % 
+
             copy_from = SimulinkName(SimulinkName.get_qualified_name_from_handle(get_param(switch_model_handle, 'Name'), switch_sub_handle), get_param(switch_model_handle, 'Name'));
             copy_to = SimulinkName(SimulinkName.get_qualified_name_from_handle(get_param(model_name, 'Name'), sub_name), obj.original_model_name);
 
@@ -171,7 +171,7 @@ classdef BuilderModel
         end
 
         function obj = check_models_correctness(obj)
-            obj.built_correct = obj.loadable() && obj.compilable();
+            obj.built_correct = obj.loadable() && (~Helper.needs_to_be_compilable || obj.compilable());
             if ~obj.built_correct
                 obj.skip_save = 1;
             end
@@ -240,7 +240,7 @@ classdef BuilderModel
         end
 
         function make_subsystem_editable(subsystem)
-            while count(subsystem,"/") > 0 && get_param(subsystem, "LinkStatus") ~= "none"
+            while Helper.get_depth(subsystem) > 0 && get_param(subsystem, "LinkStatus") ~= "none"
                 disp(subsystem)
                 disp(get_param(subsystem, "LinkStatus"))
                 set_param(subsystem, "LinkStatus", "none")
