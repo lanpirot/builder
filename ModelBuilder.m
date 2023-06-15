@@ -196,9 +196,9 @@ classdef ModelBuilder
                 end
             catch
                 cp = 0;
-                if contains(pwd, "tmp_garbage")
-                    cd("..")
-                end
+            end
+            if contains(pwd, "tmp_garbage")
+                cd("..")
             end
             Helper.clear_garbage();
         end
