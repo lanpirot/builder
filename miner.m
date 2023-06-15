@@ -30,6 +30,9 @@ function miner(max_number_of_models)
             try_close(model_name, model_path);
             evaluated = evaluated + 1;
         catch ME
+            if contains(pwd, "tmp_garbage")
+                cd("..")
+            end
             log(project_dir, 'log_eval', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
             try_close(model_name, model_path);
         end

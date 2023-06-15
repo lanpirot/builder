@@ -1,10 +1,11 @@
 function gather_models()
+    warning('off','all')
     modellist = [dir(fullfile(Helper.models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.models_path, "**" + filesep + "*.mdl"))];
     project_dir = Helper.project_dir;
     project_info = tdfread(Helper.project_info, 'tab');
     fileID = fopen(Helper.modellist, "w+");
     fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "closable" + newline);
-    for i = 5000:5100%1:length(modellist)
+    for i = 1:50%1:length(modellist)
         cd(project_dir)
         model = modellist(i);
         folder = strsplit(model.folder, filesep);
@@ -44,6 +45,9 @@ function gather_models()
             end
             Helper.clear_garbage();
         catch
+            if contains(pwd, "tmp_garbage")
+                cd("..")
+            end
         end
         
         row = replace(model_url + sprintf('\t') + project_url + sprintf('\t') + string(loadable) + sprintf('\t') + string(compilable) + sprintf('\t') + string(closable), "\", "/") + newline;
