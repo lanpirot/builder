@@ -34,7 +34,6 @@ function miner(max_number_of_models)
             try_close(model_name, model_path);
         end
 
-        cd(project_dir)
         Helper.clear_garbage()
     end
     cd(project_dir)

@@ -22,7 +22,7 @@ classdef Helper
         modellist = Helper.log_path + "modellist.csv";
 
         
-        garbage_out = Helper.project_dir + "garbage_out";
+        garbage_out = Helper.project_dir + "tmp_garbage";
         playground = Helper.project_dir + "playground";
 
 

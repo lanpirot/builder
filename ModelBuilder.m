@@ -185,7 +185,6 @@ classdef ModelBuilder
 
         function cp = compilable(obj)
             Helper.create_garbage_dir()
-            project_dir = Helper.project_dir;
             try
                 eval([char(obj.model_name), '([],[],[],''compile'');']);
                 cp = 1;
@@ -198,7 +197,6 @@ classdef ModelBuilder
             catch
                 cp = 0;
             end
-            cd(project_dir)
             Helper.clear_garbage();
         end
     end
