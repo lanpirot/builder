@@ -6,5 +6,7 @@ classdef system_constants
         
         models_path = "C:\svns\simucomp2\models\SLNET_v1\SLNET";
         project_dir = "C:\svns\alex projects\builder\";
+
+        project_pwd_number = 8;
     end
 end

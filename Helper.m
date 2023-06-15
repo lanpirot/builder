@@ -26,7 +26,7 @@ classdef Helper
         playground = Helper.project_dir + "playground";
 
 
-        project_id_pwd_number = 8;
+        project_id_pwd_number = system_constants.project_pwd_number;
 
         interface_header = "UUID,ChildUUIDs,Subsystem Path,Model Path,Project URL,Inports,Outports,...";
 
