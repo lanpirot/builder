@@ -1,4 +1,4 @@
-function gathermodels()
+function gather_models()
     modellist = [dir(fullfile(Helper.models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.models_path, "**" + filesep + "*.mdl"))];
     project_dir = Helper.project_dir;
     project_info = tdfread(Helper.project_info, 'tab');

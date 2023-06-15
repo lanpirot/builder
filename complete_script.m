@@ -1,5 +1,5 @@
 function complete_script()
-    gather_models()
+    %gather_models()
     miner(30)
     builder()
 end
