@@ -1,12 +1,12 @@
-function miner()
+function miner(max_number_of_models)
     warning('off','all')
-    Helper.reset_logs([Helper.interface2name, Helper.interface2name_unique, Helper.name2interface, Helper.name2interface_roots, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
+    Helper.reset_logs([Helper.interface2name, Helper.interface2name_unique, Helper.name2subinfo, Helper.name2subinfo_roots, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
     evaluated = 0;
     subs = {};
     project_dir = Helper.project_dir;
 
     modellist = tdfread(Helper.modellist, 'tab');
-    for i = 1:30%height(modellist.model_url)
+    for i = 1:max_number_of_models%height(modellist.model_url)
         if Helper.needs_to_be_compilable && ~modellist.compilable(i)
             continue
         end
@@ -21,7 +21,7 @@ function miner()
                 eval([model_name, '([],[],[],''compile'');']);
             end
             cd(project_dir)
-            disp("Evaluating model no. " + string(i) + " " + model_path)
+            disp("Mining interfaces of model no. " + string(i) + " " + model_path)
             subs = compute_interfaces(subs, model_handle, model_path, strip(modellist.project_url(i, :), "right"));
 
             if Helper.needs_to_be_compilable
@@ -44,17 +44,17 @@ end
 
 function serialize(subs)
     %serialize name --> interface
-    name2interface = {};
-    name2interface_roots = {};
+    name2subinfo = {};
+    name2subinfo_roots = {};
 
     for i = 1:length(subs)
-        name2interface{end + 1} = subs{i}.name2interface();
+        name2subinfo{end + 1} = subs{i}.name2subinfo();
         if subs{i}.is_root
-            name2interface_roots{end + 1} = subs{i}.name2interface();
+            name2subinfo_roots{end + 1} = subs{i}.name2subinfo();
         end
     end
-    Helper.file_print(Helper.name2interface, jsonencode(name2interface));
-    Helper.file_print(Helper.name2interface_roots, jsonencode(name2interface_roots));
+    Helper.file_print(Helper.name2subinfo, jsonencode(name2subinfo));
+    Helper.file_print(Helper.name2subinfo_roots, jsonencode(name2subinfo_roots));
 
 
     %serialize interface --> names
@@ -78,12 +78,12 @@ function serialize(subs)
 
     for i = 1:length(keys)
         interface2name_struct{end + 1} = struct;
-        interface2name_struct{end}.ntrf = keys(i);
-        interface2name_struct{end}.names = interface2name(keys(i)).name_hashes();
+        interface2name_struct{end}.(Helper.ntrf) = keys(i);
+        interface2name_struct{end}.(Helper.names) = interface2name(keys(i)).name_hashes();
 
         interface2name_unique_struct{end + 1} = struct;
-        interface2name_unique_struct{end}.ntrf = keys(i);
-        interface2name_unique_struct{end}.names = interface2name(keys(i)).unique_name_hashes();
+        interface2name_unique_struct{end}.(Helper.ntrf) = keys(i);
+        interface2name_unique_struct{end}.(Helper.names) = interface2name(keys(i)).unique_name_hashes();
     end
 
     Helper.file_print(Helper.interface2name, jsonencode(interface2name_struct));

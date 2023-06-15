@@ -1,4 +1,4 @@
-classdef BuilderModel
+classdef ModelBuilder
     properties
         uuid
         version = 0;
@@ -16,10 +16,10 @@ classdef BuilderModel
     end
     
     methods
-        function obj = BuilderModel(uuid, root_model)
+        function obj = ModelBuilder(uuid, root_model)
             try
                 obj.uuid = uuid;
-                tmp = split(root_model.name, Helper.second_level_divider);
+                tmp = split(root_model.(Helper.name), Helper.second_level_divider);
                 obj.original_model_name = string(tmp{end});
                 obj.original_model_path = tmp{1};
     
@@ -51,12 +51,13 @@ classdef BuilderModel
                 close_system(obj.root_model_path, 0)
             end
             delete(obj.root_model_path)
+            pause(0.05);            %hacky to avoid: The requested operation cannot be performed on a file with a user-mapped section open.
             copyfile(obj.original_model_path, obj.root_model_path);
             load_system(obj.root_model_path)
             set_param(obj.model_name, "LockLinksToLibrary", "off")%sometimes causes errors
         end
 
-        function obj = switch_subs_in_model(obj, name2interface, name2mapping, interface2name)
+        function obj = switch_subs_in_model(obj, name2subinfo, interface2name)
             load_system(obj.root_model_path);
             
             curr_depth = 0;
@@ -68,7 +69,7 @@ classdef BuilderModel
                     sub_name = sub_names{i};
                     if curr_depth == 0 && SimulinkName.is_root(sub_name) || Helper.get_depth(sub_name) == curr_depth && Subsystem.is_subsystem(sub_name) && ~SimulinkName.is_root(sub_name)
                         sub_at_depth_found = 1;
-                        obj = obj.switch_sub(obj.model_name, sub_name, name2interface, name2mapping, interface2name);
+                        obj = obj.switch_sub(obj.model_name, sub_name, name2subinfo, interface2name);
                     end
                 end
                 if ~sub_at_depth_found
@@ -80,45 +81,36 @@ classdef BuilderModel
             delete(obj.root_model_path)
         end
 
-        function obj = switch_sub(obj, model_name, sub_name, name2interface, name2mapping, interface2name)
+        function obj = switch_sub(obj, model_name, sub_name, name2subinfo, interface2name)
             qualified_name = SimulinkName.get_qualified_name_from_handle(obj.original_model_name, sub_name);
             sub_complete_name = SimulinkName.name_hash(obj.original_model_path, qualified_name);
-            sub_interface = name2interface({char(sub_complete_name)});
-            alt_complete_names = interface2name(sub_interface);
+            sub_interface = Helper.get_info(name2subinfo, sub_complete_name, Helper.ntrf);
+            alt_complete_names = interface2name({sub_interface});
             alt_complete_names = alt_complete_names{1};
 
             if length(alt_complete_names) > 1
-                while 1
-                    rindex = randi(length(alt_complete_names));
-                    if ~strcmp(sub_complete_name, alt_complete_names{rindex})
-                        sub_mapping = name2mapping({char(sub_complete_name)});
-                        alt_mapping = name2mapping({char(alt_complete_names{rindex})});
-                        %try
-                            obj = obj.switch_sub_with_sub(model_name, sub_name, alt_complete_names{rindex}, sub_mapping{1}, alt_mapping{1});
-                            obj = obj.check_models_correctness();
-                            if obj.skip_save == 0
-                                obj = obj.save_version();
-                            end
-                            obj = obj.copy_version(1);
-                        %catch ME
-                        %    Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alt_complete_names{rindex} + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
-                        %end
-                        break
-                    end
+                other_sub_complete_name = ModelBuilder.choose_other_sub(sub_complete_name, alt_complete_names, name2subinfo);
+                sub_mapping = Helper.get_info(name2subinfo, sub_complete_name, Helper.mapping);
+                alt_mapping = Helper.get_info(name2subinfo, other_sub_complete_name, Helper.mapping);
+                obj = obj.switch_sub_with_sub(model_name, sub_name, other_sub_complete_name, sub_mapping, alt_mapping);
+                obj = obj.check_models_correctness();
+                if obj.skip_save == 0
+                    obj = obj.save_version();
                 end
+                obj = obj.copy_version(1);
             end
         end
 
         function obj = switch_sub_with_sub(obj, model_name, sub_name, alternate_sub_name, sub_mapping, alt_mapping)
             %if ~all(sub_mapping.in_mapping == alt_mapping.in_mapping) || ~all(sub_mapping.out_mapping == alt_mapping.out_mapping)
-            %    disp(obj)
-            %    disp(model_name)
-            %    disp(sub_name)
-            %    disp(alternate_sub_name)
-            %    disp(sub_mapping.in_mapping)
-            %    disp(sub_mapping.out_mapping)
-            %    disp(alt_mapping.in_mapping)
-            %    disp(alt_mapping.out_mapping)
+                disp(obj)
+                disp(model_name)
+                disp(sub_name)
+                disp(alternate_sub_name)
+                disp(sub_mapping.in_mapping)
+                disp(sub_mapping.out_mapping)
+                disp(alt_mapping.in_mapping)
+                disp(alt_mapping.out_mapping)
             %end
 
 
@@ -154,8 +146,8 @@ classdef BuilderModel
                 %we don't need to rewire the inputs/outputs after copying
             else
                 %get prior wiring
-                connected_blocks = BuilderModel.get_wiring(copy_to.full_name);
-                BuilderModel.remove_lines(copy_to.full_name);
+                connected_blocks = ModelBuilder.get_wiring(copy_to.full_name);
+                ModelBuilder.remove_lines(copy_to.full_name);
                 if copy_from.root_bool
                     %copy from root to subsystem
                     Simulink.BlockDiagram.createSubsystem(get_param(sub_name, 'Handle'), 'Name', copied_name.element_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
@@ -168,11 +160,11 @@ classdef BuilderModel
                     add_block(copy_from.full_name, copy_to.full_name)
                 end
                 %now, rewire
-                BuilderModel.add_lines(copy_to, connected_blocks, sub_mapping, alt_mapping)
+                ModelBuilder.add_lines(copy_to, connected_blocks, sub_mapping, alt_mapping)
             end
-            BuilderModel.annotate(copy_to.full_name, "Copied system from: " + alternate_sub_name + newline + " into: " + SimulinkName.name_hash(obj.original_model_path, copy_to.original_full_name))
+            ModelBuilder.annotate(copy_to.full_name, "Copied system from: " + alternate_sub_name + newline + " into: " + SimulinkName.name_hash(obj.original_model_path, copy_to.original_full_name))
             %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
-            BuilderModel.annotate(copy_to.model_name, "Copied " + copy_from.full_name + " to: " + copy_to.full_name)
+            ModelBuilder.annotate(copy_to.model_name, "Copied " + copy_from.full_name + " to: " + copy_to.full_name)
         end
 
         function obj = check_models_correctness(obj)
@@ -212,6 +204,48 @@ classdef BuilderModel
     end
 
     methods (Static)
+        function other_sub = choose_other_sub(sub, alt_subs, name2subinfo)
+            %remove current sub from alt_subs, as to get a real alternative sub
+            alt_subs(strcmp(alt_subs,sub)) = [];
+            if isempty(alt_subs)
+                disp("")
+            end
+
+            %sort alt_subs by diverseness
+            alt_subs = ModelBuilder.sort_subs(alt_subs, Helper.diverseness, name2subinfo);
+            if Helper.wish_property == Helper.diverse
+                other_sub = alt_subs{end};
+                return
+            elseif Helper.wish_property == Helper.mono
+                other_sub = alt_subs{1};
+                return
+            end
+
+            %sort alt_subs by depth
+            alt_subs = ModelBuilder.sort_subs(alt_subs, Helper.depth, name2subinfo);
+            if Helper.wish_property == Helper.deep
+                other_sub = alt_subs{end};
+                return
+            elseif Helper.wish_property == Helper.shallow
+                other_sub = alt_subs{1};
+                return
+            end
+            
+            %neither: choose a random sub
+            other_sub = alt_subs{randi(length(alt_subs))};
+        end
+
+        function subs = sort_subs(subs, keyword, name2subinfo)
+            names_keyword = struct(Helper.name, {}, keyword, {});
+            for i=1:length(subs)
+                names_keyword(end + 1) = struct(Helper.name, subs{i}, keyword, Helper.get_info(name2subinfo, subs{i}, keyword));
+            end
+            
+
+            [sorted_subs, ~] = Helper.sort_by_field(names_keyword, keyword);
+            subs = extractfield(sorted_subs, Helper.name);
+        end
+
         function connections = get_wiring(subsystem)
             connections = struct;
             connections.in_source_ports = {};
@@ -239,9 +273,9 @@ classdef BuilderModel
         function remove_lines(subsystem)
             line_handles = get_param(subsystem, "LineHandles");
 
-            BuilderModel.make_subsystem_editable(subsystem)
-            BuilderModel.remove_lines2(line_handles.Inport);
-            BuilderModel.remove_lines2(line_handles.Outport);
+            ModelBuilder.make_subsystem_editable(subsystem)
+            ModelBuilder.remove_lines2(line_handles.Inport);
+            ModelBuilder.remove_lines2(line_handles.Outport);
         end
 
         function make_subsystem_editable(subsystem)

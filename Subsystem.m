@@ -16,9 +16,9 @@ classdef Subsystem
         buses_present   %either in subsystem itself, or in decendants
         
         %currently broken?
-        %max_depth %relative max depth in model tree from this Subsystem to its leaves
-        %block_types
-        %complexity
+        depth %relative max depth of sub tree
+        diverseness %number of different block types in the sub tree
+        %complexity %only if compilable set root to sub? https://www.mathworks.com/help/slcheck/ref/slmetric.metric.result.html
     end
     
     methods
@@ -39,25 +39,15 @@ classdef Subsystem
             obj.num_contained_elements = length(Helper.find_elements(obj.handle));
             obj.buses_present = obj.buses_in_obj_or_ancestors();
             obj.skip_it = obj.buses_present || ~Subsystem.is_subsystem(obj.handle);
-            obj.is_root = SimulinkName.is_root(obj.handle);
             if ~obj.skip_it
-                obj.compute_meta_data()
+                obj = obj.compute_meta_data();
             end
         end
 
-        function compute_meta_data(obj)
-            %own_depth = Helper.get_depth(obj.handle);
-            %contained_blocks = %%find_system(obj.handle,'LookUnderMasks','on', 'Type', 'Block');%%
-            % obj.max_depth = 0;
-            % obj.block_types = {};
-            % for i = 1:length(contained_blocks)
-            %     block = contained_blocks(i);
-            %     obj.max_depth = max(obj.max_depth, Helper.get_depth(block) - own_depth);
-            %     block_type = get_param(block, 'BlockType');
-            %     if ~any(count(obj.block_types, block_type))
-            %         obj.block_types = [obj.block_types ; block_type];
-            %     end
-            % end
+        function obj = compute_meta_data(obj)
+            obj.is_root = SimulinkName.is_root(obj.handle);
+            obj.depth = Helper.find_local_depth(obj.handle);
+            obj.diverseness = Helper.find_diverseness(obj.handle);
             %obj.complexity = 0;
         end
 
@@ -96,11 +86,13 @@ classdef Subsystem
             hsh = SimulinkName.name_hash(obj.model_path, obj.qualified_name);
         end
         
-        function n2i = name2interface(obj)
+        function n2i = name2subinfo(obj)
             n2i = struct;
-            n2i.name = obj.name_hash();
-            n2i.ntrf = obj.interface_hash();
-            n2i.mapping = obj.interface_mapping();
+            n2i.(Helper.name) = obj.name_hash();
+            n2i.(Helper.ntrf) = obj.interface_hash();
+            n2i.(Helper.mapping) = obj.interface_mapping();
+            n2i.(Helper.depth) = obj.depth;
+            n2i.(Helper.diverseness) = obj.diverseness;
         end
 
         function bool = is_in_subs(obj, sub_index, subs)
