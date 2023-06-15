@@ -24,7 +24,6 @@ function gathermodels()
             loadable = 1;
             try
                 Helper.create_garbage_dir()
-                project_dir = Helper.project_dir;
                 eval([model_name, '([],[],[],''compile'');']);
                 compilable = 1;
                 try
@@ -43,7 +42,6 @@ function gathermodels()
                 close_system(model_url);
                 closable = 1;
             end
-            cd(project_dir)
             Helper.clear_garbage();
         catch
         end
