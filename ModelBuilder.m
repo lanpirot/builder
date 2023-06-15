@@ -103,14 +103,14 @@ classdef ModelBuilder
 
         function obj = switch_sub_with_sub(obj, model_name, sub_name, alternate_sub_name, sub_mapping, alt_mapping)
             %if ~all(sub_mapping.in_mapping == alt_mapping.in_mapping) || ~all(sub_mapping.out_mapping == alt_mapping.out_mapping)
-                disp(obj)
-                disp(model_name)
-                disp(sub_name)
-                disp(alternate_sub_name)
-                disp(sub_mapping.in_mapping)
-                disp(sub_mapping.out_mapping)
-                disp(alt_mapping.in_mapping)
-                disp(alt_mapping.out_mapping)
+            %    disp(obj)
+            %    disp(model_name)
+            %    disp(sub_name)
+            %    disp(alternate_sub_name)
+            %    disp(sub_mapping.in_mapping)
+            %    disp(sub_mapping.out_mapping)
+            %    disp(alt_mapping.in_mapping)
+            %    disp(alt_mapping.out_mapping)
             %end
 
 
