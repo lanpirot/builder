@@ -6,8 +6,6 @@ classdef Interface
         out_mapping
         specialports = [];
         has_buses = 0;
-        empty_interface = 0;
-        
     end
     methods
         function obj = Interface(subsystem)
@@ -18,9 +16,6 @@ classdef Interface
             obj.specialports = Port.compute_ports(subsystem, 'TriggerPort', obj.specialports);
             if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
                 obj.has_buses = 1;
-            end
-            if length(obj.inports) + length(obj.outports) == 0
-                obj.empty_interface = 1;
             end
         end
 

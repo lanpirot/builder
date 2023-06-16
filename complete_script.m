@@ -1,7 +1,7 @@
 function complete_script()
     %gather_models()
     miner()
-    %builder()
+    builder()
 end
 
 %run by using the following:
