@@ -40,11 +40,15 @@ classdef Dimensions
 
     methods (Static)
         function ibu = is_bus(dims)
-            if ~exist('dims', 'var') || length(dims) == 0
+            if ~exist('dims', 'var') || isempty(dims)
                 ibu = 0;
                 return
             end
             if isempty(dims.Inport)
+                if isempty(dims.Outport)
+                    ibu = 0;
+                    return
+                end
                 dims = dims.Outport;
             else
                 dims = dims.Inport;

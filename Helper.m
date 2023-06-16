@@ -37,7 +37,7 @@ classdef Helper
 
         dimensions = 1
         data_types = 1              %data types shall be considered for equivalence
-        sample_times = 0            %sample times shall be considered for equivalence
+        sample_times = 0            %sample times are not considered for equivalence
         needs_to_be_compilable = Helper.dimensions || Helper.data_types || Helper.sample_times
 
         name = 'NAME'

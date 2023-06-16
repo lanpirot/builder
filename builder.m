@@ -34,7 +34,9 @@ end
 
 function clean_up()
     warning('off','all')
+    disp("Starting building process")
     clear('all');
+    mkdir(Helper.playground)
     delete(Helper.playground + filesep + "*");
     Helper.reset_logs([Helper.log_switch_up]);
 end

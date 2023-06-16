@@ -2,40 +2,41 @@ classdef Port
     properties
         handle
         num
-        type
+        port_type
+        data_type
         dimensions
         sample_time
         hsh
         hshpn
 
         is_special_port = 0;
+        is_bus = 0
     end
 
     methods
         function obj = Port(port, num, port_type)
-
-
             obj.handle = port;
             obj.num = num;
+            obj.port_type = port_type;
 
             obj.sample_time = obj.get_sample_time();
 
             
-            obj.handle = obj.check_if_bus();
+            obj = obj.check_if_bus();
             
-            obj.is_special_port = any(ismember(["ActionPort", "EnablePort", "TriggerPort"], port_type));
-            obj.dimensions = obj.get_dimensions();
-            obj.type = obj.get_datatype();
-
-            
-            obj.hsh = obj.hash();
-            obj.hshpn = obj.hashplusname();
+            if ~obj.is_bus
+                obj.is_special_port = any(ismember(["ActionPort", "EnablePort", "TriggerPort"], obj.port_type));
+                obj.dimensions = obj.get_dimensions();
+                obj.data_type = obj.get_datatype();
+                obj.hsh = obj.hash();
+                obj.hshpn = obj.hashplusname();
+            end
         end
 
-        function handle = check_if_bus(obj)
-            handle = obj.handle;
+        function obj = check_if_bus(obj)
             if Helper.dimensions && Dimensions.is_bus(get_param(obj.handle, 'CompiledPortDimensions'))
-                handle = -1;
+                obj.handle = -1;
+                obj.is_bus = 1;
             end
         end
 
@@ -50,7 +51,7 @@ classdef Port
         function type = get_datatype(obj)
             if Helper.data_types
                 if obj.is_special_port
-                    type = port_type;
+                    type = obj.port_type;
                     %get Data Type of TriggerPort https://www.mathworks.com/help/simulink/slref/trigger.html    
                 else
                     if Dimensions.is_bus(get_param(obj.handle, 'CompiledPortDimensions'))
@@ -67,14 +68,18 @@ classdef Port
         function dims = get_dimensions(obj)
             if Helper.dimensions
                 if obj.is_special_port
-                    if strcmp(port_type, "ActionPort")
+                    if strcmp(obj.data_type, "ActionPort")
                         dims = Dimensions([]);
                     else
                         dims = Dimensions(get_param(obj.handle, 'PortDimensions'));
                     end
     
                 else
-                    dims = Dimensions(get_param(obj.handle, 'CompiledPortDimensions'));
+                    try
+                        dims = Dimensions(get_param(obj.handle, 'CompiledPortDimensions'));
+                    catch
+                        disp("")
+                    end
                 end
             else
                 dims = Dimensions();
@@ -105,11 +110,11 @@ classdef Port
         end
 
         function hsh = hash(obj)
-            hsh = obj.type + " " + obj.dimensions.print() + " # " + obj.sample_time.print();
+            hsh = obj.data_type + " " + obj.dimensions.print() + " # " + obj.sample_time.print();
         end
 
         function hshpn = hashplusname(obj)
-            hshpn = obj.type + " " + obj.dimensions.print() + " # " + obj.sample_time.print() + get_param(obj.handle, 'Name');
+            hshpn = obj.data_type + " " + obj.dimensions.print() + " # " + obj.sample_time.print() + get_param(obj.handle, 'Name');
         end
     end
     
@@ -121,6 +126,7 @@ classdef Port
                 next_port = Port(port_handles(i), i, search_string);
                 if next_port.handle == -1
                     ports = -1;
+                    sortIDx = -1;
                     return
                 end
                 ports = [ports next_port];

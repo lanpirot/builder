@@ -1,11 +1,15 @@
 function miner(max_number_of_models)
     warning('off','all')
+    disp("Starting mining process")
     Helper.reset_logs([Helper.interface2name, Helper.interface2name_unique, Helper.name2subinfo, Helper.name2subinfo_roots, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
     evaluated = 0;
     subs = {};
     project_dir = Helper.project_dir;
 
     modellist = tdfread(Helper.modellist, 'tab');
+    if ~exist("max_number_of_models",'var')
+        max_number_of_models = height(modellist.model_url);
+    end
     for i = 1:max_number_of_models%height(modellist.model_url)
         if Helper.needs_to_be_compilable && ~modellist.compilable(i)
             continue
