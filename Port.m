@@ -5,78 +5,62 @@ classdef Port
         port_type
         data_type
         dimensions
-        sample_time
+
+        skip_port = 0
         hsh
         hshpn
-
-        is_special_port = 0;
-        is_bus = 0
     end
 
     methods
-        function obj = Port(port, num, port_type)
-            obj.handle = port;
+        function obj = Port(handle, num, port_type)
+            obj.handle = handle;
             obj.num = num;
             obj.port_type = port_type;
 
-            obj.sample_time = obj.get_sample_time();
-
             
-            obj = obj.check_if_bus();
+            obj.skip_port = Port.check_if_bus(handle);
             
-            if ~obj.is_bus
-                obj.is_special_port = any(ismember(["ActionPort", "EnablePort", "TriggerPort"], obj.port_type));
-                obj.dimensions = obj.get_dimensions();
-                obj.data_type = obj.get_datatype();
+            if ~obj.skip_port
+                obj.dimensions = obj.get_dimensions(handle);
+                obj.data_type = obj.get_datatype(handle);
                 obj.hsh = obj.hash();
                 obj.hshpn = obj.hashplusname();
             end
         end
 
-        function obj = check_if_bus(obj)
-            if Helper.dimensions && Dimensions.is_bus(get_param(obj.handle, 'CompiledPortDimensions'))
-                obj.handle = -1;
-                obj.is_bus = 1;
-            end
+        function is_special = is_special_port(obj)
+            is_special = any(ismember(["ActionPort", "EnablePort", "TriggerPort"], obj.port_type));
         end
 
-        function sample_time = get_sample_time(obj)
-            if Helper.sample_times
-                sample_time = SampleTime(get_param(obj.handle, 'CompiledSampleTime'));
-            else
-                sample_time = SampleTime();
-            end
-        end
-
-        function type = get_datatype(obj)
+        function type = get_datatype(obj, handle)
             if Helper.data_types
-                if obj.is_special_port
+                if is_special_port(obj)
                     type = obj.port_type;
                     %get Data Type of TriggerPort https://www.mathworks.com/help/simulink/slref/trigger.html    
                 else
-                    if Dimensions.is_bus(get_param(obj.handle, 'CompiledPortDimensions'))
-                        obj.handle = -1;
+                    if Dimensions.is_bus(get_param(handle, 'CompiledPortDimensions'))
+                        obj.skip_port = 1;
                         return
                     end
-                    type = Port.get_type(get_param(obj.handle,'CompiledPortDataTypes'));
+                    type = Port.get_type(get_param(handle,'CompiledPortDataTypes'));
                 end
             else
                 type = '';
             end
         end
 
-        function dims = get_dimensions(obj)
+        function dims = get_dimensions(obj, handle)
             if Helper.dimensions
-                if obj.is_special_port
+                if is_special_port(obj)
                     if strcmp(obj.data_type, "ActionPort")
                         dims = Dimensions([]);
                     else
-                        dims = Dimensions(get_param(obj.handle, 'PortDimensions'));
+                        dims = Dimensions(get_param(handle, 'PortDimensions'));
                     end
     
                 else
                     try
-                        dims = Dimensions(get_param(obj.handle, 'CompiledPortDimensions'));
+                        dims = Dimensions(get_param(handle, 'CompiledPortDimensions'));
                     catch
                         disp("")
                     end
@@ -105,28 +89,29 @@ classdef Port
             % end
         end
 
-        function str = print(obj)
-            str = obj.hsh + " # " + sprintf('%0.13f', obj.handle) + " " + string(obj.num) + ":" + get_param(obj.handle, 'Name');
-        end
-
         function hsh = hash(obj)
-            hsh = obj.data_type + " " + obj.dimensions.print() + " # " + obj.sample_time.print();
+            if obj.is_special_port()
+                hsh = obj.port_type;
+            else
+                hsh = obj.data_type;
+            end
+            hsh = hsh + Helper.third_level_divider + obj.dimensions.hash() + Helper.second_level_divider;
         end
 
         function hshpn = hashplusname(obj)
-            hshpn = obj.data_type + " " + obj.dimensions.print() + " # " + obj.sample_time.print() + get_param(obj.handle, 'Name');
+            hshpn = obj.hsh + get_param(obj.handle, 'Name');
         end
     end
     
     methods(Static)
-        function [ports, sortIDx] = compute_ports(subsystem, search_string, ports)
+        function [ports, sortIDx] = compute_ports(subsystem, search_string)
+            ports = [];
             port_handles = Helper.find_ports(subsystem, search_string);
             
             for i = 1:length(port_handles)
                 next_port = Port(port_handles(i), i, search_string);
-                if next_port.handle == -1
+                if next_port.skip_port
                     ports = -1;
-                    sortIDx = -1;
                     return
                 end
                 ports = [ports next_port];
@@ -143,6 +128,14 @@ classdef Port
                 return
             end
             type = type_field.Outport{1};
+        end
+
+
+        function is_bus = check_if_bus(handle)
+            is_bus = 0;
+            if Helper.dimensions && Dimensions.is_bus(get_param(handle, 'CompiledPortDimensions'))
+                is_bus = 1;
+            end
         end
     end
 end

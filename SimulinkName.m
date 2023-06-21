@@ -44,9 +44,9 @@ classdef SimulinkName
 
         function qname = get_qualified_name(handle)
             if strlength(string(get_param(handle, 'Parent'))) > 0
-                qname = string(get_param(handle, 'Parent')) + "/" + Subsystem.get_name(handle);
+                qname = string(get_param(handle, 'Parent')) + "/" + get_param(handle, 'Name');
             else
-                qname = Subsystem.get_name(handle);
+                qname = get_param(handle, 'Name');
             end
         end
 

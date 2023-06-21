@@ -1,7 +1,7 @@
 function miner(max_number_of_models)
     warning('off','all')
     disp("Starting mining process")
-    Helper.reset_logs([Helper.interface2name, Helper.interface2name_unique, Helper.name2subinfo, Helper.name2subinfo_roots, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
+    Helper.reset_logs([Helper.name2subinfo, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
     evaluated = 0;
     subs = {};
     project_dir = Helper.project_dir;
@@ -26,7 +26,7 @@ function miner(max_number_of_models)
             end
             cd(project_dir)
             disp("Mining interfaces of model no. " + string(i) + " " + model_path)
-            subs = compute_interfaces(subs, model_handle, model_path, strip(modellist.project_url(i, :), "right"));
+            subs = compute_interfaces(subs, model_handle, model_path);
 
             if Helper.needs_to_be_compilable
                 try_end(model_name);
@@ -49,64 +49,38 @@ function miner(max_number_of_models)
 end
 
 function serialize(subs)
-    %serialize name --> interface
-    name2subinfo = {};
-    name2subinfo_roots = {};
-
+    interface2sub  = dictionary();
     for i = 1:length(subs)
-        name2subinfo{end + 1} = subs{i}.name2subinfo();
-        if subs{i}.is_root
-            name2subinfo_roots{end + 1} = subs{i}.name2subinfo();
-        end
-    end
-    Helper.file_print(Helper.name2subinfo, jsonencode(name2subinfo));
-    Helper.file_print(Helper.name2subinfo_roots, jsonencode(name2subinfo_roots));
-
-
-    %serialize interface --> names
-    interface2name = dictionary();
-
-    for i = 1:length(subs)
-        ntrf_hash = subs{i}.interface_hash();
-        if isConfigured(interface2name) && interface2name.isKey(ntrf_hash)
-            eq = interface2name(ntrf_hash);
+        hash = subs{i}.interface.hash();
+        if isConfigured(interface2sub) && interface2sub.isKey(hash)
+            eq = interface2sub(hash);
+            eq = eq.add_subsystem(subs{i});
         else
-            eq = Equivalence_class();
+            eq = Equivalence_class(subs{i});
         end
-        eq = eq.add_subsystem(subs{i});
-        interface2name(ntrf_hash) = eq;
+        interface2sub(hash) = eq;
     end
-    
-    
-    interface2name_struct = {};
-    interface2name_unique_struct = {};
-    keys = interface2name.keys;
 
+    %serialize sub_info
+    subinfo = {};
+    keys = interface2sub.keys();
     for i = 1:length(keys)
-        interface2name_struct{end + 1} = struct;
-        interface2name_struct{end}.(Helper.ntrf) = keys(i);
-        interface2name_struct{end}.(Helper.names) = interface2name(keys(i)).name_hashes();
-
-        interface2name_unique_struct{end + 1} = struct;
-        interface2name_unique_struct{end}.(Helper.ntrf) = keys(i);
-        interface2name_unique_struct{end}.(Helper.names) = interface2name(keys(i)).unique_name_hashes();
+        subinfo = [subinfo interface2sub(keys(i)).subsystems];
     end
-
-    Helper.file_print(Helper.interface2name, jsonencode(interface2name_struct));
-    Helper.file_print(Helper.interface2name_unique, jsonencode(interface2name_unique_struct));
+    Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
 end
 
-function subs = compute_interfaces(subs, model_handle, model_path, project_path)
+function subs = compute_interfaces(subs, model_handle, model_path)
     subsystems = Helper.find_subsystems(model_handle);
     subsystems(end + 1) = model_handle;%the root subsystem
     for j = 1:length(subsystems)
-        subs = compute_interface(subs, subsystems(j), model_handle, model_path, project_path);
+        subs = compute_interface(subs, subsystems(j), model_path);
     end
     %disp("#subsystems analyzed: " + string(length(subsystems)) + " #equivalence classes: " + string(length(keys(hash_dic))))
 end
 
-function subs = compute_interface(subs, subsystem_handle, model_handle, model_path, project_path)
-    subsystem = Subsystem(subsystem_handle, model_handle, model_path, project_path);
+function subs = compute_interface(subs, subsystem_handle, model_path)
+    subsystem = Subsystem(subsystem_handle, model_path);
     subsystem = subsystem.constructor2();
     if subsystem.skip_it
         return

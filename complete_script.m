@@ -1,7 +1,9 @@
 function complete_script()
     %gather_models()
     miner()
-    builder()
+    if Helper.remove_duplicates
+        builder()
+    end
 end
 
 %run by using the following:

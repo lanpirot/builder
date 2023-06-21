@@ -6,11 +6,20 @@ classdef Helper
 
 
         project_info = Helper.log_path + "project_info.tsv";
-
-        interface2name = Helper.log_path + "interface2name.json";
-        interface2name_unique = Helper.log_path + "interface2name_unique.json";
         name2subinfo = Helper.log_path + "name2subinfo.json";
-        name2subinfo_roots = Helper.log_path + "name2subinfo_roots.json";
+
+
+        uuid = 'UUID';
+        identity = 'IDENTITY';
+        sub_name = "sub_name";
+        sub_parents = "sub_parents";
+        model_path = "model_path";
+        interface = 'INTERFACE'
+        is_root = 'IS_ROOT'
+        num_contained_elements = 'NUM_CONTAINED_ELEMENTS'
+        sub_depth = 'SUB_DEPTH'
+        subtree_depth = 'SUBTREE_DEPTH'
+        
         
 
         log_garbage_out = Helper.log_path + "log_garbage_out";
@@ -35,17 +44,16 @@ classdef Helper
         third_level_divider = "+";
 
 
+        remove_duplicates = 1;      %don't include subsystems which are very probably duplicates: same interface and same number of contained elements
         dimensions = 1
         data_types = 1              %data types shall be considered for equivalence
         sample_times = 0            %sample times are not considered for equivalence
         needs_to_be_compilable = Helper.dimensions || Helper.data_types || Helper.sample_times
 
-        name = 'NAME'
-        names = 'NAMES'
-        mapping = 'MAPPING'
-        ntrf = 'INTERFACE'
+
+        depth = 'DEPTH'
         diverseness = 'DIVERSENESS'
-        depth = 'DEPTH'        
+        
 
         random = "RANDOM"
         mono = "MONO"
@@ -145,12 +153,29 @@ classdef Helper
             end
         end
 
+        function is_root = is_rootf(handle)
+            is_root = isempty(get_param(handle, 'Parent'));
+        end
+
         function hash = get_hash(ports)
             if isempty(ports)
                 hash = "";
             else
                 hash = join(horzcat(ports.hsh), ";");
             end
+        end
+
+        function model_name = get_model_name(model_path)
+                tmp = split(model_path, '/');
+                tmp = split(tmp{end}, '.');
+                model_name = tmp{1};
+        end
+
+        function parents = change_root_parent(old_parents, root_name)
+            tmp = split(old_parents, '/');
+            tmp{1} = root_name;
+            tmp = join(horzcat(tmp), '/');
+            parents = tmp{1};
         end
 
         function file_print(file_name, message)

@@ -3,44 +3,33 @@ classdef Equivalence_class
     %subsystems
     %'equivalent' being that the subsystems could be exchanged in the model
     properties
-        hsh
+        hash
         subsystems;
     end
 
     methods
-        function obj = Equivalence_class()
-            obj.subsystems = {};
+        function obj = Equivalence_class(subsystem)
+            obj.hash = subsystem.interface.hash();
+            obj.subsystems = {subsystem.name2subinfo()};
         end
 
         function obj = add_subsystem(obj, subsystem)
-            if length(obj.subsystems) < 1
-                obj.hsh = subsystem.interface_hash();
-            else
-                if obj.hsh ~= subsystem.interface_hash()
-                    throw(MException('Equivalence_class', 'This subsystem is not equivalent ot others in class')) 
+            if obj.hash ~= subsystem.interface.hash()
+                throw(MException('Equivalence_class', 'This subsystem is not equivalent to others in class')) 
+            end
+            if ~obj.is_already_in(subsystem) || ~Helper.remove_duplicates
+                obj.subsystems{end + 1} = subsystem.name2subinfo();
+            end
+        end
+
+        function is_in = is_already_in(obj, subsystem)
+            is_in = 1;
+            for i=1:length(obj.subsystems)
+                if subsystem.is_identical(obj.subsystems{i})
+                    return
                 end
             end
-            obj.subsystems{end + 1} = subsystem;
-        end
-
-        function hsh = hash(obj)
-            hsh = obj.hsh;
-        end
-
-        function name_hashes = name_hashes(obj)
-            name_hashes = {};
-            for i = 1:length(obj.subsystems)
-                name_hashes{end + 1} = obj.subsystems{i}.name_hash();
-            end
-        end
-
-        function name_hashes = unique_name_hashes(obj)
-            name_hashes = {};
-            for i = 1:length(obj.subsystems)
-                if ~obj.subsystems{i}.is_in_subs(i, obj.subsystems)
-                    name_hashes{end + 1} = obj.subsystems{i}.name_hash();
-                end
-            end
+            is_in = 0;
         end
     end
 end

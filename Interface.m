@@ -1,21 +1,32 @@
 classdef Interface
     properties
         inports = [];
-        in_mapping
         outports = [];
-        out_mapping
+        mapping = struct;
         specialports = [];
-        has_buses = 0;
+        skip_interface = 0;
+        hsh
     end
     methods
         function obj = Interface(subsystem)
-            [obj.inports, obj.in_mapping] = Port.compute_ports(subsystem, 'Inport', obj.inports);
-            [obj.outports, obj.out_mapping] = Port.compute_ports(subsystem, 'Outport', obj.outports);
-            obj.specialports = Port.compute_ports(subsystem, 'ActionPort', obj.specialports);
-            obj.specialports = Port.compute_ports(subsystem, 'EnablePort', obj.specialports);
-            obj.specialports = Port.compute_ports(subsystem, 'TriggerPort', obj.specialports);
+            if isstruct(subsystem)% getting called from ModelBuilder
+                interface = subsystem;
+                obj.inports = interface.inports;%for more detail Port() each port
+                obj.outports = interface.outports;
+                obj.mapping = interface.mapping;
+                obj.specialports = interface.specialports;
+                obj.skip_interface = interface.skip_interface;
+                obj.hsh = interface.hsh;
+                return
+            end
+            [obj.inports, obj.mapping.in_mapping]  = Port.compute_ports(subsystem, 'Inport');
+            [obj.outports, obj.mapping.out_mapping] = Port.compute_ports(subsystem, 'Outport');
+            obj.specialports = [Port.compute_ports(subsystem, 'ActionPort'), Port.compute_ports(subsystem, 'EnablePort'), Port.compute_ports(subsystem, 'TriggerPort')];
+
             if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
-                obj.has_buses = 1;
+                obj.skip_interface = 1;
+            else
+                obj.hsh = obj.hash();
             end
         end
 
@@ -32,38 +43,16 @@ classdef Interface
             % obj.outports = Helper.sort_by_field(tmp_outports, 'hsh');
         end
 
-        function str = report(obj) %needs updates to current version
-            str = sprintf('%0.13f', obj.handle) + " " + get_param(obj.handle, 'Name') + newline;
-            if obj.has_buses
-                str = str + "Subsystem has busses as inputs or outputs" + newline;
-                return
-            end
-            for i = 1:length(obj.inports)            
-                str = str + obj.inports(i).print() + newline;
-            end
-            if obj.empty_interface
-                str = str + "Subsystem has empty interface" + newline;
-            else
-                str = str + "=======================" + newline;
-            end
-            for i = 1:length(obj.outports)            
-                str = str + obj.outports(i).print() + newline;
-            end
-        end
-
         function hash = hash(obj)
-            ports = [Helper.get_hash(obj.inports) Helper.get_hash(obj.outports) Helper.get_hash(obj.specialports)];
+            ip = Helper.sort_by_field(obj.inports, 'hsh');
+            op = Helper.sort_by_field(obj.outports, 'hsh');
+            sp = Helper.sort_by_field(obj.specialports, 'hsh');
+            ports = [Helper.get_hash(ip) Helper.get_hash(op) Helper.get_hash(sp)];
             hash = join(ports, Helper.first_level_divider);
         end
 
-        function map = mapping(obj)
-            map = struct;
-            map.in_mapping = obj.in_mapping;
-            map.out_mapping = obj.out_mapping;
-        end
-
-        function eq = same_as(obj, other_obj)
-            eq = strcmp(obj.hash(), other_obj.hash());
+        function eq = is_equivalent(obj, other_obj)
+            eq = strcmp(obj.hsh, other_obj.hsh);
         end
     end
 

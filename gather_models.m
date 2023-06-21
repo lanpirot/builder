@@ -1,4 +1,4 @@
-function gather_models()
+function gather_models(max_number_of_models)
     disp("Starting gathering process")
     warning('off','all')
     modellist = [dir(fullfile(Helper.models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.models_path, "**" + filesep + "*.mdl"))];
@@ -6,7 +6,10 @@ function gather_models()
     project_info = tdfread(Helper.project_info, 'tab');
     fileID = fopen(Helper.modellist, "w+");
     fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "closable" + newline);
-    for i = 4000:4050%1:length(modellist)
+    if ~exist("max_number_of_models",'var')
+        max_number_of_models = length(modellist);
+    end    
+    for i = 1:max_number_of_models
         cd(project_dir)
         model = modellist(i);
         folder = strsplit(model.folder, filesep);

@@ -1,35 +1,18 @@
 function builder()
     clean_up()
-    name2subinfo_roots = Helper.parse_json(Helper.name2subinfo_roots);
     name2subinfo = Helper.parse_json(Helper.name2subinfo);
-    interface2name = Helper.parse_json(Helper.interface2name_unique);
+    model_root_identities = get_root_models(name2subinfo);
 
-    sub_names = extractfield(name2subinfo, Helper.name);
+    sub_identities = extractfield(name2subinfo, Helper.identity);
     sub_info = build_sub_info(name2subinfo);
 
-    name2subinfo = dictionary(sub_names, sub_info);
-    interface2name = dictionary(extractfield(interface2name, Helper.ntrf), extractfield(interface2name, Helper.names));
+    name2subinfo = dictionary(sub_identities, sub_info);
     models = {};
-    for i = 1:length(name2subinfo_roots)
-        disp("Rebuilding model " + string(i) + " of " + length(name2subinfo_roots))
-        model = build_model(string(i), name2subinfo_roots(i), name2subinfo, interface2name);
-        models{end + 1} = model;
+    for i = 1:length(model_root_identities)
+        disp("Rebuilding model " + string(i) + " of " + length(model_root_identities))
+        models{end + 1} = build_model(string(i), model_root_identities{i}, name2subinfo);
     end
     disp(string(Helper.found_alt(0)) + " subsystems could have been changed")
-end
-
-function out = build_sub_info(name2subinfo)
-    sub_names = extractfield(name2subinfo, Helper.name);
-    sub_mappings = extractfield(name2subinfo, Helper.mapping);
-    sub_ntrfs = extractfield(name2subinfo, Helper.ntrf);
-    sub_depths = num2cell(extractfield(name2subinfo, Helper.depth));
-    sub_divers = num2cell(extractfield(name2subinfo, Helper.diverseness));
-    sub_info = [sub_names; sub_mappings; sub_ntrfs; sub_depths; sub_divers];
-    sub_info = cell2struct(sub_info, {Helper.name, Helper.mapping, Helper.ntrf, Helper.depth, Helper.diverseness});
-    out = {};
-    for i=1:length(sub_info)
-        out{end + 1} = sub_info(i);
-    end
 end
 
 function clean_up()
@@ -41,9 +24,41 @@ function clean_up()
     Helper.reset_logs([Helper.log_switch_up]);
 end
 
-function model = build_model(uuid, start_system, name2subinfo, interface2name)
-    model = ModelBuilder(uuid, start_system);
+function out = build_sub_info(name2subinfo)
+    sub_identities = extractfield(name2subinfo, Helper.identity);
+    %sub_hashes = {};
+    %for i=1:length(sub_identities)
+    %    sub_hashes{end + 1} = Identity(sub_identities{i}).hash();
+    %end
+
+
+    
+    sub_interfaces = extractfield(name2subinfo, Helper.interface);
+    sub_is_root = extractfield(name2subinfo, Helper.is_root);
+    sub_depths = num2cell(extractfield(name2subinfo, Helper.sub_depth));
+    subtree_depths = num2cell(extractfield(name2subinfo, Helper.subtree_depth));
+    sub_diverseness = num2cell(extractfield(name2subinfo, Helper.diverseness));
+    sub_num_contained_elements = num2cell(extractfield(name2subinfo, Helper.num_contained_elements));
+    sub_info = [sub_identities; sub_interfaces; sub_is_root; sub_depths; subtree_depths; sub_diverseness; sub_num_contained_elements];
+    sub_info = cell2struct(sub_info, {Helper.identity, Helper.interface, Helper.is_root, Helper.sub_depth, Helper.subtree_depth, Helper.diverseness, Helper.num_contained_elements});
+    out = {};
+    for i=1:length(sub_info)
+        out{end + 1} = sub_info(i);
+    end
+end
+
+function root_models = get_root_models(name2subinfo)
+    root_models = {};
+    for i=1:length(name2subinfo)
+        if name2subinfo(i).(Helper.is_root)
+            root_models{end + 1} = Identity(name2subinfo(i).(Helper.identity));
+        end
+    end
+end
+
+function model = build_model(uuid, root_model_identity, name2subinfo)
+    model = ModelBuilder(uuid, root_model_identity);
     if model.version >= 0 
-        model = model.switch_subs_in_model(name2subinfo, interface2name);
+        model = model.switch_subs_in_model(name2subinfo);
     end
 end
