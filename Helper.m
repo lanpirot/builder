@@ -45,8 +45,8 @@ classdef Helper
 
 
         remove_duplicates = 1;      %don't include subsystems which are very probably duplicates: same interface and same number of contained elements
-        dimensions = 1
-        data_types = 1              %data types shall be considered for equivalence
+        dimensions = 0
+        data_types = 0              %data types shall be considered for equivalence
         sample_times = 0            %sample times are not considered for equivalence
         needs_to_be_compilable = Helper.dimensions || Helper.data_types || Helper.sample_times
 
@@ -60,7 +60,7 @@ classdef Helper
         diverse = "DIVERSE"
         shallow = "SHALLOW"
         deep = "DEEP"
-        wish_property = Helper.shallow     %set to one of above to build models of a certain property
+        wish_property = Helper.deep     %set to one of above to build models of a certain property
     end
     
     methods(Static)

@@ -1,19 +1,38 @@
 classdef Identity
     properties
         sub_name
-        parents
+        sub_parents
         model_path
     end
 
     methods
-        function obj = Identity(identity)
-            obj.sub_name = identity.(Helper.sub_name);
-            obj.parents = identity.(Helper.sub_parents);
-            obj.model_path = identity.(Helper.model_path);
+        function obj = Identity(sn, sp, mp)
+            if ~exist('sp', 'var')
+                identity = sn;
+                obj.sub_name = identity.(Helper.sub_name);
+                obj.sub_parents = identity.(Helper.sub_parents);
+                obj.model_path = identity.(Helper.model_path);
+                return
+            end
+            obj.sub_name = sn;
+            obj.sub_parents = sp;
+            obj.model_path = mp;
         end
 
         function hsh = hash(obj)
-            hsh = [obj.sub_name  ';' obj.parents ';' obj.model_path];
+            hsh = [obj.sub_name  ';' obj.sub_parents ';' obj.model_path];
+        end
+
+        function q_name = get_qualified_name(obj)
+            if obj.is_root()
+                q_name = obj.sub_name;
+            else
+                q_name = [obj.sub_parents '/' obj.sub_name];
+            end
+        end
+
+        function is_root = is_root(obj)
+            is_root = isempty(obj.sub_parents);
         end
     end
 

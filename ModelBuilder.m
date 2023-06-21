@@ -39,7 +39,7 @@ classdef ModelBuilder
             close_system(obj.model_name + new_suffix)
         end
 
-        function obj = copy_version(obj, close_first)            
+        function obj = copy_version(obj, close_first)
             obj.model_name = "model" + string(obj.uuid);
             obj.root_model_path = Helper.playground + filesep + obj.model_name + extractAfter(obj.original_model_path,strlength(obj.original_model_path)-4);
             obj.root_model_path = char(obj.root_model_path.replace("\", "/"));
@@ -50,7 +50,13 @@ classdef ModelBuilder
             pause(0.05);            %hacky to avoid: The requested operation cannot be performed on a file with a user-mapped section open.
             copyfile(obj.original_model_path, obj.root_model_path);
             load_system(obj.root_model_path)
-            set_param(obj.model_name, "LockLinksToLibrary", "off")%sometimes causes errors
+            try
+                set_param(obj.model_name, "LockLinksToLibrary", "off")%sometimes causes errors
+            catch ME
+                close_system(obj.root_model_path, 0);
+                delete(obj.root_model_path)
+                rethrow(ME)
+            end
         end
 
         function obj = switch_subs_in_model(obj, name2subinfo)
@@ -107,42 +113,24 @@ classdef ModelBuilder
             %    disp(obj)
             %    disp(old_sub)
             %    disp(new_sub)
-            %    disp(mapping)
 
-
-            %load_system(new_sub.model_path);
-            %new_sub.handle = get_param(new_sub.qualified_name, 'Handle');
-            
-            %copy_from = new_sub
-            %copy_to = Helper.change_root_parent(old_sub.qualified_name, char(obj.model_name));%within model_name/root_model_path the relative path of old_sub
-            %copied_element_name = ['sub' int2str(Helper.found_alt(1))];
-            %copied_qualified_name = [copy_to '/' copied_element_name];
-            
-
-            alt_model_path = new_sub.model_path;
-            alt_sub_qualified_name = new_sub.qualified_name;
-            switch_model_handle = load_system(alt_model_path);
-            load_system(alt_sub_qualified_name)
-            switch_sub_handle = get_param(alt_sub_qualified_name, 'Handle');
-
-
-            copy_from = SimulinkName(SimulinkName.get_qualified_name_from_handle(get_param(switch_model_handle, 'Name'), switch_sub_handle), get_param(switch_model_handle, 'Name'));
-            copy_to = SimulinkName(SimulinkName.get_qualified_name_from_handle(get_param(obj.model_name, 'Name'), Helper.change_root_parent(old_sub.qualified_name, char(obj.model_name))), obj.original_model_name);
-
-            copied_name = SimulinkName(join([copy_to.ancestor_names "sub" + string(Helper.found_alt(1))], "/"), obj.original_model_name);
-            if copy_to.root_bool
+            copy_from = new_sub.get_identity();
+            load_system(copy_from.model_path)
+            copy_to = Identity(old_sub.name, Helper.change_root_parent(old_sub.parents, char(obj.model_name)), obj.root_model_path);
+            copied_element = Identity(['sub' int2str(Helper.found_alt(1))], copy_to.sub_parents, obj.root_model_path);
+            if copy_to.is_root()
                 
-                if copy_from.root_bool
+                if copy_from.is_root()
                     %copy from root to root
                     close_system(obj.model_name)
                     delete(obj.root_model_path)
-                    copyfile(alt_model_path, obj.root_model_path);
+                    copyfile(copy_from.model_path, obj.root_model_path);
                     load_system(obj.root_model_path);
                 else
                     %copy from subsystem to root
-                    Simulink.BlockDiagram.deleteContents(copy_to.full_name)
+                    Simulink.BlockDiagram.deleteContents(copy_to.get_qualified_name())
                     try
-                        Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.full_name, copy_to.full_name)
+                        Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
                     catch ME
                         obj.skip_save = 1;
                         Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alternate_sub_name + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
@@ -152,25 +140,25 @@ classdef ModelBuilder
                 %we don't need to rewire the inputs/outputs after copying
             else
                 %get prior wiring
-                connected_blocks = ModelBuilder.get_wiring(copy_to.full_name);
-                ModelBuilder.remove_lines(copy_to.full_name);
-                if copy_from.root_bool
+                connected_blocks = ModelBuilder.get_wiring(copy_to.get_qualified_name());
+                ModelBuilder.remove_lines(copy_to.get_qualified_name());
+                if copy_from.is_root()
                     %copy from root to subsystem
-                    Simulink.BlockDiagram.createSubsystem(get_param(copy_to.full_name, 'Handle'), 'Name', copied_name.element_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
-                    Simulink.SubSystem.deleteContents(copied_name.full_name)
-                    Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.full_name, copied_name.full_name)
-                    set_param(copied_name.full_name, 'Name', copy_to.element_name)
+                    Simulink.BlockDiagram.createSubsystem(get_param(copy_to.get_qualified_name(), 'Handle'), 'Name', copied_element.sub_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
+                    Simulink.SubSystem.deleteContents(copied_element.get_qualified_name())
+                    Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
+                    set_param(copied_element.get_qualified_name(), 'Name', copy_to.sub_name)
                 else
                     %copy from subsystem to subsystem
-                    delete_block(copy_to.full_name)
-                    add_block(copy_from.full_name, copy_to.full_name)
+                    delete_block(copy_to.get_qualified_name())
+                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
                 end
                 %now, rewire
                 ModelBuilder.add_lines(copy_to, connected_blocks, old_sub.interface.mapping, new_sub.interface.mapping)
             end
-            ModelBuilder.annotate(copy_to.full_name, "Copied system from: " + alt_sub_qualified_name + newline + " into: " + SimulinkName.name_hash(obj.original_model_path, copy_to.original_full_name))
+            ModelBuilder.annotate(copy_to.get_qualified_name(), "Copied system from: " + copy_from.get_qualified_name() + newline + " into: " + old_sub.get_identity().hash())
             %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
-            ModelBuilder.annotate(copy_to.model_name, "Copied " + copy_from.full_name + " to: " + copy_to.full_name)
+            ModelBuilder.annotate(obj.model_name, "Copied " + copy_from.get_qualified_name() + " to: " + copy_to.get_qualified_name())
         end
 
         function obj = check_models_correctness(obj)
@@ -331,17 +319,17 @@ classdef ModelBuilder
         end
 
         function add_lines(system, ports, old_mapping, new_mapping)
-            ph = get_param(system.full_name, "PortHandles");
+            ph = get_param(system.get_qualified_name(), "PortHandles");
             for i=1:length(ports.in_source_ports)
                 if ports.in_source_ports{old_mapping.in_mapping(i)} ~= -1
-                    add_line(system.ancestor_names, ports.in_source_ports{old_mapping.in_mapping(i)}, ph.Inport(new_mapping.in_mapping(i)), 'autorouting','on')
+                    add_line(system.sub_parents, ports.in_source_ports{old_mapping.in_mapping(i)}, ph.Inport(new_mapping.in_mapping(i)), 'autorouting','on')
                 end
             end
             for i=1:length(ports.out_destination_ports)
                 outports = ports.out_destination_ports{old_mapping.out_mapping(i)};
                 if outports ~= -1
                     for j=1:length(outports)
-                        add_line(system.ancestor_names, ph.Outport(new_mapping.out_mapping(i)), outports(j), 'autorouting','on')
+                        add_line(system.sub_parents, ph.Outport(new_mapping.out_mapping(i)), outports(j), 'autorouting','on')
                     end
                 end
             end

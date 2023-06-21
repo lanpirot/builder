@@ -21,7 +21,7 @@ function clean_up()
     clear('all');
     mkdir(Helper.playground)
     delete(Helper.playground + filesep + "*");
-    Helper.reset_logs([Helper.log_switch_up]);
+    Helper.reset_logs([Helper.log_switch_up Helper.log_construct]);
 end
 
 function out = build_sub_info(name2subinfo)

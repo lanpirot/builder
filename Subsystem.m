@@ -81,7 +81,7 @@ classdef Subsystem
         end
 
         function identity = get_identity(obj)
-            identity = struct(Helper.sub_name, obj.name, Helper.sub_parents, obj.parents, Helper.model_path, obj.model_path);%consider creating class for this
+            identity = Identity(obj.name, obj.parents, obj.model_path);
         end
         
         function n2i = name2subinfo(obj)
