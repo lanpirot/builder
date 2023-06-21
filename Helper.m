@@ -45,10 +45,9 @@ classdef Helper
 
 
         remove_duplicates = 1;      %don't include subsystems which are very probably duplicates: same interface and same number of contained elements
-        dimensions = 0
-        data_types = 0              %data types shall be considered for equivalence
-        sample_times = 0            %sample times are not considered for equivalence
-        needs_to_be_compilable = Helper.dimensions || Helper.data_types || Helper.sample_times
+        dimensions = 1
+        data_types = 1              %data types shall be considered for equivalence
+        needs_to_be_compilable = Helper.dimensions || Helper.data_types
 
 
         depth = 'DEPTH'
@@ -172,6 +171,10 @@ classdef Helper
         end
 
         function parents = change_root_parent(old_parents, root_name)
+            if isempty(old_parents)
+                parents = '';
+                return
+            end
             tmp = split(old_parents, '/');
             tmp{1} = root_name;
             tmp = join(horzcat(tmp), '/');
