@@ -21,22 +21,32 @@ classdef Port
             obj.skip_port = Port.check_if_bus(handle);
             
             if ~obj.skip_port
-                obj.dimensions = obj.get_dimensions(handle);
                 obj.data_type = obj.get_datatype(handle);
+                obj.dimensions = obj.get_dimensions(handle);
                 obj.hsh = obj.hash();
                 obj.hshpn = obj.hashplusname();
             end
         end
 
         function is_special = is_special_port(obj)
-            is_special = any(ismember(["ActionPort", "EnablePort", "TriggerPort"], obj.port_type));
+            is_special = any(ismember(["ActionPort", "EnablePort", "TriggerPort", "PMIOPort", "ResetPort"], obj.port_type));
         end
 
         function type = get_datatype(obj, handle)
             if Helper.data_types
                 if is_special_port(obj)
-                    type = obj.port_type;
-                    %get Data Type of TriggerPort https://www.mathworks.com/help/simulink/slref/trigger.html    
+                    switch obj.port_type
+                        case 'TriggerPort'
+                            type = get_param(handle, 'OutputDataType');
+                            %https://www.mathworks.com/help/simulink/slref/trigger.html
+                        case 'PMIOPort'
+                            type = Port.handle_pmio_port(handle, obj.num);
+                        case 'ResetPort'
+                            disp("")
+                        otherwise
+                            type = obj.port_type;
+                    end
+                    return
                 else
                     if Dimensions.is_bus(get_param(handle, 'CompiledPortDimensions'))
                         obj.skip_port = 1;
@@ -52,7 +62,7 @@ classdef Port
         function dims = get_dimensions(obj, handle)
             if Helper.dimensions
                 if is_special_port(obj)
-                    if strcmp(obj.data_type, "ActionPort")
+                    if strcmp(obj.port_type, "ActionPort") ||strcmp(obj.port_type, "PMIOPort")
                         dims = Dimensions([]);
                     else
                         dims = Dimensions(get_param(handle, 'PortDimensions'));
@@ -70,25 +80,6 @@ classdef Port
             end
         end
 
-        function obj = update_bus(obj, model)
-            % if length(obj.dimensions.dimensions) > 1
-            %     tmp_obj = obj;
-            %     obj = [];
-            %     tmp_dims = tmp_obj.dimension.dimensions(2:end);
-            %     be = Simulink.Bus.createObject(model, tmp_obj.handle);
-            %     i = 1;
-            %     while ~isempty(tmp_dims)
-            %         new_dims = tmp_dims(1:tmp_dims(1)+1);
-            %         tmp_dims = tmp_dims(tmp_dims(1)+2:end);
-            %         new_type = be.elemAttributes(i).Attribute.DataType;
-            % 
-            % 
-            %         obj = [obj Port()];
-            %         i = i+1;
-            %     end
-            % end
-        end
-
         function hsh = hash(obj)
             if obj.is_special_port()
                 hsh = obj.port_type;
@@ -104,6 +95,21 @@ classdef Port
     end
     
     methods(Static)
+        function type = handle_pmio_port(handle, num)
+            parent = get_param(handle, 'parent');
+            pc = get_param(parent, 'PortConnectivity');
+            for i = 1:length(pc)
+                port = pc(i);
+                if startsWith(port.Type, 'LConn') || startsWith(port.Type, 'RConn')
+                    num = num - 1;
+                end
+                if ~num
+                    type = port.Type;
+                    return
+                end
+            end
+        end
+
         function ports = compute_ports(subsystem, search_string)
             ports = [];
             port_handles = Helper.find_ports(subsystem, search_string);

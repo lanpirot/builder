@@ -20,6 +20,11 @@ classdef ModelMutator
         function obj = ModelMutator(uuid, root_model_identity)
             try
                 obj.uuid = uuid;
+
+                %%%%%%%%%%%%%
+                root_model_identity.model_path = 'C:/svns/simucomp2/models/SLNET_v1/SLNET/SLNET_GitHub/124448612/Simulation-master/Model/Finger2/Simulink/PQ12.slx';
+
+
                 obj.original_model_name = Helper.get_model_name(root_model_identity.model_path);
                 obj.original_model_path = root_model_identity.(Helper.model_path);
     
@@ -62,7 +67,7 @@ classdef ModelMutator
         function obj = switch_subs_in_model(obj, name2subinfo)
             load_system(obj.root_model_path);
             
-            curr_depth = 1;
+            curr_depth = 0;
             while 1
                 sub_at_depth_found = 0;
                 sub_names = Helper.find_subsystems(obj.model_name);
@@ -85,7 +90,7 @@ classdef ModelMutator
                     keyhit = name2subinfo({key});
                     curr_sub = Subsystem(keyhit{1});
                     try
-                        if curr_sub.sub_depth == curr_depth && ~curr_sub.skip_it
+                        if curr_sub.sub_depth == curr_depth
                             sub_at_depth_found = 1;
                             obj = obj.switch_sub(curr_sub, name2subinfo);
                         end
@@ -94,7 +99,7 @@ classdef ModelMutator
                         continue
                     end
                 end
-                if ~sub_at_depth_found
+                if ~sub_at_depth_found && curr_depth
                     break;
                 end
                 curr_depth = curr_depth + 1;
@@ -105,6 +110,8 @@ classdef ModelMutator
 
         function obj = switch_sub(obj, old_sub, name2subinfo)           
             [new_subs, mappings] = ModelMutator.find_equivalent_subs_and_mappings(old_sub, name2subinfo);
+            %new_subs{2} = new_subs{1}
+            %mappings{2} = mappings{1}
 
             if length(new_subs) > 1
                 next_sub_index = ModelMutator.choose_new_sub(old_sub, new_subs);
@@ -311,6 +318,21 @@ classdef ModelMutator
                     connections.out_destination_ports{end + 1} = get_param(line, "DstPortHandle");
                 end
             end
+
+            connections.Enable = lines.Enable;
+            connections.Trigger = lines.Trigger;
+            connections.LConn = {};
+            connections.RConn = {};
+            pc = get_param(subsystem, 'PortConnectivity');
+            for i=1:length(pc)
+                if startsWith(pc(i).Type, 'LConn')
+                    connections.LConn{end + 1} = pc(i).DstPort;
+                elseif startsWith(pc(i).Type, 'RConn')
+                    connections.LConn{end + 1} = pc(i).DstPort;
+                end
+            end
+            connections.Ifaction = lines.Ifaction;
+            connections.Reset = lines.Reset;
         end
 
         function remove_lines(subsystem)
@@ -319,6 +341,10 @@ classdef ModelMutator
             ModelMutator.make_subsystem_editable(subsystem)
             ModelMutator.remove_lines2(line_handles.Inport);
             ModelMutator.remove_lines2(line_handles.Outport);
+            ModelMutator.remove_lines2(line_handles.Trigger);
+            ModelMutator.remove_lines2(line_handles.LConn);
+            ModelMutator.remove_lines2(line_handles.RConn);
+            ModelMutator.remove_lines2(line_handles.Ifaction);
         end
 
         function make_subsystem_editable(subsystem)
@@ -352,6 +378,30 @@ classdef ModelMutator
                     end
                 end
             end
+            ModelMutator.add_special_lines(system, ports, ph)
+        end
+
+        function add_special_lines(system, ports, ph)
+            special_lines = {{ports.Enable,ph.Enable}, {ports.Trigger,ph.Trigger}, {[ports.LConn ports.RConn],[ph.LConn ph.RConn]},{ports.Ifaction,ph.Ifaction}, {ports.Reset, ph.Reset}};
+            for i=1:length(special_lines)
+                srcdsts = special_lines{i};
+                
+                dsts = srcdsts{1};
+                for d=1:length(dsts)
+                    dests = dsts{d};
+                    if iscell(dsts{d})
+                        dests = dsts{1};
+                    end
+                    src = srcdsts{2};
+                    src = src(d);
+                    for j=1:length(dests)
+                        try
+                            add_line(system.sub_parents, src, dests(j), 'autorouting','on');
+                        catch
+                        end
+                    end
+                end
+            end 
         end
 
         function annotate(system, text)

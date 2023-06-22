@@ -5,7 +5,7 @@ classdef Dimensions
 
     methods
         function obj = Dimensions(dims)
-            if ~exist('dims', 'var')
+            if ~exist('dims', 'var') || isempty(dims)
                 return
             end
             if ischar(dims)

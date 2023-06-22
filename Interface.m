@@ -19,7 +19,7 @@ classdef Interface
             end
             obj.inports  = Port.compute_ports(subsystem, 'Inport');
             obj.outports = Port.compute_ports(subsystem, 'Outport');
-            obj.specialports = [Port.compute_ports(subsystem, 'ActionPort'), Port.compute_ports(subsystem, 'EnablePort'), Port.compute_ports(subsystem, 'TriggerPort')];
+            obj.specialports = [Port.compute_ports(subsystem, 'ActionPort'), Port.compute_ports(subsystem, 'EnablePort'), Port.compute_ports(subsystem, 'TriggerPort'), Port.compute_ports(subsystem, 'PMIOPort'), Port.compute_ports(subsystem, 'ResetPort')];
 
             if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
                 obj.skip_interface = 1;
@@ -63,21 +63,15 @@ classdef Interface
 
         function mapping = get_mapping(old, new)
             mapping = -1;
-            if length(old.outports) > length(old.inports)
-                disp("")
-
-            end
-            if (~Helper.input_output_number_compability && (length(old.inports) ~= length(new.inports) || length(old.outports) ~= length(new.outports))) || (Helper.input_output_number_compability && (length(old.inports) < length(new.inports) || length(old.outports) > length(new.outports)))
+            if (length(old.specialports) ~= length(new.specialports) || length([old.specialports.port_type]) ~= length([new.specialports.port_type]) || ~all([old.specialports.port_type] == [new.specialports.port_type])) || (~Helper.input_output_number_compability && (length(old.inports) ~= length(new.inports) || length(old.outports) ~= length(new.outports))) || (Helper.input_output_number_compability && (length(old.inports) < length(new.inports) || length(old.outports) > length(new.outports)))
                 return
             end
+
             inmapping = Helper.get_one_mapping(new.inports, old.inports);
             outmapping = Helper.get_one_mapping(old.outports, new.outports);
 
             if isempty(inmapping) && ~isempty(old.inports) || isempty(outmapping) && ~isempty(new.outports)
                 return
-            end
-            if length(old.outports) > 1 && length(old.outports) ~= length(old.inports)
-                disp("")
             end
             mapping = struct('inmapping', inmapping, 'outmapping', outmapping);
         end

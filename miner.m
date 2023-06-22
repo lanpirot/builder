@@ -5,13 +5,14 @@ function miner(max_number_of_models)
     evaluated = 0;
     subs = {};
     project_dir = Helper.project_dir;
+    needs_to_be_compilable = Helper.needs_to_be_compilable;
 
     modellist = tdfread(Helper.modellist, 'tab');
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:max_number_of_models%height(modellist.model_url)
-        if Helper.needs_to_be_compilable && ~modellist.compilable(i)
+    for i = 147:max_number_of_models%height(modellist.model_url)
+        if needs_to_be_compilable && ~modellist.compilable(i)
             continue
         end
         Helper.create_garbage_dir();
@@ -21,14 +22,14 @@ function miner(max_number_of_models)
             model_handle = load_system(model_path);
             model_name = get_param(model_handle, 'Name');
 
-            if Helper.needs_to_be_compilable
+            if needs_to_be_compilable
                 eval([model_name, '([],[],[],''compile'');']);
             end
             cd(project_dir)
             disp("Mining interfaces of model no. " + string(i) + " " + model_path)
             subs = compute_interfaces(subs, model_handle, model_path);
 
-            if Helper.needs_to_be_compilable
+            if needs_to_be_compilable
                 try_end(model_name);
             end
             try_close(model_name, model_path);
@@ -40,7 +41,9 @@ function miner(max_number_of_models)
             log(project_dir, 'log_eval', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
             try_close(model_name, model_path);
         end
-
+        if contains(pwd, "tmp_garbage")
+            cd("..")
+        end
         Helper.clear_garbage()
     end
     cd(project_dir)
