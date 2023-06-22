@@ -1,4 +1,4 @@
-classdef ModelBuilder
+classdef ModelMutator
     properties
         uuid
         version = 0;
@@ -17,7 +17,7 @@ classdef ModelBuilder
     end
     
     methods
-        function obj = ModelBuilder(uuid, root_model_identity)
+        function obj = ModelMutator(uuid, root_model_identity)
             try
                 obj.uuid = uuid;
                 obj.original_model_name = Helper.get_model_name(root_model_identity.model_path);
@@ -68,22 +68,30 @@ classdef ModelBuilder
                 sub_names = Helper.find_subsystems(obj.model_name);
                 sub_names{end + 1} = char(obj.model_name);
                 for i = 1:length(sub_names)
-                    original_name = get_param(sub_names{i}, 'Name');
+                    try
+                        original_name = get_param(sub_names{i}, 'Name');
+                    catch ME
+                        Helper.log('log_copy_to_missing', string(jsonencode(obj)) + newline + jsonencode(key) + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                        continue
+                    end
                     original_parent = Helper.change_root_parent(get_param(sub_names{i}, 'Parent'), obj.original_model_name);
                     if isempty(original_parent)
                         original_name = obj.original_model_name;
                     end
                     key = struct(Helper.sub_name, original_name, Helper.sub_parents, original_parent, Helper.model_path, obj.original_model_path);
+                    if ~name2subinfo.isKey({key})
+                        continue
+                    end
+                    keyhit = name2subinfo({key});
+                    curr_sub = Subsystem(keyhit{1});
                     try
-                        keyhit = name2subinfo({key});
-                        curr_sub = Subsystem(keyhit{1});
+                        if curr_sub.sub_depth == curr_depth && ~curr_sub.skip_it
+                            sub_at_depth_found = 1;
+                            obj = obj.switch_sub(curr_sub, name2subinfo);
+                        end
                     catch ME
                         Helper.log('log_switch_up', string(jsonencode(obj)) + newline + jsonencode(key) + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
                         continue
-                    end
-                    if curr_sub.sub_depth == curr_depth && ~curr_sub.skip_it
-                        sub_at_depth_found = 1;
-                        obj = obj.switch_sub(curr_sub, name2subinfo);
                     end
                 end
                 if ~sub_at_depth_found
@@ -96,11 +104,13 @@ classdef ModelBuilder
         end
 
         function obj = switch_sub(obj, old_sub, name2subinfo)           
-            new_subs = ModelBuilder.find_equivalent_subs(old_sub, name2subinfo);
+            [new_subs, mappings] = ModelMutator.find_equivalent_subs_and_mappings(old_sub, name2subinfo);
 
             if length(new_subs) > 1
-                new_sub = Subsystem(ModelBuilder.choose_new_sub(old_sub, new_subs));
-                obj = obj.switch_sub_with_sub(old_sub, new_sub);
+                next_sub_index = ModelMutator.choose_new_sub(old_sub, new_subs);
+                new_sub = Subsystem(new_subs{next_sub_index});
+                mapping = mappings{next_sub_index};
+                obj = obj.switch_sub_with_sub(old_sub, new_sub, mapping);
                 obj = obj.check_models_correctness();
                 if obj.skip_save == 0
                     obj = obj.save_version();
@@ -109,7 +119,7 @@ classdef ModelBuilder
             end
         end
         
-        function obj = switch_sub_with_sub(obj, old_sub, new_sub)
+        function obj = switch_sub_with_sub(obj, old_sub, new_sub, mapping)
             %    disp(obj)
             %    disp(old_sub)
             %    disp(new_sub)
@@ -140,8 +150,8 @@ classdef ModelBuilder
                 %we don't need to rewire the inputs/outputs after copying
             else
                 %get prior wiring
-                connected_blocks = ModelBuilder.get_wiring(copy_to.get_qualified_name());
-                ModelBuilder.remove_lines(copy_to.get_qualified_name());
+                connected_blocks = ModelMutator.get_wiring(copy_to.get_qualified_name());
+                ModelMutator.remove_lines(copy_to.get_qualified_name());
                 if copy_from.is_root()
                     %copy from root to subsystem
                     Simulink.BlockDiagram.createSubsystem(get_param(copy_to.get_qualified_name(), 'Handle'), 'Name', copied_element.sub_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
@@ -154,11 +164,11 @@ classdef ModelBuilder
                     add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
                 end
                 %now, rewire
-                ModelBuilder.add_lines(copy_to, connected_blocks, old_sub.interface.mapping, new_sub.interface.mapping)
+                ModelMutator.add_lines(copy_to, connected_blocks, mapping)
             end
-            ModelBuilder.annotate(copy_to.get_qualified_name(), "Copied system from: " + copy_from.get_qualified_name() + newline + " into: " + old_sub.get_identity().hash())
+            ModelMutator.annotate(copy_to.get_qualified_name(), "Copied system from: " + copy_from.get_qualified_name() + newline + " into: " + old_sub.get_identity().hash())
             %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
-            ModelBuilder.annotate(obj.model_name, "Copied " + copy_from.get_qualified_name() + " to: " + copy_to.get_qualified_name())
+            ModelMutator.annotate(obj.model_name, "Copied " + copy_from.get_qualified_name() + " to: " + copy_to.get_qualified_name())
         end
 
         function obj = check_models_correctness(obj)
@@ -188,7 +198,11 @@ classdef ModelBuilder
                     end
                 catch
                 end
-            catch
+            catch ME
+                if contains(pwd, "tmp_garbage")
+                    cd("..")
+                end
+                Helper.log('log_compile', string(jsonencode(obj)) + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
                 cp = 0;
             end
             if contains(pwd, "tmp_garbage")
@@ -199,46 +213,50 @@ classdef ModelBuilder
     end
 
     methods (Static)
-        function new_subs = find_equivalent_subs(old_sub, name2subinfo)
-            new_subs = {};
+        function [new_subs, mappings] = find_equivalent_subs_and_mappings(old_sub, name2subinfo)
+            new_subs = {}; mappings = {};
             keys = name2subinfo.keys();
             for i=1:length(keys)
                 alt_sub = name2subinfo{keys(i)};
-                if old_sub.interface.is_equivalent(alt_sub.(Helper.interface))
+                mapping = old_sub.interface.get_mapping(alt_sub.(Helper.interface));
+                if isstruct(mapping)
+                    if ~all(1:length(mapping.outmapping) == mapping.outmapping)
+                        disp(mapping)
+                    end
                     new_subs{end + 1} = alt_sub;
+                    mappings{end + 1} = mapping;
                 end
             end
+
+            
         end
 
-        function other_sub = choose_new_sub(old_sub, new_subs)
+        function index = choose_new_sub(old_sub, new_subs)
             %remove current sub from alt_subs, as to get a real alternative sub
-            new_subs(ModelBuilder.find_identical(old_sub, new_subs)) = [];
-            if isempty(new_subs)
-                disp("")
-            end
+            new_subs(ModelMutator.find_identical(old_sub, new_subs)) = [];
 
             %sort alt_subs by diverseness
-            [max_index, min_index] = ModelBuilder.get_extremes(new_subs, Helper.diverseness);
+            [max_index, min_index] = ModelMutator.get_extremes(new_subs, Helper.diverseness);
             if Helper.wish_property == Helper.diverse
-                other_sub = new_subs{max_index};
+                index = max_index;
                 return
             elseif Helper.wish_property == Helper.mono
-                other_sub = new_subs{min_index};
+                index = min_index;
                 return
             end
 
             %sort alt_subs by depth
-            [max_index, min_index] = ModelBuilder.get_extremes(new_subs, Helper.sub_depth);
+            [max_index, min_index] = ModelMutator.get_extremes(new_subs, Helper.sub_depth);
             if Helper.wish_property == Helper.deep
-                other_sub = new_subs{max_index};
+                index = max_index;
                 return
             elseif Helper.wish_property == Helper.shallow
-                other_sub = new_subs{min_index};
+                index = min_index;
                 return
             end
             
             %neither: choose a random sub
-            other_sub = new_subs{randi(length(new_subs))};
+            index = randi(length(new_subs));
         end
 
         function [min_index, max_index] = get_extremes(subs, keyword)
@@ -298,9 +316,9 @@ classdef ModelBuilder
         function remove_lines(subsystem)
             line_handles = get_param(subsystem, "LineHandles");
 
-            ModelBuilder.make_subsystem_editable(subsystem)
-            ModelBuilder.remove_lines2(line_handles.Inport);
-            ModelBuilder.remove_lines2(line_handles.Outport);
+            ModelMutator.make_subsystem_editable(subsystem)
+            ModelMutator.remove_lines2(line_handles.Inport);
+            ModelMutator.remove_lines2(line_handles.Outport);
         end
 
         function make_subsystem_editable(subsystem)
@@ -318,18 +336,19 @@ classdef ModelBuilder
             end
         end
 
-        function add_lines(system, ports, old_mapping, new_mapping)
+        function add_lines(system, ports, mapping)
             ph = get_param(system.get_qualified_name(), "PortHandles");
+            disp(mapping)
             for i=1:length(ports.in_source_ports)
-                if ports.in_source_ports{old_mapping.in_mapping(i)} ~= -1
-                    add_line(system.sub_parents, ports.in_source_ports{old_mapping.in_mapping(i)}, ph.Inport(new_mapping.in_mapping(i)), 'autorouting','on')
+                if ports.in_source_ports{i} ~= -1
+                    add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
                 end
             end
             for i=1:length(ports.out_destination_ports)
-                outports = ports.out_destination_ports{old_mapping.out_mapping(i)};
+                outports = ports.out_destination_ports{i};
                 if outports ~= -1
                     for j=1:length(outports)
-                        add_line(system.sub_parents, ph.Outport(new_mapping.out_mapping(i)), outports(j), 'autorouting','on')
+                        add_line(system.sub_parents, ph.Outport(mapping.outmapping(i)), outports(j), 'autorouting','on')
                     end
                 end
             end

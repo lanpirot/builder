@@ -8,7 +8,7 @@ function builder()
 
     name2subinfo = dictionary(sub_identities, sub_info);
     models = {};
-    for i = 1:length(model_root_identities)
+    for i = 33:length(model_root_identities)
         disp("Rebuilding model " + string(i) + " of " + length(model_root_identities))
         models{end + 1} = build_model(string(i), model_root_identities{i}, name2subinfo);
     end
@@ -21,7 +21,7 @@ function clean_up()
     clear('all');
     mkdir(Helper.playground)
     delete(Helper.playground + filesep + "*");
-    Helper.reset_logs([Helper.log_switch_up Helper.log_construct]);
+    Helper.reset_logs([Helper.log_switch_up Helper.log_construct Helper.log_compile Helper.log_copy_to_missing]);
 end
 
 function out = build_sub_info(name2subinfo)
@@ -57,7 +57,7 @@ function root_models = get_root_models(name2subinfo)
 end
 
 function model = build_model(uuid, root_model_identity, name2subinfo)
-    model = ModelBuilder(uuid, root_model_identity);
+    model = ModelMutator(uuid, root_model_identity);
     if model.version >= 0 
         model = model.switch_subs_in_model(name2subinfo);
     end

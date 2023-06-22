@@ -27,6 +27,8 @@ classdef Helper
         log_close = Helper.log_path + "log_close";
         log_switch_up = Helper.log_path + "log_switch_up";
         log_construct = Helper.log_path + "log_construct";
+        log_compile = Helper.log_path + "log_compile";
+        log_copy_to_missing = Helper.log_path + "log_copy_to_missing";
 
         modellist = Helper.log_path + "modellist.csv";
 
@@ -48,6 +50,8 @@ classdef Helper
         dimensions = 1
         data_types = 1              %data types shall be considered for equivalence
         needs_to_be_compilable = Helper.dimensions || Helper.data_types
+
+        input_output_number_compability = 0     %a subsystem can be exchanged, if the other subsystem has less inputs and more outputs (that are all equivalent)
 
 
         depth = 'DEPTH'
@@ -139,6 +143,12 @@ classdef Helper
             if isempty(arr)
                 return
             end
+            if ischar(arr(1).(field))
+                for i = 1:length(arr)
+                    arr(i).(field) = string(arr(i).(field));
+                end
+            end
+
             [~, sortIdx] = sort([arr.(field)]);
             arr = arr(sortIdx);
         end
@@ -214,6 +224,32 @@ classdef Helper
                 my_fileID = fopen(file, "w+");
                 fprintf(my_fileID, "");
                 fclose(my_fileID);
+            end
+        end
+
+        function mapping = get_one_mapping(ports1, ports2)
+            mapping = [];
+            for i = 1:length(ports1)
+                mapping(end + 1) = Helper.find_equivalent_port(ports1(i), ports2, mapping);
+                if mapping(end) < 0
+                    mapping = [];
+                    return
+                end
+            end
+            % if length(ports1) > 2
+            %     disp([ports1.data_type ';' ports2.data_type])
+            %     disp(mapping)
+            %     disp("")
+            % end
+        end
+
+        function index = find_equivalent_port(port, ports, mapped)
+            index = -1;
+            for i = 1:length(ports)
+                if ~ismember(i, mapped) && all(port.dimensions.dimensions == ports(i).dimensions.dimensions) && strcmp(port.data_type, ports(i).data_type)
+                    index = i;
+                    return
+                end
             end
         end
     end

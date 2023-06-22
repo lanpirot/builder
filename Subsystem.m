@@ -112,10 +112,6 @@ classdef Subsystem
             end
         end
 
-        function mapping = find_mapping_to(obj, other_subsystem)
-            mapping = obj.interface.find_mapping_to(other_subsystem.interface);
-        end
-
         function obj = get_qualified_name(obj)
             if ~isempty(obj.parents)
                 obj.qualified_name = [obj.parents '/' obj.name];

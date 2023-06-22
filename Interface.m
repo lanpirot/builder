@@ -2,7 +2,6 @@ classdef Interface
     properties
         inports = [];
         outports = [];
-        mapping = struct;
         specialports = [];
         skip_interface = 0;
         hsh
@@ -13,14 +12,13 @@ classdef Interface
                 interface = subsystem;
                 obj.inports = interface.inports;%for more detail Port() each port
                 obj.outports = interface.outports;
-                obj.mapping = interface.mapping;
                 obj.specialports = interface.specialports;
                 obj.skip_interface = interface.skip_interface;
                 obj.hsh = interface.hsh;
                 return
             end
-            [obj.inports, obj.mapping.in_mapping]  = Port.compute_ports(subsystem, 'Inport');
-            [obj.outports, obj.mapping.out_mapping] = Port.compute_ports(subsystem, 'Outport');
+            obj.inports  = Port.compute_ports(subsystem, 'Inport');
+            obj.outports = Port.compute_ports(subsystem, 'Outport');
             obj.specialports = [Port.compute_ports(subsystem, 'ActionPort'), Port.compute_ports(subsystem, 'EnablePort'), Port.compute_ports(subsystem, 'TriggerPort')];
 
             if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
@@ -51,8 +49,37 @@ classdef Interface
             hash = join(ports, Helper.first_level_divider);
         end
 
+        function hash = unsorted_hash(obj)
+            ip = obj.inports;
+            op = obj.outports;
+            sp = obj.specialports;
+            ports = [Helper.get_hash(ip) Helper.get_hash(op) Helper.get_hash(sp)];
+            hash = join(ports, Helper.first_level_divider);
+        end
+
         function eq = is_equivalent(obj, other_obj)
             eq = strcmp(obj.hsh, other_obj.hsh);
+        end
+
+        function mapping = get_mapping(old, new)
+            mapping = -1;
+            if length(old.outports) > length(old.inports)
+                disp("")
+
+            end
+            if (~Helper.input_output_number_compability && (length(old.inports) ~= length(new.inports) || length(old.outports) ~= length(new.outports))) || (Helper.input_output_number_compability && (length(old.inports) < length(new.inports) || length(old.outports) > length(new.outports)))
+                return
+            end
+            inmapping = Helper.get_one_mapping(new.inports, old.inports);
+            outmapping = Helper.get_one_mapping(old.outports, new.outports);
+
+            if isempty(inmapping) && ~isempty(old.inports) || isempty(outmapping) && ~isempty(new.outports)
+                return
+            end
+            if length(old.outports) > 1 && length(old.outports) ~= length(old.inports)
+                disp("")
+            end
+            mapping = struct('inmapping', inmapping, 'outmapping', outmapping);
         end
     end
 
