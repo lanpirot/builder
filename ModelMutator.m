@@ -11,19 +11,13 @@ classdef ModelMutator
         num_original_subsystems
         num_switched_subsystems
 
-        built_correct
-
-        skip_save = 0;
+        built_correct = 0;
     end
     
     methods
         function obj = ModelMutator(uuid, root_model_identity)
             try
                 obj.uuid = uuid;
-
-                %%%%%%%%%%%%%
-                %root_model_identity.model_path = 'C:/svns/simucomp2/models/SLNET_v1/SLNET/SLNET_GitHub/56873326/SimulinkLibraryForJava-master/test-data/org.conqat.lib.simulink.model.datahandler/special_ports.slx';
-
 
                 obj.original_model_name = Helper.get_model_name(root_model_identity.model_path);
                 obj.original_model_path = root_model_identity.(Helper.model_path);
@@ -120,7 +114,7 @@ classdef ModelMutator
                 mapping = mappings{next_sub_index};
                 obj = obj.switch_sub_with_sub(old_sub, new_sub, mapping);
                 obj = obj.check_models_correctness();
-                if obj.skip_save == 0
+                if obj.built_correct
                     obj = obj.save_version();
                 end
                 obj = obj.copy_version(1);
@@ -128,10 +122,6 @@ classdef ModelMutator
         end
         
         function obj = switch_sub_with_sub(obj, old_sub, new_sub, mapping)
-            %    disp(obj)
-            %    disp(old_sub)
-            %    disp(new_sub)
-
             copy_from = new_sub.get_identity();
             load_system(copy_from.model_path)
             copy_to = Identity(old_sub.name, Helper.change_root_parent(old_sub.parents, char(obj.model_name)), obj.root_model_path);
@@ -176,9 +166,6 @@ classdef ModelMutator
 
         function obj = check_models_correctness(obj)
             obj.built_correct = obj.loadable() && (~Helper.needs_to_be_compilable || obj.compilable());
-            if ~obj.built_correct
-                obj.skip_save = 1;
-            end
         end
 
         function ld = loadable(obj)

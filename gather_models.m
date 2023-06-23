@@ -12,6 +12,10 @@ function gather_models(max_number_of_models)
     for i = 1:max_number_of_models
         cd(project_dir)
         model = modellist(i);
+        if contains(model.name, ' ')
+            movefile([model.folder filesep model.name], [model.folder filesep replace(model.name, ' ', '')])
+            model.name = replace(model.name, ' ', '');
+        end
         folder = strsplit(model.folder, filesep);
         project_id = double(string(folder{Helper.project_id_pwd_number}));
         project_info_row = find(project_info.path == project_id);
@@ -23,6 +27,7 @@ function gather_models(max_number_of_models)
         loadable = 0;
         compilable = 0;
         closable = 0;
+        
         try
             model_handle = load_system(model_url);
             model_name = get_param(model_handle, 'Name');

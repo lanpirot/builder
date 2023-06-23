@@ -11,7 +11,7 @@ function miner(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 147:max_number_of_models%height(modellist.model_url)
+    for i = 1:max_number_of_models%height(modellist.model_url)
         if needs_to_be_compilable && ~modellist.compilable(i)
             continue
         end
@@ -106,7 +106,7 @@ function try_close(name, model_path)
     try
         close_system(model_path)
     catch ME
-        log(project_dir, 'log_close', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+        log(Helper.project_dir, 'log_close', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
     end
 end
 
