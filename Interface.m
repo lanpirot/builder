@@ -63,7 +63,7 @@ classdef Interface
 
         function mapping = get_mapping(old, new)
             mapping = -1;
-            if (length(old.specialports) ~= length(new.specialports) || length([old.specialports.port_type]) ~= length([new.specialports.port_type]) || ~all([old.specialports.port_type] == [new.specialports.port_type])) || (~Helper.input_output_number_compability && (length(old.inports) ~= length(new.inports) || length(old.outports) ~= length(new.outports))) || (Helper.input_output_number_compability && (length(old.inports) < length(new.inports) || length(old.outports) > length(new.outports)))
+            if ~Helper.special_ports_equi(old.specialports, new.specialports)  || (~Helper.input_output_number_compability && (length(old.inports) ~= length(new.inports) || length(old.outports) ~= length(new.outports))) || (Helper.input_output_number_compability && (length(old.inports) < length(new.inports) || length(old.outports) > length(new.outports)))
                 return
             end
 

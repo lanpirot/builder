@@ -8,7 +8,7 @@ function builder()
 
     name2subinfo = dictionary(sub_identities, sub_info);
     models = {};
-    for i = 33:length(model_root_identities)
+    for i = 22:length(model_root_identities)
         disp("Rebuilding model " + string(i) + " of " + length(model_root_identities))
         models{end + 1} = build_model(string(i), model_root_identities{i}, name2subinfo);
     end

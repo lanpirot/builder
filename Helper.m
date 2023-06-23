@@ -252,5 +252,18 @@ classdef Helper
                 end
             end
         end
+
+        function bool = special_ports_equi(s1, s2)
+            bool = 0;
+            if length(s1) == length(s2)
+                if isempty(s1)
+                    bool = 1;
+                else
+                    if length([s1.port_type]) == length([s2.port_type]) && all([s1.port_type] == [s2.port_type])
+                        bool = 1;
+                    end
+                end
+            end
+        end
     end
 end

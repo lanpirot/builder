@@ -22,7 +22,7 @@ classdef ModelMutator
                 obj.uuid = uuid;
 
                 %%%%%%%%%%%%%
-                root_model_identity.model_path = 'C:/svns/simucomp2/models/SLNET_v1/SLNET/SLNET_GitHub/124448612/Simulation-master/Model/Finger2/Simulink/PQ12.slx';
+                %root_model_identity.model_path = 'C:/svns/simucomp2/models/SLNET_v1/SLNET/SLNET_GitHub/56873326/SimulinkLibraryForJava-master/test-data/org.conqat.lib.simulink.model.datahandler/special_ports.slx';
 
 
                 obj.original_model_name = Helper.get_model_name(root_model_identity.model_path);
@@ -84,20 +84,21 @@ classdef ModelMutator
                         original_name = obj.original_model_name;
                     end
                     key = struct(Helper.sub_name, original_name, Helper.sub_parents, original_parent, Helper.model_path, obj.original_model_path);
+
                     if ~name2subinfo.isKey({key})
                         continue
                     end
                     keyhit = name2subinfo({key});
                     curr_sub = Subsystem(keyhit{1});
-                    try
+                    %try
                         if curr_sub.sub_depth == curr_depth
                             sub_at_depth_found = 1;
                             obj = obj.switch_sub(curr_sub, name2subinfo);
                         end
-                    catch ME
-                        Helper.log('log_switch_up', string(jsonencode(obj)) + newline + jsonencode(key) + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
-                        continue
-                    end
+                    %catch ME
+                        %Helper.log('log_switch_up', string(jsonencode(obj)) + newline + jsonencode(key) + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                        %continue
+                    %end
                 end
                 if ~sub_at_depth_found && curr_depth
                     break;
@@ -143,16 +144,11 @@ classdef ModelMutator
                     delete(obj.root_model_path)
                     copyfile(copy_from.model_path, obj.root_model_path);
                     load_system(obj.root_model_path);
+                    copy_to = Identity(char(obj.model_name), '', obj.root_model_path);
                 else
                     %copy from subsystem to root
                     Simulink.BlockDiagram.deleteContents(copy_to.get_qualified_name())
-                    try
-                        Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
-                    catch ME
-                        obj.skip_save = 1;
-                        Helper.log('log_switch_up', string(jsonencode(obj)) + newline + alternate_sub_name + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
-                        return
-                    end
+                    Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
                 end
                 %we don't need to rewire the inputs/outputs after copying
             else
@@ -319,8 +315,8 @@ classdef ModelMutator
                 end
             end
 
-            connections.Enable = lines.Enable;
-            connections.Trigger = lines.Trigger;
+            connections.Enable = get_param(lines.Enable, "SrcPortHandle");
+            connections.Trigger = get_param(lines.Trigger, "SrcPortHandle");
             connections.LConn = {};
             connections.RConn = {};
             pc = get_param(subsystem, 'PortConnectivity');
@@ -331,7 +327,7 @@ classdef ModelMutator
                     connections.LConn{end + 1} = pc(i).DstPort;
                 end
             end
-            connections.Ifaction = lines.Ifaction;
+            connections.Ifaction = get_param(lines.Ifaction, "SrcPortHandle");
             connections.Reset = lines.Reset;
         end
 
@@ -341,10 +337,13 @@ classdef ModelMutator
             ModelMutator.make_subsystem_editable(subsystem)
             ModelMutator.remove_lines2(line_handles.Inport);
             ModelMutator.remove_lines2(line_handles.Outport);
+            ModelMutator.remove_lines2(line_handles.Enable);
             ModelMutator.remove_lines2(line_handles.Trigger);
             ModelMutator.remove_lines2(line_handles.LConn);
             ModelMutator.remove_lines2(line_handles.RConn);
             ModelMutator.remove_lines2(line_handles.Ifaction);
+            ModelMutator.remove_lines2(line_handles.Reset);
+            ModelMutator.remove_lines2(line_handles.Event);
         end
 
         function make_subsystem_editable(subsystem)
@@ -382,30 +381,39 @@ classdef ModelMutator
         end
 
         function add_special_lines(system, ports, ph)
-            special_lines = {{ports.Enable,ph.Enable}, {ports.Trigger,ph.Trigger}, {[ports.LConn ports.RConn],[ph.LConn ph.RConn]},{ports.Ifaction,ph.Ifaction}, {ports.Reset, ph.Reset}};
+            special_lines = {{ports.Enable,ph.Enable}, {ports.Trigger,ph.Trigger}, {[ports.LConn ports.RConn],[ph.LConn ph.RConn]},{ph.Ifaction,ports.Ifaction}, {ports.Reset, ph.Reset}};
             for i=1:length(special_lines)
                 srcdsts = special_lines{i};
                 
                 dsts = srcdsts{1};
                 for d=1:length(dsts)
-                    dests = dsts{d};
-                    if iscell(dsts{d})
-                        dests = dsts{1};
+                    if isfloat(dsts)
+                        dests = dsts;
+                    else
+                        dests = dsts{d};
+                        if iscell(dsts{d})
+                            dests = dsts{1};
+                        end
                     end
                     src = srcdsts{2};
                     src = src(d);
                     for j=1:length(dests)
-                        try
-                            add_line(system.sub_parents, src, dests(j), 'autorouting','on');
-                        catch
-                        end
+                        ModelMutator.try_add_line(system.sub_parents, src, dests(j))
+                        ModelMutator.try_add_line(system.sub_parents, dests(j), src)
                     end
                 end
-            end 
+            end
+        end
+
+        function try_add_line(system, src, dst)
+            try
+                add_line(system, src, dst, 'autorouting','on');
+            catch
+            end
         end
 
         function annotate(system, text)
-            a = Simulink.Annotation(system, '');
+            a = Simulink.Annotation(system, string(randi(1000)));
             a.FontSize = 18;
             a.BackgroundColor = 'lightBlue';
             a.Interpreter = 'rich';
