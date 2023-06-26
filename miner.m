@@ -11,7 +11,7 @@ function miner(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:max_number_of_models
+    for i = 1:100%max_number_of_models
         if needs_to_be_compilable && ~modellist.compilable(i)
             continue
         end
@@ -42,6 +42,7 @@ function miner(max_number_of_models)
         cd(project_dir)
         Helper.clear_garbage()
     end
+    disp("We analyzed " + string(length(subs)) + " Subsystems altogether.")
     serialize(subs);
     fprintf("\nFinished! %i models evaluated out of %i\n", evaluated, height(modellist.model_url))
 end
@@ -61,11 +62,12 @@ function serialize(subs)
 
     %serialize sub_info
     subinfo = {};
-    keys = interface2sub.keys();
-    for i = 1:length(keys)
-        subinfo = [subinfo interface2sub(keys(i)).subsystems];
+    ikeys = interface2sub.keys();
+    for i = 1:length(ikeys)
+        subinfo = [subinfo interface2sub(ikeys(i)).subsystems];
     end
     Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
+    disp("After deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2sub))) + " interfaces.")
 end
 
 function subs = compute_interfaces(subs, model_handle, model_path)

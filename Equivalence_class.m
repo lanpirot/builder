@@ -17,8 +17,9 @@ classdef Equivalence_class
             if obj.hash ~= subsystem.interface.hash()
                 throw(MException('Equivalence_class', 'This subsystem is not equivalent to others in class')) 
             end
-            if ~obj.is_already_in(subsystem) || ~Helper.remove_duplicates
-                obj.subsystems{end + 1} = subsystem.name2subinfo();
+            next_index = obj.get_index(subsystem);
+            if next_index > 0 || ~Helper.remove_duplicates
+                obj.subsystems = [obj.subsystems(1:next_index - 1) subsystem.name2subinfo() obj.subsystems(next_index:end)];
             end
         end
 
@@ -30,6 +31,29 @@ classdef Equivalence_class
                 end
             end
             is_in = 0;
+        end
+
+        function index = get_index(obj, subsystem)
+            index = -1;
+            left_wall = 1; right_wall = length(obj.subsystems); pivot = round((right_wall + left_wall)/2);
+            while right_wall >= left_wall
+                if subsystem.num_contained_elements < obj.subsystems{pivot}.NUM_CONTAINED_ELEMENTS
+                    right_wall = pivot - 1;
+                elseif subsystem.num_contained_elements > obj.subsystems{pivot}.NUM_CONTAINED_ELEMENTS
+                    left_wall = pivot + 1;
+                else
+                    break
+                end
+                pivot = round((right_wall + left_wall)/2);
+            end
+            pivot = min(max(1, pivot), length(obj.subsystems));
+            if ~subsystem.is_identical(obj.subsystems{pivot})
+                if subsystem.num_contained_elements < obj.subsystems{pivot}.NUM_CONTAINED_ELEMENTS
+                    index = pivot;
+                else
+                    index = pivot + 1;
+                end
+            end
         end
     end
 end
