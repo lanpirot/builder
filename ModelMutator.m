@@ -49,13 +49,8 @@ classdef ModelMutator
             pause(0.05);            %hacky to avoid: The requested operation cannot be performed on a file with a user-mapped section open.
             copyfile(obj.original_model_path, obj.root_model_path);
             load_system(obj.root_model_path)
-            try
-                set_param(obj.model_name, "LockLinksToLibrary", "off")%sometimes causes errors
-            catch ME
-                close_system(obj.root_model_path, 0);
-                delete(obj.root_model_path)
-                rethrow(ME)
-            end
+            set_param(obj.model_name, 'Lock', 'off')
+            set_param(obj.model_name, "LockLinksToLibrary", "off")%sometimes causes errors
         end
 
         function obj = switch_subs_in_model(obj, name2subinfo)
@@ -70,7 +65,7 @@ classdef ModelMutator
                     try
                         original_name = get_param(sub_names{i}, 'Name');
                     catch ME
-                        Helper.log('log_copy_to_missing', string(jsonencode(obj)) + newline + jsonencode(key) + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                        Helper.log('log_copy_to_missing', string(jsonencode(obj)) + newline + sub_names{i} + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
                         continue
                     end
                     original_parent = Helper.change_root_parent(get_param(sub_names{i}, 'Parent'), obj.original_model_name);
@@ -84,15 +79,16 @@ classdef ModelMutator
                     end
                     keyhit = name2subinfo({key});
                     curr_sub = Subsystem(keyhit{1});
-                    %try
+                    try
                         if curr_sub.sub_depth == curr_depth
                             sub_at_depth_found = 1;
                             obj = obj.switch_sub(curr_sub, name2subinfo);
                         end
-                    %catch ME
-                        %Helper.log('log_switch_up', string(jsonencode(obj)) + newline + jsonencode(key) + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
-                        %continue
-                    %end
+                    catch ME
+                        Helper.log('log_switch_up', string(jsonencode(obj)) + newline + jsonencode(key) + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                        continue
+                    end
+                    obj.copy_version(1);
                 end
                 if ~sub_at_depth_found && curr_depth
                     break;
@@ -117,7 +113,6 @@ classdef ModelMutator
                 if obj.built_correct
                     obj = obj.save_version();
                 end
-                obj = obj.copy_version(1);
             end
         end
         
@@ -137,6 +132,7 @@ classdef ModelMutator
                     copy_to = Identity(char(obj.model_name), '', obj.root_model_path);
                 else
                     %copy from subsystem to root
+                    copy_to.sub_name = obj.model_name;
                     Simulink.BlockDiagram.deleteContents(copy_to.get_qualified_name())
                     Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
                 end
@@ -217,8 +213,6 @@ classdef ModelMutator
                     mappings{end + 1} = mapping;
                 end
             end
-
-            
         end
 
         function index = choose_new_sub(old_sub, new_subs)
@@ -350,7 +344,6 @@ classdef ModelMutator
 
         function add_lines(system, ports, mapping)
             ph = get_param(system.get_qualified_name(), "PortHandles");
-            disp(mapping)
             for i=1:length(ports.in_source_ports)
                 if ports.in_source_ports{i} ~= -1
                     add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')

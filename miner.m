@@ -11,7 +11,7 @@ function miner(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:max_number_of_models%height(modellist.model_url)
+    for i = 1:max_number_of_models
         if needs_to_be_compilable && ~modellist.compilable(i)
             continue
         end
@@ -35,18 +35,13 @@ function miner(max_number_of_models)
             try_close(model_name, model_path);
             evaluated = evaluated + 1;
         catch ME
-            if contains(pwd, "tmp_garbage")
-                cd("..")
-            end
+            cd(project_dir)
             log(project_dir, 'log_eval', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
             try_close(model_name, model_path);
         end
-        if contains(pwd, "tmp_garbage")
-            cd("..")
-        end
+        cd(project_dir)
         Helper.clear_garbage()
     end
-    cd(project_dir)
     serialize(subs);
     fprintf("\nFinished! %i models evaluated out of %i\n", evaluated, height(modellist.model_url))
 end

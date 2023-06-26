@@ -9,7 +9,8 @@ function gather_models(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = length(modellist);
     end    
-    for i = 1:max_number_of_models
+    for i = 6000:6500%:max_number_of_models
+        disp("Now gathering model no. " + string(i))
         cd(project_dir)
         model = modellist(i);
         if contains(model.name, ' ')
@@ -27,7 +28,7 @@ function gather_models(max_number_of_models)
         loadable = 0;
         compilable = 0;
         closable = 0;
-        
+
         try
             model_handle = load_system(model_url);
             model_name = get_param(model_handle, 'Name');

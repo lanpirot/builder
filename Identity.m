@@ -14,7 +14,7 @@ classdef Identity
                 obj.model_path = identity.(Helper.model_path);
                 return
             end
-            obj.sub_name = sn;
+            obj.sub_name = replace(sn, '/', '//');
             obj.sub_parents = sp;
             obj.model_path = mp;
         end

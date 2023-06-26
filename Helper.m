@@ -26,7 +26,6 @@ classdef Helper
         log_eval = Helper.log_path + "log_eval";
         log_close = Helper.log_path + "log_close";
         log_switch_up = Helper.log_path + "log_switch_up";
-        log_construct = Helper.log_path + "log_construct";
         log_compile = Helper.log_path + "log_compile";
         log_copy_to_missing = Helper.log_path + "log_copy_to_missing";
 
@@ -47,8 +46,8 @@ classdef Helper
 
 
         remove_duplicates = 1;      %don't include subsystems which are very probably duplicates: same interface and same number of contained elements
-        dimensions = 0
-        data_types = 0              %data types shall be considered for equivalence
+        dimensions = 1
+        data_types = 1              %data types shall be considered for equivalence
         needs_to_be_compilable = Helper.dimensions || Helper.data_types
 
         input_output_number_compability = 0     %a subsystem can be exchanged, if the other subsystem has less inputs and more outputs (that are all equivalent)
@@ -193,6 +192,7 @@ classdef Helper
 
         function file_print(file_name, message)
             my_fileID = fopen(file_name, "a+");
+            message = replace(message, '\"', '\\"');
             fprintf(my_fileID, message);
             fclose(my_fileID);
         end
@@ -236,11 +236,6 @@ classdef Helper
                     return
                 end
             end
-            % if length(ports1) > 2
-            %     disp([ports1.data_type ';' ports2.data_type])
-            %     disp(mapping)
-            %     disp("")
-            % end
         end
 
         function index = find_equivalent_port(port, ports, mapped)
