@@ -11,7 +11,7 @@ function miner(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:100%max_number_of_models
+    for i = 1:max_number_of_models
         if needs_to_be_compilable && ~modellist.compilable(i)
             continue
         end
@@ -65,8 +65,16 @@ function serialize(subs)
     ikeys = interface2sub.keys();
     for i = 1:length(ikeys)
         subinfo = [subinfo interface2sub(ikeys(i)).subsystems];
+        if length(interface2sub(ikeys{i}).subsystems) > 2
+            disp(interface2sub(ikeys{i}).hash)
+            for j = 1:length(interface2sub(ikeys{i}).subsystems)
+                disp(interface2sub(ikeys{i}).subsystems{j}.IDENTITY)
+            end
+            disp("" + newline + newline + newline + newline + newline)
+        end
     end
     Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
+
     disp("After deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2sub))) + " interfaces.")
 end
 
