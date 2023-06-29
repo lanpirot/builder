@@ -1,5 +1,5 @@
 function complete_script()
-    %gather_models()
+    gather_models()
     miner()
     if Helper.remove_duplicates
         builder()

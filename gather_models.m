@@ -9,7 +9,7 @@ function gather_models(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = length(modellist);
     end    
-    for i = 6000:6500%:max_number_of_models
+    for i = 1:max_number_of_models
         disp("Now gathering model no. " + string(i))
         cd(project_dir)
         model = modellist(i);

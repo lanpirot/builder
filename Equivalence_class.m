@@ -4,6 +4,7 @@ classdef Equivalence_class
     %'equivalent' being that the subsystems could be exchanged in the model
     properties
         hash
+        is_chimerable = 0;
         subsystems;
     end
 
@@ -54,6 +55,17 @@ classdef Equivalence_class
                     index = pivot + 1;
                 end
             end
+        end
+
+        function obj = remove_non_chimerable(obj, identity2sub)
+            subsystems2 = {};
+            for i = 1:length(obj.subsystems)
+                sub = obj.subsystems{i};
+                if identity2sub(sub.IDENTITY).is_chimerable
+                    subsystems2{end + 1} = sub;
+                end
+            end
+            obj.subsystems = subsystems2;
         end
     end
 end

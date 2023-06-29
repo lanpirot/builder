@@ -219,8 +219,8 @@ classdef ModelMutator
             %remove current sub from alt_subs, as to get a real alternative sub
             new_subs(ModelMutator.find_identical(old_sub, new_subs)) = [];
 
-            %sort alt_subs by diverseness
-            [max_index, min_index] = ModelMutator.get_extremes(new_subs, Helper.diverseness);
+            %sort alt_subs by diversity
+            [max_index, min_index] = ModelMutator.get_extremes(new_subs, Helper.diversity);
             if Helper.wish_property == Helper.diverse
                 index = max_index;
                 return

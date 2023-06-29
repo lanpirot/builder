@@ -7,6 +7,7 @@ classdef Helper
 
         project_info = Helper.log_path + "project_info.tsv";
         name2subinfo = Helper.log_path + "name2subinfo.json";
+        name2subinfo_chimerable = Helper.log_path + "name2subinfo_chimerable.json";
 
 
         uuid = 'UUID';
@@ -54,7 +55,7 @@ classdef Helper
 
 
         depth = 'DEPTH'
-        diverseness = 'DIVERSENESS'
+        diversity = 'DIVERSITY'
         
 
         random = "RANDOM"
@@ -79,8 +80,12 @@ classdef Helper
             subsystems = jsondecode(fileread(file));
         end
 
-        function subsystems = find_subsystems(handle)
-            subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','On', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
+        function subsystems = find_subsystems(handle, depth)
+            if ~exist('depth', 'var')
+                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','On', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
+            else
+                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','On', 'SearchDepth',depth, 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
+            end
         end
 
         function elements = find_elements(subsystem_handle)
@@ -105,8 +110,8 @@ classdef Helper
             end
         end
 
-        function diverseness = find_diverseness(handle)
-            blocks = find_system(handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'Type','Block');
+        function diversity = find_diversity(handle)
+            blocks = find_system(handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'SearchDepth',1, 'Type','Block');
             block_types = {};
             for i=1:length(blocks)
                 block_type = get_param(blocks(i), 'BlockType');
@@ -114,11 +119,11 @@ classdef Helper
                     block_types{end + 1} = block_type;
                 end
             end
-            diverseness = length(block_types);
+            diversity = length(block_types);
         end
 
-        function subsystems = get_contained_subsystems(handle)
-            pot_subsystems = Helper.find_subsystems(handle);
+        function subsystems = get_contained_subsystems(handle, depth)
+            pot_subsystems = Helper.find_subsystems(handle, depth);
             subsystems = [];
             for i = 2:length(pot_subsystems)
                 if Subsystem.is_subsystem(pot_subsystems(i))

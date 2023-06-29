@@ -2,7 +2,7 @@ function miner(max_number_of_models)
     warning('off','all')
     disp("Starting mining process")
     Helper.reset_logs([Helper.name2subinfo, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
-    evaluated = 0;
+    models_evaluated = 0;
     subs = {};
     project_dir = Helper.project_dir;
     needs_to_be_compilable = Helper.needs_to_be_compilable;
@@ -27,13 +27,13 @@ function miner(max_number_of_models)
             end
             cd(project_dir)
             disp("Mining interfaces of model no. " + string(i) + " " + model_path)
-            subs = compute_interfaces(subs, model_handle, model_path);
+            subs = compute_interfaces_for_subs(subs, model_handle, model_path);
 
             if needs_to_be_compilable
                 try_end(model_name);
             end
             try_close(model_name, model_path);
-            evaluated = evaluated + 1;
+            models_evaluated = models_evaluated + 1;
         catch ME
             cd(project_dir)
             log(project_dir, 'log_eval', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
@@ -43,57 +43,126 @@ function miner(max_number_of_models)
         Helper.clear_garbage()
     end
     disp("We analyzed " + string(length(subs)) + " Subsystems altogether.")
-    serialize(subs);
-    fprintf("\nFinished! %i models evaluated out of %i\n", evaluated, height(modellist.model_url))
+    subs = remove_skips(subs);
+    disp(string(length(subs)) + " Subsystems were taken into account (no buses present etc.).")
+
+    interface2subs = dic_int2subs(subs);
+    identity2sub = dic_id2sub(subs);
+
+    
+
+    serialize(interface2subs, 0);
+    [interface2subs, identity2sub] = propagate_chimerability(subs, interface2subs, identity2sub);
+    disp("Removing non-chimerable subsystems, now.")
+    interface2subs = remove_non_chimerable(interface2subs, identity2sub);
+    serialize(interface2subs, 1);
+    fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
 end
 
-function serialize(subs)
-    interface2sub  = dictionary();
+function subs2 = remove_skips(subs)
+    subs2 = {};
+    for i = 1:length(subs)
+        if ~subs{i}.skip_it
+            subs2{end + 1} = subs{i};
+        end
+    end
+end
+
+function interface2subs = remove_non_chimerable(interface2subs, identity2sub)
+    ks = interface2subs.keys();
+    for i = 1:length(ks)
+        eq = interface2subs(ks(i));
+        eq = eq.remove_non_chimerable(identity2sub);
+        if isempty(eq)
+            interface2subs(ks(i)) = [];
+        else
+            interface2subs(ks(i)) = eq;
+        end
+    end
+end
+
+function interface2subs = dic_int2subs(subs)
+    interface2subs  = dictionary();
     for i = 1:length(subs)
         hash = subs{i}.interface.hash();
-        if isConfigured(interface2sub) && interface2sub.isKey(hash)
-            eq = interface2sub(hash);
+        if isConfigured(interface2subs) && interface2subs.isKey(hash)
+            eq = interface2subs(hash);
             eq = eq.add_subsystem(subs{i});
         else
             eq = Equivalence_class(subs{i});
         end
-        interface2sub(hash) = eq;
+        interface2subs(hash) = eq;
     end
+end
+
+function identity2sub = dic_id2sub(subs)
+    identity2sub = dictionary();
+    for i = 1:length(subs)
+        identity2sub(subs{i}.get_identity()) = subs{i};
+    end
+end
+
+function [interface2subs, identity2sub] = propagate_chimerability(subs, interface2subs, identity2sub)
+    found_propagation = 1;
+    %initialize dictionary is_chimerable values with leave nodes
+    chimerable_count = 0;
+    for i = 1:length(subs)
+        if subs{i}.is_chimerable
+            chimerable_count = chimerable_count + 1;
+            interface2subs(subs{i}.interface.hash()).is_chimerable = 1;
+        end
+    end
+
+    %propagate
+    propagation_rounds = 1;
+    while found_propagation
+        propagation_rounds = propagation_rounds + 1;
+        found_propagation = 0;
+        for i = 1:length(subs)
+            [subs{i}, is_chimerable] = subs{i}.propagate_chimerability(interface2subs, identity2sub);
+            if is_chimerable
+                chimerable_count = chimerable_count + 1;
+                interface2subs(subs{i}.interface.hash()).is_chimerable = 1;
+                identity2sub(subs{i}.get_identity()).is_chimerable = 1;
+                found_propagation = 1;
+            end
+        end
+    end
+    disp("We propagated is_chimerable to " + string(chimerable_count) + " subsystems in " + string(propagation_rounds) + " rounds.")
+end
+
+function serialize(interface2subs, chimerable_only)
+    %[subs, interface2subs] = propagate_chimerability(subs, interface2subs);
 
     %serialize sub_info
     subinfo = {};
-    ikeys = interface2sub.keys();
+    ikeys = interface2subs.keys();
     for i = 1:length(ikeys)
-        subinfo = [subinfo interface2sub(ikeys(i)).subsystems];
-        if length(interface2sub(ikeys{i}).subsystems) > 2
-            disp(interface2sub(ikeys{i}).hash)
-            for j = 1:length(interface2sub(ikeys{i}).subsystems)
-                disp(interface2sub(ikeys{i}).subsystems{j}.IDENTITY)
-            end
-            disp("" + newline + newline + newline + newline + newline)
-        end
+        subinfo = [subinfo interface2subs(ikeys(i)).subsystems];
     end
-    Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
 
-    disp("After deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2sub))) + " interfaces.")
+    if chimerable_only
+        Helper.file_print(Helper.name2subinfo_chimerable, jsonencode(subinfo));
+    else
+        Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
+    end
+
+    disp("After deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
 end
 
-function subs = compute_interfaces(subs, model_handle, model_path)
+function subs = compute_interfaces_for_subs(subs, model_handle, model_path)
     subsystems = Helper.find_subsystems(model_handle);
     subsystems(end + 1) = model_handle;%the root subsystem
     for j = 1:length(subsystems)
-        subs = compute_interface(subs, subsystems(j), model_path);
+        if Subsystem.is_subsystem(subsystems(j))
+            subs = compute_interface_for_sub(subs, subsystems(j), model_path);
+        end
     end
-    %disp("#subsystems analyzed: " + string(length(subsystems)) + " #equivalence classes: " + string(length(keys(hash_dic))))
 end
 
-function subs = compute_interface(subs, subsystem_handle, model_path)
+function subs = compute_interface_for_sub(subs, subsystem_handle, model_path)
     subsystem = Subsystem(subsystem_handle, model_path);
     subsystem = subsystem.constructor2();
-    if subsystem.skip_it
-        return
-    end
-
     subs{end + 1} = subsystem;
 end
 
