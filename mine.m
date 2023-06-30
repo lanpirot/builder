@@ -1,7 +1,7 @@
-function miner(max_number_of_models)
+function mine(max_number_of_models)
     warning('off','all')
     disp("Starting mining process")
-    Helper.reset_logs([Helper.name2subinfo, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
+    Helper.reset_logs([Helper.name2subinfo, Helper.name2subinfo_chimerable, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
     models_evaluated = 0;
     subs = {};
     project_dir = Helper.project_dir;
@@ -62,7 +62,7 @@ end
 function subs2 = remove_skips(subs)
     subs2 = {};
     for i = 1:length(subs)
-        if ~subs{i}.skip_it
+        if ~subs{i}.skip()
             subs2{end + 1} = subs{i};
         end
     end
@@ -73,7 +73,7 @@ function interface2subs = remove_non_chimerable(interface2subs, identity2sub)
     for i = 1:length(ks)
         eq = interface2subs(ks(i));
         eq = eq.remove_non_chimerable(identity2sub);
-        if isempty(eq)
+        if isempty(eq) || ~eq.is_chimerable
             interface2subs(ks(i)) = [];
         else
             interface2subs(ks(i)) = eq;
@@ -98,12 +98,26 @@ end
 function identity2sub = dic_id2sub(subs)
     identity2sub = dictionary();
     for i = 1:length(subs)
-        identity2sub(subs{i}.get_identity()) = subs{i};
+        identity2sub(subs{i}.identity) = subs{i};
     end
 end
 
 function [interface2subs, identity2sub] = propagate_chimerability(subs, interface2subs, identity2sub)
-    found_propagation = 1;
+    %make subs-list
+    ikeys = interface2subs.keys();
+    subs2 = {};
+    for i = 1:length(subs)
+        eq = interface2subs(subs{i}.interface.hsh).subsystems;
+        for j = 1:length(eq)
+            if Identity.is_identical(eq{j}.identity, subs{i}.identity)
+                subs2{end + 1} = subs{i};
+                break
+            end
+        end
+    end
+    subs = subs2;
+
+
     %initialize dictionary is_chimerable values with leave nodes
     chimerable_count = 0;
     for i = 1:length(subs)
@@ -115,6 +129,7 @@ function [interface2subs, identity2sub] = propagate_chimerability(subs, interfac
 
     %propagate
     propagation_rounds = 1;
+    found_propagation = 1;
     while found_propagation
         propagation_rounds = propagation_rounds + 1;
         found_propagation = 0;
@@ -122,8 +137,8 @@ function [interface2subs, identity2sub] = propagate_chimerability(subs, interfac
             [subs{i}, is_chimerable] = subs{i}.propagate_chimerability(interface2subs, identity2sub);
             if is_chimerable
                 chimerable_count = chimerable_count + 1;
-                interface2subs(subs{i}.interface.hash()).is_chimerable = 1;
-                identity2sub(subs{i}.get_identity()).is_chimerable = 1;
+                interface2subs(subs{i}.interface.hash()).is_chimerable = interface2subs(subs{i}.interface.hash()).check_chimerability();
+                identity2sub(subs{i}.identity).is_chimerable = 1;
                 found_propagation = 1;
             end
         end
@@ -132,13 +147,11 @@ function [interface2subs, identity2sub] = propagate_chimerability(subs, interfac
 end
 
 function serialize(interface2subs, chimerable_only)
-    %[subs, interface2subs] = propagate_chimerability(subs, interface2subs);
-
     %serialize sub_info
     subinfo = {};
     ikeys = interface2subs.keys();
     for i = 1:length(ikeys)
-        subinfo = [subinfo interface2subs(ikeys(i)).subsystems];
+        subinfo = [subinfo interface2subs(ikeys(i)).less_fields().subsystems];
     end
 
     if chimerable_only
@@ -155,15 +168,9 @@ function subs = compute_interfaces_for_subs(subs, model_handle, model_path)
     subsystems(end + 1) = model_handle;%the root subsystem
     for j = 1:length(subsystems)
         if Subsystem.is_subsystem(subsystems(j))
-            subs = compute_interface_for_sub(subs, subsystems(j), model_path);
+            subs{end + 1} = Subsystem(subsystems(j), model_path);
         end
     end
-end
-
-function subs = compute_interface_for_sub(subs, subsystem_handle, model_path)
-    subsystem = Subsystem(subsystem_handle, model_path);
-    subsystem = subsystem.constructor2();
-    subs{end + 1} = subsystem;
 end
 
 function try_end(name)

@@ -1,8 +1,8 @@
 function complete_script()
     gather_models()
-    miner()
+    mine()
     if Helper.remove_duplicates
-        builder()
+        mutate()
     end
 end
 

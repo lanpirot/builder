@@ -17,10 +17,12 @@ classdef Helper
         model_path = "model_path";
         interface = 'INTERFACE'
         is_root = 'IS_ROOT'
-        num_contained_elements = 'NUM_CONTAINED_ELEMENTS'
-        sub_depth = 'SUB_DEPTH'
-        subtree_depth = 'SUBTREE_DEPTH'
         
+        num_local_elements = 'NUM_LOCAL_ELEMENTS'
+        local_depth = 'LOCAL_DEPTH' %sub_depth
+        subtree_depth = 'SUBTREE_DEPTH'
+        children = 'CHILDREN'       
+
         
 
         log_garbage_out = Helper.log_path + "log_garbage_out";
@@ -29,12 +31,16 @@ classdef Helper
         log_switch_up = Helper.log_path + "log_switch_up";
         log_compile = Helper.log_path + "log_compile";
         log_copy_to_missing = Helper.log_path + "log_copy_to_missing";
+        log_synth_theory = Helper.log_path + "log_synth_theory";
+        log_synth_practice = Helper.log_path + "log_synth_practice";
+
 
         modellist = Helper.log_path + "modellist.csv";
 
         
         garbage_out = Helper.project_dir + "tmp_garbage";
-        playground = Helper.project_dir + "playground";
+        mutate_playground = Helper.project_dir + "mutate_playground";
+        synthesize_playground = Helper.project_dir + "synthesize_playground";
 
 
         project_id_pwd_number = system_constants.project_pwd_number;
@@ -55,15 +61,20 @@ classdef Helper
 
 
         depth = 'DEPTH'
-        diversity = 'DIVERSITY'
         
 
         random = "RANDOM"
-        mono = "MONO"
-        diverse = "DIVERSE"
         shallow = "SHALLOW"
         deep = "DEEP"
         wish_property = Helper.deep     %set to one of above to build models of a certain property
+
+        target_model_count = 10;
+        target_count_min_ratio = 0.8;
+        synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
+        synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
+        synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
+        target_metric = Helper.synth_depth
+        max_repair_count = 3;
     end
     
     methods(Static)
@@ -78,6 +89,26 @@ classdef Helper
 
         function subsystems = parse_json(file)
             subsystems = jsondecode(fileread(file));
+        end
+
+        function out = build_sub_info(name2subinfo)
+            sub_identities = extractfield(name2subinfo, Helper.identity);
+            name2subinfo = dictionary(sub_identities, name2subinfo);
+
+            sub_identities = extractfield(name2subinfo, Helper.identity);    
+            sub_interfaces = extractfield(name2subinfo, Helper.interface);
+        
+            sub_num_local_elements = num2cell(extractfield(name2subinfo, Helper.num_local_elements));
+            local_depths = num2cell(extractfield(name2subinfo, Helper.local_depth));
+            subtree_depth = num2cell(extractfield(name2subinfo, Helper.subtree_depth));
+            children = extractfield(name2subinfo, Helper.children);    
+            
+            sub_info = [sub_identities; sub_interfaces; sub_num_local_elements; local_depths; subtree_depth; children];
+            sub_info = cell2struct(sub_info, {Helper.identity, Helper.interface, Helper.num_local_elements, Helper.local_depth, Helper.subtree_depth, Helper.children});
+            out = {};
+            for i=1:length(sub_info)
+                out{end + 1} = sub_info(i);
+            end
         end
 
         function subsystems = find_subsystems(handle, depth)
@@ -96,7 +127,7 @@ classdef Helper
             ports = find_system(subsystem_handle, 'FindAll','On', 'LookUnderMasks','on', 'FollowLinks','On', 'SearchDepth',1, 'BlockType',block_type_string);
         end
 
-        function depth = find_local_depth(handle)
+        function depth = find_subtree_depth(handle)
             depth = 0;
             last_length = 0;
             while 1
@@ -108,18 +139,6 @@ classdef Helper
                 end
                 depth = depth + 1;
             end
-        end
-
-        function diversity = find_diversity(handle)
-            blocks = find_system(handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'SearchDepth',1, 'Type','Block');
-            block_types = {};
-            for i=1:length(blocks)
-                block_type = get_param(blocks(i), 'BlockType');
-                if ~ismember(block_type, block_types)
-                    block_types{end + 1} = block_type;
-                end
-            end
-            diversity = length(block_types);
         end
 
         function subsystems = get_contained_subsystems(handle, depth)
@@ -214,6 +233,15 @@ classdef Helper
                 %log(Helper.project_dir, 'log_garbage_out', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
             end
             cd(Helper.project_dir)
+        end
+
+        function clean_up(startmessage, playground_path, logs)
+            warning('off','all')
+            disp(startmessage)
+            clear('all');
+            mkdir(playground_path)
+            delete(playground_path + filesep + "*");
+            Helper.reset_logs(logs);
         end
 
         function log(file_name, message)

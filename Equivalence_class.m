@@ -4,14 +4,14 @@ classdef Equivalence_class
     %'equivalent' being that the subsystems could be exchanged in the model
     properties
         hash
-        is_chimerable = 0;
+        is_chimerable = 0;          %at least two subsystems (of two different models) in this class are chimerable themselves
         subsystems;
     end
 
     methods
         function obj = Equivalence_class(subsystem)
             obj.hash = subsystem.interface.hash();
-            obj.subsystems = {subsystem.name2subinfo()};
+            obj.subsystems = {subsystem};
         end
 
         function obj = add_subsystem(obj, subsystem)
@@ -20,27 +20,25 @@ classdef Equivalence_class
             end
             next_index = obj.get_index(subsystem);
             if next_index > 0 || ~Helper.remove_duplicates
-                obj.subsystems = [obj.subsystems(1:next_index - 1) subsystem.name2subinfo() obj.subsystems(next_index:end)];
+                obj.subsystems = [obj.subsystems(1:next_index - 1) {subsystem} obj.subsystems(next_index:end)];
             end
         end
 
-        function is_in = is_already_in(obj, subsystem)
-            is_in = 1;
+        function obj = less_fields(obj)
+            subs = {};
             for i=1:length(obj.subsystems)
-                if subsystem.is_identical(obj.subsystems{i})
-                    return
-                end
+                subs{end + 1} = obj.subsystems{i}.less_fields();
             end
-            is_in = 0;
+            obj.subsystems = subs;
         end
 
         function index = get_index(obj, subsystem)
             index = -1;
             left_wall = 1; right_wall = length(obj.subsystems); pivot = round((right_wall + left_wall)/2);
             while right_wall >= left_wall
-                if subsystem.num_contained_elements < obj.subsystems{pivot}.NUM_CONTAINED_ELEMENTS
+                if subsystem.num_local_elements < obj.subsystems{pivot}.num_local_elements
                     right_wall = pivot - 1;
-                elseif subsystem.num_contained_elements > obj.subsystems{pivot}.NUM_CONTAINED_ELEMENTS
+                elseif subsystem.num_local_elements > obj.subsystems{pivot}.num_local_elements
                     left_wall = pivot + 1;
                 else
                     break
@@ -49,10 +47,27 @@ classdef Equivalence_class
             end
             pivot = min(max(1, pivot), length(obj.subsystems));
             if ~subsystem.is_identical(obj.subsystems{pivot})
-                if subsystem.num_contained_elements < obj.subsystems{pivot}.NUM_CONTAINED_ELEMENTS
+                if subsystem.num_local_elements < obj.subsystems{pivot}.num_local_elements
                     index = pivot;
                 else
                     index = pivot + 1;
+                end
+            end
+        end
+
+        function bool = check_chimerability(obj)
+            bool = obj.is_chimerable;
+            if bool
+                return
+            end
+            for c=1:length(obj.subsystems)-1
+                if obj.subsystems{c}.is_chimerable                    
+                    for i=c+1:length(obj.subsystems)
+                        if obj.subsystems{i}.is_chimerable && ~strcmp(obj.subsystems{c}.identity.model_path, obj.subsystems{i}.identity.model_path)
+                            bool = 1;
+                            return
+                        end
+                    end
                 end
             end
         end
@@ -61,7 +76,7 @@ classdef Equivalence_class
             subsystems2 = {};
             for i = 1:length(obj.subsystems)
                 sub = obj.subsystems{i};
-                if identity2sub(sub.IDENTITY).is_chimerable
+                if identity2sub(sub.identity).is_chimerable
                     subsystems2{end + 1} = sub;
                 end
             end

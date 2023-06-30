@@ -19,6 +19,10 @@ classdef Identity
             obj.model_path = mp;
         end
 
+        function obj = set_name(obj, name)
+            obj.sub_name = replace(name, '/', '//');
+        end
+
         function hsh = hash(obj)
             hsh = [obj.sub_name  ';' obj.sub_parents ';' obj.model_path];
         end

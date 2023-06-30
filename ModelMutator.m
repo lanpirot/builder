@@ -40,7 +40,7 @@ classdef ModelMutator
 
         function obj = copy_version(obj, close_first)
             obj.model_name = "model" + string(obj.uuid);
-            obj.root_model_path = Helper.playground + filesep + obj.model_name + extractAfter(obj.original_model_path,strlength(obj.original_model_path)-4);
+            obj.root_model_path = Helper.mutate_playground + filesep + obj.model_name + extractAfter(obj.original_model_path,strlength(obj.original_model_path)-4);
             obj.root_model_path = char(obj.root_model_path.replace("\", "/"));
             if close_first
                 close_system(obj.root_model_path, 0)
@@ -80,7 +80,7 @@ classdef ModelMutator
                     keyhit = name2subinfo({key});
                     curr_sub = Subsystem(keyhit{1});
                     try
-                        if curr_sub.sub_depth == curr_depth
+                        if curr_sub.local_depth == curr_depth
                             sub_at_depth_found = 1;
                             obj = obj.switch_sub(curr_sub, name2subinfo);
                         end
@@ -117,9 +117,9 @@ classdef ModelMutator
         end
         
         function obj = switch_sub_with_sub(obj, old_sub, new_sub, mapping)
-            copy_from = new_sub.get_identity();
+            copy_from = new_sub.identity;
             load_system(copy_from.model_path)
-            copy_to = Identity(old_sub.name, Helper.change_root_parent(old_sub.parents, char(obj.model_name)), obj.root_model_path);
+            copy_to = Identity(old_sub.identity.sub_name, Helper.change_root_parent(old_sub.identity.sub_parents, char(obj.model_name)), obj.root_model_path);
             copied_element = Identity(['sub' int2str(Helper.found_alt(1))], copy_to.sub_parents, obj.root_model_path);
             if copy_to.is_root()
                 
@@ -155,7 +155,7 @@ classdef ModelMutator
                 %now, rewire
                 ModelMutator.add_lines(copy_to, connected_blocks, mapping)
             end
-            ModelMutator.annotate(copy_to.get_qualified_name(), "Copied system from: " + copy_from.get_qualified_name() + newline + " into: " + old_sub.get_identity().hash())
+            ModelMutator.annotate(copy_to.get_qualified_name(), "Copied system from: " + copy_from.get_qualified_name() + newline + " into: " + old_sub.identity.hash())
             %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
             ModelMutator.annotate(obj.model_name, "Copied " + copy_from.get_qualified_name() + " to: " + copy_to.get_qualified_name())
         end
@@ -219,18 +219,8 @@ classdef ModelMutator
             %remove current sub from alt_subs, as to get a real alternative sub
             new_subs(ModelMutator.find_identical(old_sub, new_subs)) = [];
 
-            %sort alt_subs by diversity
-            [max_index, min_index] = ModelMutator.get_extremes(new_subs, Helper.diversity);
-            if Helper.wish_property == Helper.diverse
-                index = max_index;
-                return
-            elseif Helper.wish_property == Helper.mono
-                index = min_index;
-                return
-            end
-
             %sort alt_subs by depth
-            [max_index, min_index] = ModelMutator.get_extremes(new_subs, Helper.sub_depth);
+            [max_index, min_index] = ModelMutator.get_extremes(new_subs, Helper.local_depth);
             if Helper.wish_property == Helper.deep
                 index = max_index;
                 return
@@ -266,7 +256,7 @@ classdef ModelMutator
         function index = find_identical(sub, subs)
             index = -1;
             for i=1:length(subs)
-                if sub.num_contained_elements == subs{i}.(Helper.num_contained_elements)
+                if sub.is_identical(subs{i})
                     index = i;
                     return
                 end

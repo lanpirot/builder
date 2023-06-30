@@ -1,6 +1,5 @@
 classdef Port
     properties
-        handle
         num
         port_type
         data_type
@@ -13,7 +12,6 @@ classdef Port
 
     methods
         function obj = Port(handle, num, port_type)
-            obj.handle = handle;
             obj.num = num;
             obj.port_type = port_type;
 
@@ -24,7 +22,7 @@ classdef Port
                 obj.data_type = obj.get_datatype(handle);
                 obj.dimensions = obj.get_dimensions(handle);
                 obj.hsh = obj.hash();
-                obj.hshpn = obj.hashplusname();
+                obj.hshpn = obj.hashplusname(handle);
             end
         end
 
@@ -89,8 +87,8 @@ classdef Port
             hsh = hsh + Helper.third_level_divider + obj.dimensions.hash() + Helper.second_level_divider;
         end
 
-        function hshpn = hashplusname(obj)
-            hshpn = obj.hsh + get_param(obj.handle, 'Name');
+        function hshpn = hashplusname(obj, handle)
+            hshpn = obj.hsh + get_param(handle, 'Name');
         end
     end
     

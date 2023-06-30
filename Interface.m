@@ -3,7 +3,7 @@ classdef Interface
         inports = [];
         outports = [];
         specialports = [];
-        skip_interface = 0;
+        skip = 0;
         hsh
     end
     methods
@@ -13,7 +13,7 @@ classdef Interface
                 obj.inports = interface.inports;%for more detail Port() each port
                 obj.outports = interface.outports;
                 obj.specialports = interface.specialports;
-                obj.skip_interface = interface.skip_interface;
+                obj.skip = interface.skip;
                 obj.hsh = interface.hsh;
                 return
             end
@@ -22,7 +22,7 @@ classdef Interface
             obj.specialports = [Port.compute_ports(subsystem, 'ActionPort'), Port.compute_ports(subsystem, 'EnablePort'), Port.compute_ports(subsystem, 'TriggerPort'), Port.compute_ports(subsystem, 'PMIOPort'), Port.compute_ports(subsystem, 'ResetPort')];
 
             if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
-                obj.skip_interface = 1;
+                obj.skip = 1;
             else
                 obj.hsh = obj.hash();
             end
