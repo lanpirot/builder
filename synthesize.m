@@ -1,8 +1,13 @@
 function synthesize()
     Helper.clean_up("Starting synthesis process", Helper.synthesize_playground, [Helper.log_synth_theory Helper.log_synth_practice])
     global name2subinfo
-    name2subinfo = Helper.parse_json(Helper.name2subinfo);
+    name2subinfo = Helper.parse_json(Helper.name2subinfo_chimerable);
     name2subinfo = Helper.build_sub_info(name2subinfo);
+    global interface2subs
+    interface2subs = Helper.parse_json(Helper.interface2subs);
+    interface2subs = dictionary(interface2subs{1}, interface2subs{2});
+
+
     rounds = 0;
     success = 1;
     while success
@@ -24,32 +29,65 @@ function good_models = synth_rounds(metric_target)
     %if strcmp(Helper.target_metric, Helper.synth_model_sub_tree) parse random model's subtree and set as goal subtree
     good_models = 0;
     for i = 1:Helper.target_model_count
-        [seed_model, model_root, root_metric] = seed_a_model();
-        model = synth_repair(seed_model, model_root, root_metric, metric_target, Helper.max_repair_count);
-        %build .slx model after 'model'
-        %recompute metrics on .slx model
-        if metrics_good(slx_model)
+        start_interface = seed_interface();
+        [model_root, metric_met] = synth_repair(start_interface, Identity("", "", ""), metric_target);
+        if ~metric_met
+            continue
+        end
+        slx_identity = model_root.build();
+        if slx_evaluate(slx_identity)
             %save slx_model
             good_models = good_models + 1;
         end
     end
 end
 
-function [model, root, root_metric] = seed_a_model()
-    [model, root] = TheoryModel();
-    root_metric = model.get_metric(Helper.target_metric);
+function interface = seed_interface()
+    global name2subinfo
+    nkeys = name2subinfo.keys();
+    interface = name2subinfo{choose_random(nkeys)}.(Helper.interface).hsh;
 end
 
-function model = synth_repair(model, subsystem, subtree_curr, subtree_target, repairs_left)
-    if subtree_curr == subtree_target
-        return
+function [subtree, local_metric, metric_met] = synth_repair(interface, not_identity, metric_target)
+    for i = 1:Helper.max_repair_count
+        %choose identity fitting to interface and not_identity
+        subtree = choose_subsystem(interface, not_identity, metric_target);
+        curr_metric_target = subtree.adapt_target(curr_metric_target);
+        
+        %run synth_repair on all children
+        for j = 1:length(subtree.children)
+            [subtree.children(i) sub_metric, sub_met] = synth_repair(interface2sub(subtree.children(i).interface.hash()), subtree.identity, curr_metric_target);
+            if ~sub_met
+                subtree.children(i) = [];
+                break
+            end
+        end
+        
+        [metric_met, local_metric] = evaluate_subtree(subtree, metric_target);
+        if metric_met
+            return
+        end
     end
-    %exchange current subsystem with a (hopefully) better one
-    %run synth_repai on all children
-    %compute new    subtree_curr
-    bool = synth_repair(model, subsystem, subtree_curr, subtree_target, repairs_left - 1);
 end
 
+function subsystem = choose_subsystem(interface, not_identity, metric_target)
+    %collect suitable subsystems
+    subsystems = interface2subs(interface);
+    %remove those, which are excluded because of not_identity
+    subsystems = remove_not_identity(subsystems, not_identity);
+    switch Helper.target_metric
+        case Helper.synth_random
+            subsystem = choose_random(subsystems);
+    end
+end
 
-%For Helper.synth_num_elements: build homogenously. If target and x
-%children, then each child has to be (0.75 * target - this_subs_elements)/children - (1.25*target - this_subs_elements)/children big.
+function bool = evaluate_subtree(subtree, target)
+    switch Helper.target_metric
+        case Helper.synth_random
+            bool = 1;
+    end
+end
+
+function element = choose_random(array)
+    element = array(randi(length(array)));
+end

@@ -1,7 +1,7 @@
 function mine(max_number_of_models)
     warning('off','all')
     disp("Starting mining process")
-    Helper.reset_logs([Helper.name2subinfo, Helper.name2subinfo_chimerable, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
+    Helper.reset_logs([Helper.name2subinfo, Helper.name2subinfo_chimerable, Helper.interface2subs, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
     models_evaluated = 0;
     subs = {};
     project_dir = Helper.project_dir;
@@ -156,11 +156,28 @@ function serialize(interface2subs, chimerable_only)
 
     if chimerable_only
         Helper.file_print(Helper.name2subinfo_chimerable, jsonencode(subinfo));
+        [ikeys, identities] = make_i2s_smaller(interface2subs);
+        Helper.file_print(Helper.interface2subs, jsonencode({ikeys, identities}))
     else
         Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
     end
 
+
     disp("After deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
+end
+
+function [ikeys, identities] = make_i2s_smaller(i2s)
+    ikeys = i2s.keys();
+    identities = {};
+    for i = 1:length(ikeys)
+        ids = {};
+        subsi = i2s(ikeys(i)).subsystems;
+        for j = 1:length(subsi)
+            ids{end + 1} = subsi{j}.identity;
+        end
+        identities{end + 1} = ids;
+    end
+    ikeys = ikeys';
 end
 
 function subs = compute_interfaces_for_subs(subs, model_handle, model_path)

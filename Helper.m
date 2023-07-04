@@ -6,6 +6,7 @@ classdef Helper
 
 
         project_info = Helper.log_path + "project_info.tsv";
+        interface2subs = Helper.log_path + "interface2subs.json"
         name2subinfo = Helper.log_path + "name2subinfo.json";
         name2subinfo_chimerable = Helper.log_path + "name2subinfo_chimerable.json";
 
@@ -53,8 +54,8 @@ classdef Helper
 
 
         remove_duplicates = 1;      %don't include subsystems which are very probably duplicates: same interface and same number of contained elements
-        dimensions = 1
-        data_types = 1              %data types shall be considered for equivalence
+        dimensions = 0
+        data_types = 0              %data types shall be considered for equivalence
         needs_to_be_compilable = Helper.dimensions || Helper.data_types
 
         input_output_number_compability = 0     %a subsystem can be exchanged, if the other subsystem has less inputs and more outputs (that are all equivalent)
@@ -70,11 +71,13 @@ classdef Helper
 
         target_model_count = 10;
         target_count_min_ratio = 0.8;
+        max_repair_count = 3;
+        synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
-        target_metric = Helper.synth_depth
-        max_repair_count = 3;
+        target_metric = Helper.synth_random
+        
     end
     
     methods(Static)
@@ -91,9 +94,10 @@ classdef Helper
             subsystems = jsondecode(fileread(file));
         end
 
-        function out = build_sub_info(name2subinfo)
+        function name2subinfo = build_sub_info(name2subinfo)
+            name2subinfo = name2subinfo';
             sub_identities = extractfield(name2subinfo, Helper.identity);
-            name2subinfo = dictionary(sub_identities, name2subinfo);
+            
 
             sub_identities = extractfield(name2subinfo, Helper.identity);    
             sub_interfaces = extractfield(name2subinfo, Helper.interface);
@@ -109,6 +113,7 @@ classdef Helper
             for i=1:length(sub_info)
                 out{end + 1} = sub_info(i);
             end
+            name2subinfo = dictionary(sub_identities, out);
         end
 
         function subsystems = find_subsystems(handle, depth)
@@ -238,10 +243,10 @@ classdef Helper
         function clean_up(startmessage, playground_path, logs)
             warning('off','all')
             disp(startmessage)
-            clear('all');
             mkdir(playground_path)
             delete(playground_path + filesep + "*");
             Helper.reset_logs(logs);
+            clear('all');
         end
 
         function log(file_name, message)
