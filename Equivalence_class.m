@@ -14,12 +14,13 @@ classdef Equivalence_class
             obj.subsystems = {subsystem};
         end
 
-        function obj = add_subsystem(obj, subsystem)
+        function obj = add_subsystem(obj, subsystem, remove_duplicates)
             if obj.hash ~= subsystem.interface.hash()
                 throw(MException('Equivalence_class', 'This subsystem is not equivalent to others in class')) 
             end
             next_index = obj.get_index(subsystem);
-            if next_index > 0 || ~Helper.remove_duplicates
+            if next_index > 0 || ~remove_duplicates
+                next_index = abs(next_index);
                 obj.subsystems = [obj.subsystems(1:next_index - 1) {subsystem} obj.subsystems(next_index:end)];
             end
         end

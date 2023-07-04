@@ -7,6 +7,7 @@ classdef Helper
 
         project_info = Helper.log_path + "project_info.tsv";
         interface2subs = Helper.log_path + "interface2subs.json"
+        name2subinfo_complete = Helper.log_path + "name2subinfo_complete.json";
         name2subinfo = Helper.log_path + "name2subinfo.json";
         name2subinfo_chimerable = Helper.log_path + "name2subinfo_chimerable.json";
 
@@ -53,7 +54,6 @@ classdef Helper
         third_level_divider = "+";
 
 
-        remove_duplicates = 1;      %don't include subsystems which are very probably duplicates: same interface and same number of contained elements
         dimensions = 0
         data_types = 0              %data types shall be considered for equivalence
         needs_to_be_compilable = Helper.dimensions || Helper.data_types
@@ -76,7 +76,7 @@ classdef Helper
         synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
-        target_metric = Helper.synth_random
+        synth_target_metric = Helper.synth_random
         
     end
     

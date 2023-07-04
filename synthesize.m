@@ -1,8 +1,16 @@
 function synthesize()
+
+    %%%%%%%%%%%%%%%%%%%%%%%%
+    rng('default')
+    %%%%%%%%%%%%%%%%%%%%%%%%
+
     Helper.clean_up("Starting synthesis process", Helper.synthesize_playground, [Helper.log_synth_theory Helper.log_synth_practice])
     global name2subinfo
     name2subinfo = Helper.parse_json(Helper.name2subinfo_chimerable);
     name2subinfo = Helper.build_sub_info(name2subinfo);
+    global name2subinfo_complete
+    name2subinfo_complete = Helper.parse_json(Helper.name2subinfo_complete);
+    name2subinfo_complete = Helper.build_sub_info(name2subinfo_complete);
     global interface2subs
     interface2subs = Helper.parse_json(Helper.interface2subs);
     interface2subs = dictionary(interface2subs{1}, interface2subs{2});
@@ -11,12 +19,12 @@ function synthesize()
     rounds = 0;
     success = 1;
     while success
-        metric_target = 2 ^ rounds;
+        metric_target = compute_target(rounds);
         rounds = rounds + 1;
-        if strcmp(Helper.target_metric, Helper.synth_model_sub_tree)
+        if strcmp(Helper.synth_target_metric, Helper.synth_model_sub_tree)
             disp("Trying to synth model no. " + string(rounds))
         else
-            disp("Synthing with target of " + string(metric_target) + " for metric " + Helper.target_metric)
+            disp("Synthing with target of " + string(metric_target) + " for metric " + Helper.synth_target_metric)
         end
         models_synthed = synth_rounds(metric_target);
         success = models_synthed > Helper.target_model_count * Helper.target_count_min_ratio;
@@ -26,17 +34,21 @@ function synthesize()
 end
 
 function good_models = synth_rounds(metric_target)
-    %if strcmp(Helper.target_metric, Helper.synth_model_sub_tree) parse random model's subtree and set as goal subtree
+    %if strcmp(Helper.synth_target_metric, Helper.synth_model_sub_tree) parse random model's subtree and set as goal subtree
     good_models = 0;
     for i = 1:Helper.target_model_count
         start_interface = seed_interface();
-        [model_root, metric_met] = synth_repair(start_interface, Identity("", "", ""), metric_target);
+        [model_root, metric_met] = synth_repair(start_interface, Identity("", "", ""), metric_target);              %if random models are too small or big: choose root subsystem as base
         if ~metric_met
             continue
         end
-        slx_identity = model_root.build();
+        if i == 4
+            disp("")
+        end
+        slx_identity = model_root.build_root();
         if slx_evaluate(slx_identity)
             %save slx_model
+            slx_save(slx_identity);
             good_models = good_models + 1;
         end
     end
@@ -48,22 +60,34 @@ function interface = seed_interface()
     interface = name2subinfo{choose_random(nkeys)}.(Helper.interface).hsh;
 end
 
-function [subtree, local_metric, metric_met] = synth_repair(interface, not_identity, metric_target)
+function [subtree, curr_metric_target, metric_met] = synth_repair(interface, not_identity, metric_target)
+    global name2subinfo_complete
     for i = 1:Helper.max_repair_count
+        curr_metric_target = metric_target;
         %choose identity fitting to interface and not_identity
-        subtree = choose_subsystem(interface, not_identity, metric_target);
-        curr_metric_target = subtree.adapt_target(curr_metric_target);
-        
+        subtree = choose_subsystem(interface, not_identity, curr_metric_target);
+        curr_metric_target = subtree.adapt_target_local(curr_metric_target);
+
+
+        children_before = subtree.children;
+        subtree.children = [];
         %run synth_repair on all children
-        for j = 1:length(subtree.children)
-            [subtree.children(i) sub_metric, sub_met] = synth_repair(interface2sub(subtree.children(i).interface.hash()), subtree.identity, curr_metric_target);
+        for j = 1:length(children_before)
+            if j > 1
+                disp("")
+            end
+            child_before = name2subinfo_complete({children_before(i)});
+            child_before = child_before{1};
+            [child_after, sub_metric, sub_met] = synth_repair(child_before.(Helper.interface).hsh, subtree.identity, curr_metric_target);
+            subtree.children{j} = child_after;
+            curr_metric_target = subtree.adapt_target_descendants(sub_metric, curr_metric_target);
             if ~sub_met
-                subtree.children(i) = [];
+                subtree.children{i} = [];
                 break
             end
         end
         
-        [metric_met, local_metric] = evaluate_subtree(subtree, metric_target);
+        metric_met = subtree.is_metric_met(curr_metric_target, metric_target);
         if metric_met
             return
         end
@@ -71,23 +95,89 @@ function [subtree, local_metric, metric_met] = synth_repair(interface, not_ident
 end
 
 function subsystem = choose_subsystem(interface, not_identity, metric_target)
+    global name2subinfo
+    global interface2subs
     %collect suitable subsystems
-    subsystems = interface2subs(interface);
+    subsystems = interface2subs({interface});
     %remove those, which are excluded because of not_identity
-    subsystems = remove_not_identity(subsystems, not_identity);
-    switch Helper.target_metric
+    subsystems = remove_not_identity(subsystems{1}, not_identity);
+    switch Helper.synth_target_metric
         case Helper.synth_random
-            subsystem = choose_random(subsystems);
+            subsystem = SubTree(choose_random(subsystems), name2subinfo);
+    end
+end
+
+function subsystems = remove_not_identity(subsystems, not_identity)
+    for i = 1:length(subsystems)
+        if strcmp(subsystems(i).model_path, not_identity.model_path)
+            subsystems = [subsystems(1:i-1); subsystems(i+1:end)];
+            return
+        end
     end
 end
 
 function bool = evaluate_subtree(subtree, target)
-    switch Helper.target_metric
+    switch Helper.synth_target_metric
         case Helper.synth_random
             bool = 1;
     end
 end
 
+function target = compute_target(rounds)
+    switch Helper.synth_target_metric
+        case Helper.synth_depth
+            target = rounds;
+        case Helper.synth_num_elements
+            target = 2^rounds;
+        otherwise
+            target = -1;
+    end
+end
+
 function element = choose_random(array)
     element = array(randi(length(array)));
+end
+
+function bool = slx_evaluate(slx_identity)
+    bool = loadable(slx_identity);
+end
+
+function bool = loadable(slx_identity)
+    try
+        load_system(slx_identity)
+        if ~Helper.needs_to_be_compilable || compilable(slx_identity)
+            bool = 1;
+        end        
+    catch
+        bool = 0;
+    end
+end
+
+function slx_save(slx_identity)
+    save_system(obj.model_name, extractBefore(obj.root_model_path, strlength(obj.root_model_path)-3) + new_suffix + extractAfter(obj.root_model_path, strlength(obj.root_model_path)-4))
+    close_system(obj.model_name + new_suffix)
+end
+
+function cp = compilable(slx_identity)
+    Helper.create_garbage_dir()
+    try
+        eval([slx_identity, '([],[],[],''compile'');']);
+        cp = 1;
+        try
+            while 1
+                eval([slx_identity, '([],[],[],''term'');']);
+            end
+        catch
+        end
+    catch ME
+        if contains(pwd, "tmp_garbage")
+            cd("..")
+        end
+        Helper.log('log_compile', string(jsonencode(slx_identity)) + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
+        cp = 0;
+    end
+    if contains(pwd, "tmp_garbage")
+        cd("..")
+    end
+    Helper.clear_garbage();
 end
