@@ -24,7 +24,7 @@ classdef Identity
         end
 
         function hsh = hash(obj)
-            hsh = [obj.sub_name  ';' obj.sub_parents ';' obj.model_path];
+            hsh = [obj.sub_name  ';' obj.sub_parents ';' char(obj.model_path)];
         end
 
         function q_name = get_qualified_name(obj)

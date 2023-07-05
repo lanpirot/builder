@@ -121,40 +121,7 @@ classdef ModelMutator
             load_system(copy_from.model_path)
             copy_to = Identity(old_sub.identity.sub_name, Helper.change_root_parent(old_sub.identity.sub_parents, char(obj.model_name)), obj.root_model_path);
             copied_element = Identity(['sub' int2str(Helper.found_alt(1))], copy_to.sub_parents, obj.root_model_path);
-            if copy_to.is_root()
-                
-                if copy_from.is_root()
-                    %copy from root to root
-                    close_system(obj.model_name)
-                    delete(obj.root_model_path)
-                    copyfile(copy_from.model_path, obj.root_model_path);
-                    load_system(obj.root_model_path);
-                    copy_to = Identity(char(obj.model_name), '', obj.root_model_path);
-                else
-                    %copy from subsystem to root
-                    copy_to.sub_name = obj.model_name;
-                    Simulink.BlockDiagram.deleteContents(copy_to.get_qualified_name())
-                    Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
-                end
-                %we don't need to rewire the inputs/outputs after copying
-            else
-                %get prior wiring
-                connected_blocks = ModelMutator.get_wiring(copy_to.get_qualified_name());
-                ModelMutator.remove_lines(copy_to.get_qualified_name());
-                if copy_from.is_root()
-                    %copy from root to subsystem
-                    Simulink.BlockDiagram.createSubsystem(get_param(copy_to.get_qualified_name(), 'Handle'), 'Name', copied_element.sub_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
-                    Simulink.SubSystem.deleteContents(copied_element.get_qualified_name())
-                    Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
-                    set_param(copied_element.get_qualified_name(), 'Name', copy_to.sub_name)
-                else
-                    %copy from subsystem to subsystem
-                    delete_block(copy_to.get_qualified_name())
-                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
-                end
-                %now, rewire
-                ModelMutator.add_lines(copy_to, connected_blocks, mapping)
-            end
+            copy_to = copy_SS(obj.model_name, obj.model_path, copy_from, copy_to, copied_element, mapping);
             ModelMutator.annotate(copy_to.get_qualified_name(), "Copied system from: " + copy_from.get_qualified_name() + newline + " into: " + old_sub.identity.hash())
             %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
             ModelMutator.annotate(obj.model_name, "Copied " + copy_from.get_qualified_name() + " to: " + copy_to.get_qualified_name())
@@ -264,6 +231,7 @@ classdef ModelMutator
         end        
 
         function connections = get_wiring(subsystem)
+            ModelMutator.make_subsystem_editable(subsystem)
             connections = struct;
             connections.in_source_ports = {};
             connections.out_destination_ports = {};
@@ -305,7 +273,7 @@ classdef ModelMutator
         function remove_lines(subsystem)
             line_handles = get_param(subsystem, "LineHandles");
 
-            ModelMutator.make_subsystem_editable(subsystem)
+            
             ModelMutator.remove_lines2(line_handles.Inport);
             ModelMutator.remove_lines2(line_handles.Outport);
             ModelMutator.remove_lines2(line_handles.Enable);
@@ -330,6 +298,56 @@ classdef ModelMutator
                     delete_line(lines(i))
                 end
             end
+        end
+
+        function copy_to = copy_SS(model_name, model_path, copy_from, copy_to, copied_element, mapping)
+            if copy_to.is_root()
+                copy_to = ModelMutator.copy_to_root(model_name, model_path, copy_from, copy_to);
+            else
+                ModelMutator.copy_to_non_root(copy_to, copy_from, copied_element, mapping)
+            end
+        end
+
+        function copy_to = copy_to_root(model_name, root_model_path, copy_from, copy_to)
+            if copy_from.is_root()
+                %copy from root to root
+                close_system(model_name)
+                delete(root_model_path)
+
+                load_system(copy_from.model_path)
+                save_system(copy_from.sub_name, root_model_path)
+                close_system(copy_from.sub_name)
+                load_system(root_model_path)
+                %instead of the following:
+                %copyfile(copy_from.model_path, root_model_path);
+                %load_system(root_model_path);
+                copy_to = Identity(char(model_name), '', root_model_path);
+            else
+                %copy from subsystem to root
+                copy_to.sub_name = model_name;
+                Simulink.BlockDiagram.deleteContents(copy_to.get_qualified_name())
+                Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+            end
+            %we don't need to rewire the inputs/outputs after copying
+        end
+
+        function copy_to_non_root(copy_to, copy_from, copied_element, mapping)
+            %get prior wiring
+            connected_blocks = ModelMutator.get_wiring(copy_to.get_qualified_name());
+            ModelMutator.remove_lines(copy_to.get_qualified_name());
+            if copy_from.is_root()
+                %copy from root to subsystem
+                Simulink.BlockDiagram.createSubsystem(get_param(copy_to.get_qualified_name(), 'Handle'), 'Name', copied_element.sub_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
+                Simulink.SubSystem.deleteContents(copied_element.get_qualified_name())
+                Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
+                set_param(copied_element.get_qualified_name(), 'Name', copy_to.sub_name)
+            else
+                %copy from subsystem to subsystem
+                delete_block(copy_to.get_qualified_name())
+                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+            end
+            %now, rewire
+            ModelMutator.add_lines(copy_to, connected_blocks, mapping)
         end
 
         function add_lines(system, ports, mapping)
@@ -386,7 +404,7 @@ classdef ModelMutator
             a = Simulink.Annotation(system, string(randi(1000)));
             a.FontSize = 18;
             a.BackgroundColor = 'lightBlue';
-            a.Interpreter = 'rich';
+            %a.Interpreter = 'rich';
             a.Text = text;
         end
     end
