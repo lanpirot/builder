@@ -235,7 +235,7 @@ classdef ModelMutator
             connections = struct;
             connections.in_source_ports = {};
             connections.out_destination_ports = {};
-            lines = get_param(subsystem, 'LineHandles');            
+            lines = get_param(subsystem, 'LineHandles');
             for i=1:length(lines.Inport)
                 line = lines.Inport(i);
                 if line == -1

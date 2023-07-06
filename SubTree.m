@@ -48,7 +48,7 @@ classdef SubTree
             save_system(slx_id.sub_name, slx_id.model_path)
             
             load_system(obj.identity.model_path)
-            ModelMutator.copy_to_root(slx_id.sub_name, slx_id.model_path, obj.identity, slx_id)
+            ModelMutator.copy_to_root(slx_id.sub_name, slx_id.model_path, obj.identity, slx_id);
             close_system(obj.identity.model_path)
             ModelMutator.annotate(slx_id.sub_name, "Copied system from: " + obj.identity.hash() + newline + " into: " + slx_id.hash())
             
@@ -70,10 +70,11 @@ classdef SubTree
             mapping = copy_to_interface.get_mapping(copy_from_interface);
             copied_element = Identity(copy_from.sub_name, copy_into.sub_parents, slx_id.model_path);
 
-            
+            load_system(copy_to.model_path)
             load_system(copy_from.model_path)
             ModelMutator.copy_to_non_root(copy_into, copy_from, copied_element, mapping)
             close_system(copy_from.model_path)
+            close_system(copy_to.model_path)
             ModelMutator.annotate(copy_into.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + " into: " + copy_to.hash())
 
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);

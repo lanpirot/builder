@@ -1,9 +1,5 @@
 function synthesize()
 
-    %%%%%%%%%%%%%%%%%%%%%%%%
-    rng('default')
-    %%%%%%%%%%%%%%%%%%%%%%%%
-
     Helper.clean_up("Starting synthesis process", Helper.synthesize_playground, [Helper.log_synth_theory Helper.log_synth_practice])
     global name2subinfo
     name2subinfo = Helper.parse_json(Helper.name2subinfo_chimerable);
@@ -21,6 +17,7 @@ function synthesize()
     rounds = 0;
     success = 1;
     while success
+        rng(rounds);
         metric_target = compute_target(rounds);
         rounds = rounds + 1;
         if strcmp(Helper.synth_target_metric, Helper.synth_model_sub_tree)
@@ -29,7 +26,7 @@ function synthesize()
             disp("Synthing with target of " + string(metric_target) + " for metric " + Helper.synth_target_metric)
         end
         models_synthed = synth_rounds(metric_target);
-        success = models_synthed > Helper.target_model_count * Helper.target_count_min_ratio;
+        success = models_synthed >= Helper.target_model_count * Helper.target_count_min_ratio;
         disp("Synthesis was successful " + models_synthed + " times.")
     end
     disp("Finished synthesis attempts.")
@@ -37,18 +34,28 @@ end
 
 function good_models = synth_rounds(metric_target)
     %if strcmp(Helper.synth_target_metric, Helper.synth_model_sub_tree) parse random model's subtree and set as goal subtree
+    
     good_models = 0;
     for i = 1:Helper.target_model_count
+        disp("Building model " + string(i))
         start_interface = seed_interface();
         [model_root, metric_met] = synth_repair(start_interface, Identity("", "", ""), metric_target, 1);              %if random models are too small or big: choose root subsystem as base
         if ~metric_met
+            disp("Building model " + string(i) + " failed")
             continue
         end
-        slx_handle = model_root.build_root();
-        if slx_evaluate(slx_handle)
-            %save slx_model
-            slx_save(slx_handle);
-            good_models = good_models + 1;
+        disp("Saving model " + string(i))
+        try
+            slx_handle = model_root.build_root();
+            if slx_evaluate(slx_handle)
+               %save slx_model
+               slx_save(slx_handle);
+               good_models = good_models + 1;
+            end
+            disp("Saved model " + string(i))
+        catch ME
+            disp("Saving model " + string(i) + " failed.")
+            Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
         end
     end
 end

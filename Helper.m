@@ -71,7 +71,7 @@ classdef Helper
 
         target_model_count = 10;
         target_count_min_ratio = 0.8;
-        max_repair_count = 3;
+        max_repair_count = 2;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
