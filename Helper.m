@@ -150,7 +150,12 @@ classdef Helper
         function subsystems = get_contained_subsystems(handle, depth)
             pot_subsystems = Helper.find_subsystems(handle, depth);
             subsystems = [];
-            for i = 2:length(pot_subsystems)
+            if Helper.is_rootf(handle)
+                min = 1;
+            else
+                min = 2;
+            end
+            for i = min:length(pot_subsystems)
                 if Subsystem.is_subsystem(pot_subsystems(i))
                     subsystems(end + 1) = pot_subsystems(i);
                 end
@@ -158,8 +163,7 @@ classdef Helper
         end
 
         function info = get_info(n2i, name, field)%gets subsystem information from name2info.json
-            info = n2i({char(name)});
-            info = info{1}.(field);
+            info = n2i{{char(name)}}.(field);
         end            
 
         function str = rstrip(str)

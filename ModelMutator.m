@@ -77,8 +77,7 @@ classdef ModelMutator
                     if ~name2subinfo.isKey({key})
                         continue
                     end
-                    keyhit = name2subinfo({key});
-                    curr_sub = Subsystem(keyhit{1});
+                    curr_sub = Subsystem(name2subinfo{{key}});
                     try
                         if curr_sub.local_depth == curr_depth
                             sub_at_depth_found = 1;
@@ -326,7 +325,12 @@ classdef ModelMutator
                 %copy from subsystem to root
                 copy_to.sub_name = model_name;
                 Simulink.BlockDiagram.deleteContents(copy_to.get_qualified_name())
-                Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+                try
+                    Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+                catch
+                    %if it is a stateflow chart
+                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+"/"+copy_from.sub_name)
+                end
             end
             %we don't need to rewire the inputs/outputs after copying
         end
