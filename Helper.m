@@ -20,12 +20,11 @@ classdef Helper
         interface = 'INTERFACE'
         is_root = 'IS_ROOT'
         
+        %Subsystem.m
         num_local_elements = 'NUM_LOCAL_ELEMENTS'
         local_depth = 'LOCAL_DEPTH' %sub_depth
         subtree_depth = 'SUBTREE_DEPTH'
-        children = 'CHILDREN'       
-
-        
+        children = 'CHILDREN'
 
         log_garbage_out = Helper.log_path + "log_garbage_out";
         log_eval = Helper.log_path + "log_eval";
@@ -43,6 +42,11 @@ classdef Helper
         garbage_out = Helper.project_dir + "tmp_garbage";
         mutate_playground = Helper.project_dir + "mutate_playground";
         synthesize_playground = Helper.project_dir + "synthesize_playground";
+
+        %report
+        num_subsystems = 'NUM_SUBSYSTEMS'
+        unique_models = 'NUM_UNIQUE_MODELS'
+        synth_report = Helper.synthesize_playground + filesep + "synth_report.csv";
 
 
         project_id_pwd_number = system_constants.project_pwd_number;
@@ -71,13 +75,13 @@ classdef Helper
 
         target_model_count = 1000;
         target_count_min_ratio = 0.8;
-        max_repair_count = 2;
+        max_repair_count = 3;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
         synth_target_metric = Helper.synth_random
-        synth_max_depth = 5;
+        synth_max_depth = 6;
         
     end
     
@@ -125,8 +129,12 @@ classdef Helper
             end
         end
 
-        function elements = find_elements(subsystem_handle)
-            elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on');
+        function elements = find_elements(subsystem_handle, depth)
+            if ~exist('depth', 'var')
+                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on');
+            else
+                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'SearchDepth',depth);
+            end
         end
 
         function ports = find_ports(subsystem_handle, block_type_string)

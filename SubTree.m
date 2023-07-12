@@ -87,5 +87,39 @@ classdef SubTree
                 obj.children{i}.build_sub(slx_children(i), slx_id, [slx_parents '/' copy_into.sub_name]);
             end
         end
+
+        function report = root_report(obj)
+            report = obj.report();
+            report.(Helper.unique_models) = length(unique(report.(Helper.unique_models)));
+            report.(Helper.num_local_elements) = report.(Helper.num_local_elements) - report.(Helper.num_subsystems); %these got counted twice while mining
+        end
+
+        function report = report(obj)
+            global name2subinfo_complete
+            report = struct();
+            local_elements = name2subinfo_complete{{struct(obj.identity)}}.(Helper.num_local_elements);
+            if isempty(obj.children)
+                report.(Helper.local_depth) = 0;
+                report.(Helper.num_local_elements) = local_elements;
+                report.(Helper.num_subsystems) = 1;
+                report.(Helper.unique_models) = string(obj.identity.model_path);
+            else
+                subtree_local_depth = 0;
+                subtree_num_local_elements = 0;
+                subtree_num_subsystems = 0;
+                all_models = [];
+                for i = 1:length(obj.children)
+                    sub_report = obj.children{i}.report();
+                    subtree_local_depth = max(subtree_local_depth, sub_report.(Helper.local_depth));
+                    subtree_num_local_elements = subtree_num_local_elements + sub_report.(Helper.num_local_elements);
+                    subtree_num_subsystems = subtree_num_subsystems + sub_report.(Helper.num_subsystems);
+                    all_models = [all_models sub_report.(Helper.unique_models)];
+                end
+                report.(Helper.local_depth) = subtree_local_depth + 1;
+                report.(Helper.num_local_elements) = subtree_num_local_elements + local_elements;
+                report.(Helper.num_subsystems) = subtree_num_subsystems + 1;
+                report.(Helper.unique_models) = [all_models string(obj.identity.model_path)];
+            end
+        end
     end
 end

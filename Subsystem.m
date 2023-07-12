@@ -36,7 +36,7 @@ classdef Subsystem
 
         function obj = compute_fields(obj, model_path)
             obj.identity = Identity(get_param(obj.handle, 'Name'), get_param(obj.handle, 'Parent'), model_path);
-            obj.num_local_elements = length(Helper.find_elements(obj.handle));
+            obj.num_local_elements = length(Helper.find_elements(obj.handle, 1));
             obj.local_depth = Helper.get_depth(obj.handle);
             obj.subtree_depth = Helper.find_subtree_depth(obj.handle);
             obj = obj.get_direct_children();
