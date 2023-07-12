@@ -37,7 +37,8 @@ classdef SubTree
 
         function model_handle = build_root(obj)
             global name2subinfo_complete
-            slx_id = Identity('tmp', '', Helper.synthesize_playground + filesep + 'tmp');
+            model_name = 'tmp';
+            slx_id = Identity(model_name, '', Helper.synthesize_playground + filesep + model_name);
             try
                 close_system(slx_id.sub_name)
             catch
@@ -47,18 +48,18 @@ classdef SubTree
             save_system(slx_id.sub_name, slx_id.model_path)
 
             load_system(obj.identity.model_path)
-            ModelMutator.copy_to_root(slx_id.sub_name, slx_id.model_path, obj.identity, slx_id);
-            ModelMutator.make_subsystem_editable(slx_id.sub_name);
-            set_param(slx_id.sub_name, 'Lock', 'off')
-            set_param(slx_id.sub_name, "LockLinksToLibrary", "off")
+            slx_id = ModelMutator.copy_to_root(slx_id.sub_name, slx_id.model_path, obj.identity, slx_id);
+            ModelMutator.make_subsystem_editable(slx_id.get_qualified_name());
+            set_param(model_name, 'Lock', 'off')
+            set_param(model_name, "LockLinksToLibrary", "off")
             close_system(obj.identity.model_path)
-            ModelMutator.annotate(slx_id.sub_name, "Copied system from: " + obj.identity.hash() + newline + "to: " + slx_id.hash())
+            ModelMutator.annotate(slx_id.get_qualified_name(), "Copied system from: " + obj.identity.hash() + newline + "to: " + slx_id.hash())
             
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
-                obj.children{i}.build_sub(slx_children(i), slx_id, [slx_id.sub_name]);
+                obj.children{i}.build_sub(slx_children(i), slx_id, [slx_id.get_qualified_name()]);
             end
-            model_handle = get_param(slx_id.sub_name, 'Handle');
+            model_handle = get_param(model_name, 'Handle');
         end
 
         function build_sub(obj, copy_to, slx_id, slx_parents)

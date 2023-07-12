@@ -286,7 +286,10 @@ classdef ModelMutator
 
         function make_subsystem_editable(subsystem)
             while Helper.get_depth(subsystem) > 0 && get_param(subsystem, "LinkStatus") ~= "none"
-                set_param(subsystem, "LinkStatus", "none")
+                try
+                    set_param(subsystem, "LinkStatus", "none")
+                catch
+                end
                 subsystem = get_param(subsystem, "Parent");
             end
         end
@@ -328,8 +331,10 @@ classdef ModelMutator
                 try
                     Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
                 catch
-                    %if it is a stateflow chart
+                    %if it is a stateflow chart or non-root allowed subsystem
                     add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+"/"+copy_from.sub_name)
+                    copy_to.sub_parents = copy_to.sub_name;
+                    copy_to.sub_name = copy_from.sub_name;                    
                 end
             end
             %we don't need to rewire the inputs/outputs after copying
@@ -344,7 +349,7 @@ classdef ModelMutator
                 Simulink.BlockDiagram.createSubsystem(get_param(copy_to.get_qualified_name(), 'Handle'), 'Name', copied_element.sub_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
                 Simulink.SubSystem.deleteContents(copied_element.get_qualified_name())
                 Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
-                set_param(copied_element.get_qualified_name(), 'Name', copy_to.sub_name)
+                set_param(copied_element.get_qualified_name(), 'Name', copy_to.get_sub_name_for_diagram())
             else
                 %copy from subsystem to subsystem
                 delete_block(copy_to.get_qualified_name())

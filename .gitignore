@@ -7,3 +7,4 @@ complete_script.m
 logs/*
 mutate_playground/*
 synthesize_playground/*
+synthed_archive/*

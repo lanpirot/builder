@@ -34,6 +34,10 @@ classdef Identity
         function is_root = is_root(obj)
             is_root = isempty(obj.sub_parents);
         end
+
+        function name = get_sub_name_for_diagram(obj)
+            name = replace(obj.sub_name, '//', '/');
+        end
     end
 
     methods (Static)

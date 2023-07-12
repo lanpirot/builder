@@ -69,7 +69,7 @@ classdef Helper
         deep = "DEEP"
         wish_property = Helper.deep     %set to one of above to build models of a certain property
 
-        target_model_count = 10;
+        target_model_count = 1000;
         target_count_min_ratio = 0.8;
         max_repair_count = 2;
         synth_random = 'RANDOM';                    %just try to synthesize any model
