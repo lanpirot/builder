@@ -35,7 +35,7 @@ classdef SubTree
             bool = isempty(obj.children);
         end
 
-        function model_handle = build_root(obj)
+        function [model_handle, additional_level] = build_root(obj)
             global name2subinfo_complete
             model_name = 'tmp';
             slx_id = Identity(model_name, '', Helper.synthesize_playground + filesep + model_name);
@@ -48,7 +48,7 @@ classdef SubTree
             save_system(slx_id.sub_name, slx_id.model_path)
 
             load_system(obj.identity.model_path)
-            slx_id = ModelMutator.copy_to_root(slx_id.sub_name, slx_id.model_path, obj.identity, slx_id);
+            [slx_id, additional_level] = ModelMutator.copy_to_root(slx_id.sub_name, slx_id.model_path, obj.identity, slx_id);
             ModelMutator.make_subsystem_editable(slx_id.get_qualified_name());
             set_param(model_name, 'Lock', 'off')
             set_param(model_name, "LockLinksToLibrary", "off")
@@ -91,7 +91,7 @@ classdef SubTree
         function report = root_report(obj)
             report = obj.report();
             report.(Helper.unique_models) = length(unique(report.(Helper.unique_models)));
-            report.(Helper.num_local_elements) = report.(Helper.num_local_elements) - report.(Helper.num_subsystems); %these got counted twice while mining
+            report.(Helper.num_local_elements) = report.(Helper.num_local_elements) - report.(Helper.num_subsystems) + 1; %these got counted twice while mining
         end
 
         function report = report(obj)

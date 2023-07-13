@@ -138,6 +138,10 @@ classdef Port
 
         function is_bus = check_if_bus(handle)
             is_bus = 0;
+            params = get_param(handle,'DialogParameters');
+            if isfield(params, 'IsBusElementPort')
+                is_bus = 1;
+            end
             if Helper.dimensions && Dimensions.is_bus(get_param(handle, 'CompiledPortDimensions'))
                 is_bus = 1;
             end

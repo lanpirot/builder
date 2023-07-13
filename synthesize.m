@@ -10,7 +10,7 @@ function synthesize()
     global interface2subs
     interface2subs = Helper.parse_json(Helper.interface2subs);
     interface2subs = dictionary(interface2subs{1}, interface2subs{2});
-    Helper.log('synth_report', "model_no, depth, elements, subs, unique, depth, elements, subs");
+    start_synth_report()
 
     
     rounds = 0;
@@ -34,7 +34,7 @@ function good_models = synth_rounds(metric_target)
     %if strcmp(Helper.synth_target_metric, Helper.synth_model_sub_tree) parse random model's subtree and set as goal subtree
     
     good_models = 0;
-    for i = 1:Helper.target_model_count
+    for i = 18%1:Helper.target_model_count
         rng(i)
         disp("Building model " + string(i))
         start_interface = seed_interface();
@@ -47,7 +47,10 @@ function good_models = synth_rounds(metric_target)
         practice_report = dummy_report();
         disp("Saving model " + string(i))
         try
-            slx_handle = model_root.build_root();
+            [slx_handle, additional_level] = model_root.build_root();
+            if additional_level
+                theory_report = add_level(theory_report);
+            end
             if slx_evaluate(slx_handle)
                practice_report = basic_slx_report(slx_handle);
                slx_save(slx_handle, i);
@@ -63,6 +66,12 @@ function good_models = synth_rounds(metric_target)
         Helper.log('synth_report', report2string(i, theory_report, practice_report));
         delete(Helper.synthesize_playground + filesep + "*.slmx");
     end
+end
+
+function report = add_level(report)
+    report.(Helper.local_depth) = report.(Helper.local_depth) + 1;
+    report.(Helper.num_local_elements) = report.(Helper.num_local_elements) + 1;
+    report.(Helper.num_subsystems) = report.(Helper.num_subsystems) + 1;
 end
 
 function report = dummy_report()
@@ -193,6 +202,11 @@ function bool = slx_metrics_met(slx_identity, metric_target)
         case Helper.synth_random
             bool = 1;
     end
+end
+
+function start_synth_report()
+    Helper.log('synth_report', ",,,,,,,target_model_count " + string(Helper.target_model_count + " max_repair_count " + Helper.max_repair_count + " synth_max_depth " + Helper.synth_max_depth + " synth_target_metric " + Helper.synth_target_metric))
+    Helper.log('synth_report', "model_no, depth, elements, subs, unique, depth, elements, subs");
 end
 
 function bool = loadable(slx_identity)

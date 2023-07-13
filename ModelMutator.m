@@ -310,7 +310,8 @@ classdef ModelMutator
             end
         end
 
-        function copy_to = copy_to_root(model_name, root_model_path, copy_from, copy_to)
+        function [copy_to, additional_level] = copy_to_root(model_name, root_model_path, copy_from, copy_to)
+            additional_level = 0;
             if copy_from.is_root()
                 %copy from root to root
                 close_system(model_name)
@@ -332,6 +333,7 @@ classdef ModelMutator
                     Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
                 catch
                     %if it is a stateflow chart or non-root allowed subsystem
+                    additional_level = 1;
                     add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+"/"+copy_from.sub_name)
                     copy_to.sub_parents = copy_to.sub_name;
                     copy_to.sub_name = copy_from.sub_name;                    

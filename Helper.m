@@ -81,8 +81,7 @@ classdef Helper
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
         synth_target_metric = Helper.synth_random
-        synth_max_depth = 6;
-        
+        synth_max_depth = 6;        
     end
     
     methods(Static)
