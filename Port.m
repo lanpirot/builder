@@ -17,9 +17,10 @@ classdef Port
 
             
             obj.skip_port = Port.check_if_bus(handle);
+            obj.skip_port = Port.check_if_function_trigger_port(handle);
             
             if ~obj.skip_port
-                obj.data_type = obj.get_datatype(handle);
+                obj = obj.get_datatype(handle);
                 obj.dimensions = obj.get_dimensions(handle);
                 obj.hsh = obj.hash();
                 obj.hshpn = obj.hashplusname(handle);
@@ -30,19 +31,19 @@ classdef Port
             is_special = any(ismember(["ActionPort", "EnablePort", "TriggerPort", "PMIOPort", "ResetPort"], obj.port_type));
         end
 
-        function type = get_datatype(obj, handle)
+        function obj = get_datatype(obj, handle)
             if Helper.data_types
                 if is_special_port(obj)
                     switch obj.port_type
                         case 'TriggerPort'
-                            type = get_param(handle, 'OutputDataType');
+                            obj.data_type = get_param(handle, 'OutputDataType');
                             %https://www.mathworks.com/help/simulink/slref/trigger.html
                         case 'PMIOPort'
-                            type = Port.handle_pmio_port(handle, obj.num);
+                            obj.data_type = Port.handle_pmio_port(handle, obj.num);
                         case 'ResetPort'
                             disp("")
                         otherwise
-                            type = obj.port_type;
+                            obj.data_type = obj.port_type;
                     end
                     return
                 else
@@ -50,10 +51,10 @@ classdef Port
                         obj.skip_port = 1;
                         return
                     end
-                    type = Port.get_type(get_param(handle,'CompiledPortDataTypes'));
+                    obj.data_type = Port.get_type(get_param(handle,'CompiledPortDataTypes'));
                 end
             else
-                type = '';
+                obj.data_type = '';
             end
         end
 
@@ -144,6 +145,13 @@ classdef Port
             end
             if Helper.dimensions && Dimensions.is_bus(get_param(handle, 'CompiledPortDimensions'))
                 is_bus = 1;
+            end
+        end
+
+        function is_function_trigger = check_if_function_trigger_port(handle)
+            is_function_trigger = 0;
+            if strcmp(get_param(handle, 'TriggerType'), 'function-call')
+                is_function_trigger = 1;
             end
         end
     end

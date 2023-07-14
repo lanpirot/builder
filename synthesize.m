@@ -34,7 +34,7 @@ function good_models = synth_rounds(metric_target)
     %if strcmp(Helper.synth_target_metric, Helper.synth_model_sub_tree) parse random model's subtree and set as goal subtree
     
     good_models = 0;
-    for i = 18%1:Helper.target_model_count
+    for i = 2%1:Helper.target_model_count
         rng(i)
         disp("Building model " + string(i))
         start_interface = seed_interface();
@@ -43,7 +43,7 @@ function good_models = synth_rounds(metric_target)
             disp("Building model " + string(i) + " FAILED")
             continue
         end
-        theory_report = model_root.root_report();
+        [theory_report, model_root] = model_root.root_report();
         practice_report = dummy_report();
         disp("Saving model " + string(i))
         try

@@ -21,7 +21,7 @@ classdef Interface
             obj.outports = Port.compute_ports(subsystem, 'Outport');
             obj.specialports = [Port.compute_ports(subsystem, 'ActionPort'), Port.compute_ports(subsystem, 'EnablePort'), Port.compute_ports(subsystem, 'TriggerPort'), Port.compute_ports(subsystem, 'PMIOPort'), Port.compute_ports(subsystem, 'ResetPort')];
 
-            if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1
+            if isfloat(obj.inports) && ~isempty(obj.inports) && obj.inports == -1 || isfloat(obj.outports) && ~isempty(obj.outports) && obj.outports == -1 || isfloat(obj.specialports) && ~isempty(obj.specialports) && obj.specialports == -1
                 obj.skip = 1;
             else
                 obj.hsh = obj.hash();

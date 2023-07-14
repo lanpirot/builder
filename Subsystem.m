@@ -111,6 +111,11 @@ classdef Subsystem
     methods (Static)
         function bool = is_subsystem(handle)
             bool = length(Helper.find_elements(handle)) > 1;
+            try
+                get_param(handle, "MATLABFunctionConfiguration")
+            catch
+                bool = 0;
+            end
         end
     end
 end

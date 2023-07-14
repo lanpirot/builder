@@ -355,7 +355,7 @@ classdef ModelMutator
             else
                 %copy from subsystem to subsystem
                 delete_block(copy_to.get_qualified_name())
-                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+" synthed")
             end
             %now, rewire
             ModelMutator.add_lines(copy_to, connected_blocks, mapping)

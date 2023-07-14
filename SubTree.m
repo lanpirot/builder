@@ -2,6 +2,8 @@ classdef SubTree
     properties
         identity
         children = [];                  %identities of all children of this subtree
+
+        num_elements
     end
 
     methods
@@ -88,13 +90,14 @@ classdef SubTree
             end
         end
 
-        function report = root_report(obj)
-            report = obj.report();
+        function [report, obj] = root_report(obj)
+            [report, obj] = obj.report();
             report.(Helper.unique_models) = length(unique(report.(Helper.unique_models)));
             report.(Helper.num_local_elements) = report.(Helper.num_local_elements) - report.(Helper.num_subsystems) + 1; %these got counted twice while mining
+            obj.num_elements = report.(Helper.num_local_elements);
         end
 
-        function report = report(obj)
+        function [report, obj] = report(obj)
             global name2subinfo_complete
             report = struct();
             local_elements = name2subinfo_complete{{struct(obj.identity)}}.(Helper.num_local_elements);
@@ -109,7 +112,7 @@ classdef SubTree
                 subtree_num_subsystems = 0;
                 all_models = [];
                 for i = 1:length(obj.children)
-                    sub_report = obj.children{i}.report();
+                    [sub_report, obj.children{i}] = obj.children{i}.report();
                     subtree_local_depth = max(subtree_local_depth, sub_report.(Helper.local_depth));
                     subtree_num_local_elements = subtree_num_local_elements + sub_report.(Helper.num_local_elements);
                     subtree_num_subsystems = subtree_num_subsystems + sub_report.(Helper.num_subsystems);
@@ -120,6 +123,7 @@ classdef SubTree
                 report.(Helper.num_subsystems) = subtree_num_subsystems + 1;
                 report.(Helper.unique_models) = [all_models string(obj.identity.model_path)];
             end
+            obj.num_elements = report.(Helper.num_local_elements) - report.(Helper.num_subsystems) + 1;
         end
     end
 end
