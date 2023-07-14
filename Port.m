@@ -150,8 +150,11 @@ classdef Port
 
         function is_function_trigger = check_if_function_trigger_port(handle)
             is_function_trigger = 0;
-            if strcmp(get_param(handle, 'TriggerType'), 'function-call')
-                is_function_trigger = 1;
+            try
+                if strcmp(get_param(handle, 'TriggerType'), 'function-call')
+                    is_function_trigger = 1;
+                end
+            catch
             end
         end
     end

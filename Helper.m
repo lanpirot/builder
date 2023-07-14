@@ -59,7 +59,7 @@ classdef Helper
 
 
         dimensions = 0
-        data_types = 0              %data types shall be considered for equivalence
+        data_types = 0
         needs_to_be_compilable = Helper.dimensions || Helper.data_types
 
         input_output_number_compability = 0     %a subsystem can be exchanged, if the other subsystem has less inputs and more outputs (that are all equivalent)
@@ -74,14 +74,14 @@ classdef Helper
         wish_property = Helper.deep     %set to one of above to build models of a certain property
 
         target_model_count = 1000;
-        target_count_min_ratio = 0.8;
         max_repair_count = 3;
+        synth_target = 0;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
         synth_target_metric = Helper.synth_random
-        synth_max_depth = 6;        
+        synth_max_depth = 4;        
     end
     
     methods(Static)

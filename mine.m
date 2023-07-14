@@ -23,9 +23,10 @@ function mine(max_number_of_models)
             model_name = get_param(model_handle, 'Name');
 
             try 
-                systemcomposer.openModel(model_name)%skip architecture models
-                try_close(model_name, model_path)
+                systemcomposer.loadModel(model_name)%skip architecture models
                 cd(project_dir)
+                close(model_name)
+                try_close(model_name, model_path)                
                 continue
             catch
             end

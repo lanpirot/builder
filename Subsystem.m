@@ -112,9 +112,9 @@ classdef Subsystem
         function bool = is_subsystem(handle)
             bool = length(Helper.find_elements(handle)) > 1;
             try
-                get_param(handle, "MATLABFunctionConfiguration")
-            catch
+                get_param(handle, "MATLABFunctionConfiguration");
                 bool = 0;
+            catch
             end
         end
     end

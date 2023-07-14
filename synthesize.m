@@ -13,21 +13,9 @@ function synthesize()
     start_synth_report()
 
     
-    rounds = 0;
-    success = 1;
-    while success
-        metric_target = compute_target(rounds);
-        rounds = rounds + 1;
-        if strcmp(Helper.synth_target_metric, Helper.synth_model_sub_tree)
-            disp("Trying to synth model no. " + string(rounds))
-        else
-            disp("Synthing with target of " + string(metric_target) + " for metric " + Helper.synth_target_metric)
-        end
-        models_synthed = synth_rounds(metric_target);
-        success = models_synthed >= Helper.target_model_count * Helper.target_count_min_ratio;
-        disp("Synthesis was successful " + models_synthed + " times.")
-    end
-    disp("Finished synthesis attempts.")
+    metric_target = synth_target;
+    models_synthed = synth_rounds(metric_target);
+    disp("Synthesis was successful " + models_synthed + " times.")
 end
 
 function good_models = synth_rounds(metric_target)
@@ -175,17 +163,6 @@ function bool = evaluate_subtree(subtree, target)
     switch Helper.synth_target_metric
         case Helper.synth_random
             bool = 1;
-    end
-end
-
-function target = compute_target(rounds)
-    switch Helper.synth_target_metric
-        case Helper.synth_depth
-            target = rounds;
-        case Helper.synth_num_elements
-            target = 2^rounds;
-        otherwise
-            target = -1;
     end
 end
 
