@@ -73,15 +73,16 @@ classdef Helper
         deep = "DEEP"
         wish_property = Helper.deep     %set to one of above to build models of a certain property
 
-        target_model_count = 1000;
-        max_repair_count = 3;
+        synth_model_count = 1000;
+        synth_repair_count = 3;
         synth_target = 0;
+        synth_force_diversity = 1;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
         synth_target_metric = Helper.synth_random
-        synth_max_depth = 4;        
+        synth_max_depth = 8;        
     end
     
     methods(Static)
@@ -122,9 +123,9 @@ classdef Helper
 
         function subsystems = find_subsystems(handle, depth)
             if ~exist('depth', 'var')
-                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','On', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
+                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','On', 'Variants','AllVariants', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
             else
-                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','On', 'SearchDepth',depth, 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
+                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','On', 'SearchDepth',depth, 'Variants','AllVariants', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
             end
         end
 
@@ -151,6 +152,14 @@ classdef Helper
                     break
                 end
                 depth = depth + 1;
+            end
+        end
+
+        function num = find_num_elements_in_contained_subsystems(handle)
+            subsystems = Helper.get_contained_subsystems(handle, 1000);
+            num = length(Helper.find_elements(handle, 1));
+            for i = 1:length(subsystems)
+                num = num + length(Helper.find_elements(subsystems(i), 1));
             end
         end
 
@@ -212,12 +221,6 @@ classdef Helper
             else
                 hash = join(horzcat(ports.hsh), ";");
             end
-        end
-
-        function model_name = get_model_name(model_path)
-                tmp = split(model_path, '/');
-                tmp = split(tmp{end}, '.');
-                model_name = tmp{1};
         end
 
         function parents = change_root_parent(old_parents, root_name)

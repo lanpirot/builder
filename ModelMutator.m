@@ -19,7 +19,7 @@ classdef ModelMutator
             try
                 obj.uuid = uuid;
 
-                obj.original_model_name = Helper.get_model_name(root_model_identity.model_path);
+                obj.original_model_name = root_model_identity.get_model_name();
                 obj.original_model_path = root_model_identity.(Helper.model_path);
     
                 obj = obj.copy_version(0);
@@ -342,7 +342,7 @@ classdef ModelMutator
             %we don't need to rewire the inputs/outputs after copying
         end
 
-        function copy_to_non_root(copy_to, copy_from, copied_element, mapping)
+        function copy_to = copy_to_non_root(copy_to, copy_from, copied_element, mapping)
             %get prior wiring
             connected_blocks = ModelMutator.get_wiring(copy_to.get_qualified_name());
             ModelMutator.remove_lines(copy_to.get_qualified_name());
@@ -355,7 +355,9 @@ classdef ModelMutator
             else
                 %copy from subsystem to subsystem
                 delete_block(copy_to.get_qualified_name())
-                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+" synthed")
+                copy_to.sub_name = [copy_to.sub_name  ' synthed'];
+                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+                
             end
             %now, rewire
             ModelMutator.add_lines(copy_to, connected_blocks, mapping)

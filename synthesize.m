@@ -13,7 +13,7 @@ function synthesize()
     start_synth_report()
 
     
-    metric_target = synth_target;
+    metric_target = Helper.synth_target;
     models_synthed = synth_rounds(metric_target);
     disp("Synthesis was successful " + models_synthed + " times.")
 end
@@ -22,36 +22,35 @@ function good_models = synth_rounds(metric_target)
     %if strcmp(Helper.synth_target_metric, Helper.synth_model_sub_tree) parse random model's subtree and set as goal subtree
     
     good_models = 0;
-    for i = 2%1:Helper.target_model_count
+    for i = 1:Helper.synth_model_count
         rng(i)
         disp("Building model " + string(i))
+        model_name = char("model" + string(i));
+        model_path = Helper.synthesize_playground + filesep + model_name + ".slx";
         start_interface = seed_interface();
-        [model_root, ~, metric_met] = synth_repair(start_interface, Identity("", "", ""), metric_target, 1);              %if random models are too small or big: choose root subsystem as base
+        [model_root, ~, metric_met] = synth_repair(start_interface, Identity('', '', ''), metric_target, 1);              %if random models are too small or big: choose root subsystem as base
         if ~metric_met
             disp("Building model " + string(i) + " FAILED")
             continue
         end
         [theory_report, model_root] = model_root.root_report();
-        practice_report = dummy_report();
-        disp("Saving model " + string(i))
-        try
-            [slx_handle, additional_level] = model_root.build_root();
+        Helper.log('synth_report', report2string(i, theory_report));
+        continue
+        %try
+            [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
             if additional_level
                 theory_report = add_level(theory_report);
             end
             if slx_evaluate(slx_handle)
-               practice_report = basic_slx_report(slx_handle);
-               slx_save(slx_handle, i);
+               slx_save(slx_handle, model_path);
+               model_root.is_discrepant_to_slx
                good_models = good_models + 1;
                disp("Saved model " + string(i))
-            else
-                disp("Saving model " + string(i) + " FAILED")
             end
-        catch ME
-            disp("Saving model " + string(i) + " FAILED")
-            Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
-        end
-        Helper.log('synth_report', report2string(i, theory_report, practice_report));
+        %catch ME
+        %    disp("Saving model " + string(i) + " FAILED")
+        %    Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
+        %end
         delete(Helper.synthesize_playground + filesep + "*.slmx");
     end
 end
@@ -62,27 +61,8 @@ function report = add_level(report)
     report.(Helper.num_subsystems) = report.(Helper.num_subsystems) + 1;
 end
 
-function report = dummy_report()
-    report = struct();
-    report.(Helper.local_depth) = "";
-    report.(Helper.num_local_elements) = "";
-    report.(Helper.num_subsystems) = "";
-end
-
-function str = report2string(model_no, theory_report, practice_report)
-    str = string(model_no) + "," + theory_report.(Helper.local_depth) + "," + theory_report.(Helper.num_local_elements) + "," + theory_report.(Helper.num_subsystems) + "," + theory_report.(Helper.unique_models) + "," + practice_report.(Helper.local_depth) + "," + practice_report.(Helper.num_local_elements) + "," + practice_report.(Helper.num_subsystems);
-end
-
-function report = basic_slx_report(handle)
-    report = struct;
-    all_subsystems = Helper.get_contained_subsystems(handle, 1000);
-    max_depth = 0;
-    for i = 1:length(all_subsystems)
-        max_depth = max(max_depth, Helper.get_depth(all_subsystems(i)));
-    end
-    report.(Helper.local_depth) = max_depth;
-    report.(Helper.num_local_elements) = length(Helper.find_elements(handle));
-    report.(Helper.num_subsystems) = length(all_subsystems) + 1;
+function str = report2string(model_no, theory_report)
+    str = string(model_no) + "," + theory_report.(Helper.local_depth) + "," + theory_report.(Helper.num_local_elements) + "," + theory_report.(Helper.num_subsystems) + "," + theory_report.(Helper.unique_models);
 end
 
 function interface = seed_interface()
@@ -100,7 +80,7 @@ function [subtree, curr_metric_target, metric_met] = synth_repair(interface, not
         return
     end
     global name2subinfo_complete
-    for i = 1:Helper.max_repair_count
+    for i = 1:Helper.synth_repair_count
         curr_metric_target = metric_target;
         %choose identity fitting to interface and not_identity
         subtree = choose_subsystem(interface, not_identity, curr_metric_target);
@@ -137,8 +117,9 @@ function subsystem = choose_subsystem(interface, not_identity, metric_target)
     global interface2subs
     %collect suitable subsystems
     subsystems = interface2subs{{interface}};
-    %remove those, which are excluded because of not_identity
-    %subsystems = remove_not_identity(subsystems, not_identity);
+    if Helper.synth_force_diversity
+        subsystems = remove_not_identity(subsystems, not_identity);
+    end
     if isempty(subsystems)
         subsystem = [];
         return
@@ -182,8 +163,8 @@ function bool = slx_metrics_met(slx_identity, metric_target)
 end
 
 function start_synth_report()
-    Helper.log('synth_report', ",,,,,,,target_model_count " + string(Helper.target_model_count + " max_repair_count " + Helper.max_repair_count + " synth_max_depth " + Helper.synth_max_depth + " synth_target_metric " + Helper.synth_target_metric))
-    Helper.log('synth_report', "model_no, depth, elements, subs, unique, depth, elements, subs");
+    Helper.log('synth_report', ",,,,synth_model_count " + string(Helper.synth_model_count + " synth_repair_count " + Helper.synth_repair_count + " synth_max_depth " + Helper.synth_max_depth + " synth_target_metric " + Helper.synth_target_metric))
+    Helper.log('synth_report', "model_no, depth, elements, subs, unique");
 end
 
 function bool = loadable(slx_identity)
@@ -197,8 +178,8 @@ function bool = loadable(slx_identity)
     end
 end
 
-function slx_save(slx_handle, model_no)
-    save_system(slx_handle, Helper.synthesize_playground + filesep + "model" + string(model_no))
+function slx_save(slx_handle, model_path)    
+    save_system(slx_handle, model_path)
     close_system(slx_handle)
 end
 

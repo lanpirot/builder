@@ -20,7 +20,7 @@ classdef Identity
         end
 
         function hsh = hash(obj)
-            hsh = [obj.sub_name  ';' obj.sub_parents ';' char(obj.model_path)];
+            hsh = [char(obj.sub_name)  ';' char(obj.sub_parents) ';' char(obj.model_path)];
         end
 
         function q_name = get_qualified_name(obj)
@@ -37,6 +37,12 @@ classdef Identity
 
         function name = get_sub_name_for_diagram(obj)
             name = replace(obj.sub_name, '//', '/');
+        end
+
+        function model_name = get_model_name(obj)
+            tmp = split(obj.model_path, filesep);
+            tmp = split(tmp{end}, '.');
+            model_name = tmp{1};
         end
     end
 
