@@ -7,6 +7,9 @@ classdef SubTree
         num_elements
         num_subsystems
         local_depth
+
+        unique_models
+        unique_subsystems
     end
 
     methods
@@ -18,7 +21,7 @@ classdef SubTree
             obj_handle = get_param(obj.synthed_identity.get_qualified_name(), "Handle");
             num_elements = Helper.find_num_elements_in_contained_subsystems(obj_handle);
             num_subsystems = length(Helper.get_contained_subsystems(obj_handle, 1000));
-            if obj.num_elements + num_subsystems ~= num_elements || obj.num_subsystems - 1 ~= num_subsystems
+            if obj.num_elements ~= num_elements || obj.num_subsystems - 1 ~= num_subsystems
                 disp("Warning: Discrepancy found between Theory-Model and actual slx-Model")
                 disp(obj.synthed_identity)
                 disp("")
@@ -111,42 +114,48 @@ classdef SubTree
             end
         end
 
-        function [report, obj] = root_report(obj)
-            [report, obj] = obj.report();
-            report.(Helper.unique_models) = length(unique(report.(Helper.unique_models)));
-            report.(Helper.num_local_elements) = report.(Helper.num_local_elements) - report.(Helper.num_subsystems) + 1; %these got counted twice while mining
-            obj.num_elements = report.(Helper.num_local_elements);
+        function obj = root_report(obj)
+            obj = obj.report();
+            obj.unique_models = unique(obj.unique_models);
+            obj.unique_subsystems = unique(obj.unique_subsystems);
         end
 
-        function [report, obj] = report(obj)
+        function obj = report(obj)
             global name2subinfo_complete
-            report = struct();
+            global model2id
             local_elements = name2subinfo_complete{{struct(obj.identity)}}.(Helper.num_local_elements);
             if isempty(obj.children)
-                report.(Helper.local_depth) = 0;
-                report.(Helper.num_local_elements) = local_elements;
-                report.(Helper.num_subsystems) = 1;
-                report.(Helper.unique_models) = string(obj.identity.model_path);
+                obj.local_depth = 0;
+                obj.num_elements = local_elements;
+                obj.num_subsystems = 1;
+                obj.unique_models = model2id(cellstr(obj.identity.model_path));
+                obj.unique_subsystems = name2subinfo_complete{{struct(obj.identity)}}.sub_id;
             else
                 subtree_local_depth = 0;
-                subtree_num_local_elements = 0;
+                subtree_num_elements = 0;
                 subtree_num_subsystems = 0;
                 all_models = [];
+                all_subsystems = [];
                 for i = 1:length(obj.children)
-                    [sub_report, obj.children{i}] = obj.children{i}.report();
-                    subtree_local_depth = max(subtree_local_depth, sub_report.(Helper.local_depth));
-                    subtree_num_local_elements = subtree_num_local_elements + sub_report.(Helper.num_local_elements);
-                    subtree_num_subsystems = subtree_num_subsystems + sub_report.(Helper.num_subsystems);
-                    all_models = [all_models sub_report.(Helper.unique_models)];
+                    obj.children{i} = obj.children{i}.report();
+                    subtree_local_depth = max(subtree_local_depth, obj.children{i}.local_depth);
+                    subtree_num_elements = subtree_num_elements + obj.children{i}.num_elements;
+                    subtree_num_subsystems = subtree_num_subsystems + obj.children{i}.num_subsystems;
+                    all_models = [all_models obj.children{i}.unique_models];
+                    all_subsystems = [all_subsystems obj.children{i}.unique_subsystems];
                 end
-                report.(Helper.local_depth) = subtree_local_depth + 1;
-                report.(Helper.num_local_elements) = subtree_num_local_elements + local_elements;
-                report.(Helper.num_subsystems) = subtree_num_subsystems + 1;
-                report.(Helper.unique_models) = [all_models string(obj.identity.model_path)];
+                obj.local_depth = subtree_local_depth + 1;
+                obj.num_elements = subtree_num_elements + local_elements;
+                obj.num_subsystems = subtree_num_subsystems + 1;
+                obj.unique_models = [all_models model2id(cellstr(obj.identity.model_path))];
+                obj.unique_subsystems = [all_subsystems name2subinfo_complete{{struct(obj.identity)}}.sub_id];
             end
-            obj.num_elements = report.(Helper.num_local_elements) - report.(Helper.num_subsystems) + 1;
-            obj.num_subsystems = report.(Helper.num_subsystems);
-            obj.local_depth = report.(Helper.local_depth);
+        end
+
+        function obj = add_level(obj)
+            obj.local_depth = obj.local_depth + 1;
+            obj.num_elements = obj.num_elements + 1;
+            obj.num_subsystems = obj.num_subsystems + 1;
         end
     end
 end

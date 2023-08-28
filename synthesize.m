@@ -1,12 +1,22 @@
 function synthesize()
-
+    tic
     Helper.clean_up("Starting synthesis process", Helper.synthesize_playground, [Helper.log_synth_theory Helper.log_synth_practice Helper.synth_report])
-    global name2subinfo
-    name2subinfo = Helper.parse_json(Helper.name2subinfo_chimerable);
-    name2subinfo = Helper.build_sub_info(name2subinfo);
+    
     global name2subinfo_complete
     name2subinfo_complete = Helper.parse_json(Helper.name2subinfo_complete);
     name2subinfo_complete = Helper.build_sub_info(name2subinfo_complete);
+    ks = name2subinfo_complete.keys();
+    models = {};
+    for i = 1:length(ks)
+        n2i = name2subinfo_complete{ks(i)};
+        n2i.sub_id = i;
+        name2subinfo_complete{ks(i)} = n2i;
+        models = [models n2i.(Helper.identity).model_path];
+    end
+    models = unique(models);
+    global model2id
+    model2id = dictionary(models, 1:length(models));
+
     global interface2subs
     interface2subs = Helper.parse_json(Helper.interface2subs);
     interface2subs = dictionary(interface2subs{1}, interface2subs{2});
@@ -14,14 +24,99 @@ function synthesize()
 
     
     metric_target = Helper.synth_target;
-    models_synthed = synth_rounds(metric_target);
+    [roots, models_synthed] = synth_rounds(metric_target);
+    coverage_report(roots, models_synthed, length(models), length(ks))
     disp("Synthesis was successful " + models_synthed + " times.")
 end
 
-function good_models = synth_rounds(metric_target)
+function coverage_report(roots, models_synthed, model_count, sub_count)
+    Helper.log('synth_report', newline + "========END REPORT:=========" + newline);
+    Helper.log('synth_report', "Total elapsed time: " + string(toc));
+    
+    for i=1:length(roots)
+        if isempty(roots{i})
+            continue
+        end
+        roots_copy = struct(roots{i});
+        break
+    end
+
+    
+    for i = i+1:length(roots)
+        if isempty(roots{i})
+            continue
+        end
+        roots_copy(end + 1) = struct(roots{i});
+    end
+    roots = roots_copy;
+
+    %size report
+    %element histogram
+    histc(horzcat(roots.num_elements), 1:max(horzcat(roots.num_elements)))
+    %subsystem histogram
+    histc(horzcat(roots.num_subsystems), 1:max(horzcat(roots.num_subsystems)))
+    %depth histogram
+    histc(horzcat(roots.local_depth), 0:max(horzcat(roots.local_depth)))
+    
+    
+
+    %how many models are covered
+    all_models = horzcat(roots.unique_models);
+    unique_models = unique(all_models);
+    Helper.log('synth_report', "Ratio of models covered: " + string(length(unique_models) / model_count) + " (of " + model_count + " models)");
+    %how many subsystems are covered
+    all_subs = horzcat(roots_copy.unique_subsystems);
+    unique_subs = unique(all_subs);
+    Helper.log('synth_report', "Ratio of subsystems covered: " + string(length(unique_subs)/sub_count) + " (of " + sub_count + " subsystems)")
+
+    %what is the overlap between models
+    overlap_ratios = struct;
+    model_total_overlap = 0;
+    subsystem_total_overlap = 0;
+    for i = 1:length(roots)
+        model_local_overlap_ratios = [];
+        subsystem_local_overlap_ratios = [];
+        for j = 1:length(roots)
+            model_overlap = intersect(roots(i).unique_models, roots(j).unique_models);
+            model_local_overlap_ratios(end + 1) = length(model_overlap) / length(roots(i).unique_models);
+            if model_local_overlap_ratios(end) == 1
+                model_total_overlap = model_total_overlap + 1;
+            end
+
+            subsystem_overlap = intersect(roots(i).unique_subsystems, roots(j).unique_subsystems);
+            subsystem_local_overlap_ratios(end + 1) = length(subsystem_overlap) / length(roots(i).unique_subsystems);
+            if subsystem_local_overlap_ratios(end) == 1
+                subsystem_total_overlap = subsystem_total_overlap + 1;
+            end
+        end
+        overlap_ratios(end + 1).model_mean = mean(model_local_overlap_ratios);
+        overlap_ratios(end).model_median = median(model_local_overlap_ratios);
+        overlap_ratios(end).subsystem_mean = mean(subsystem_local_overlap_ratios);
+        overlap_ratios(end).subsystem_median = median(subsystem_local_overlap_ratios);
+    end
+
+    if models_synthed == 0
+        models_synthed = length(roots);
+    end
+    model_means = vertcat(overlap_ratios.model_mean);
+    model_medians = vertcat(overlap_ratios.model_median);
+    Helper.log('synth_report', "Maximum of mean model overlaps: " + string(max(model_means)))
+    Helper.log('synth_report', "Maximum of median model overlaps: " + string(max(model_medians)))
+    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + model_total_overlap + " complete model overlaps (max: " + string(models_synthed^2) + ").")
+
+    subsystem_means = vertcat(overlap_ratios.subsystem_mean);
+    subsystem_medians = vertcat(overlap_ratios.subsystem_median);
+    Helper.log('synth_report', "Maximum of mean subsystem overlaps: " + string(max(subsystem_means)))
+    Helper.log('synth_report', "Maximum of median subsystem overlaps: " + string(max(subsystem_medians)))
+    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + subsystem_total_overlap + " complete subsystem overlaps (max: " + string(models_synthed^2) + ").")
+    Helper.log('synth_report', "========END REPORT END=========")
+end
+
+function [roots, good_models] = synth_rounds(metric_target)
     %if strcmp(Helper.synth_target_metric, Helper.synth_model_sub_tree) parse random model's subtree and set as goal subtree
     
     good_models = 0;
+    roots = {};
     for i = 1:Helper.synth_model_count
         rng(i)
         disp("Building model " + string(i))
@@ -33,13 +128,14 @@ function good_models = synth_rounds(metric_target)
             disp("Building model " + string(i) + " FAILED")
             continue
         end
-        [theory_report, model_root] = model_root.root_report();
-        Helper.log('synth_report', report2string(i, theory_report));
+        model_root = model_root.root_report();
+        roots{i} = model_root;
+        Helper.log('synth_report', report2string(i, model_root));
         continue
         %try
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
             if additional_level
-                theory_report = add_level(theory_report);
+                model_root = model_root.add_level();
             end
             if slx_evaluate(slx_handle)
                slx_save(slx_handle, model_path);
@@ -53,22 +149,6 @@ function good_models = synth_rounds(metric_target)
         %end
         delete(Helper.synthesize_playground + filesep + "*.slmx");
     end
-end
-
-function report = add_level(report)
-    report.(Helper.local_depth) = report.(Helper.local_depth) + 1;
-    report.(Helper.num_local_elements) = report.(Helper.num_local_elements) + 1;
-    report.(Helper.num_subsystems) = report.(Helper.num_subsystems) + 1;
-end
-
-function str = report2string(model_no, theory_report)
-    str = string(model_no) + "," + theory_report.(Helper.local_depth) + "," + theory_report.(Helper.num_local_elements) + "," + theory_report.(Helper.num_subsystems) + "," + theory_report.(Helper.unique_models);
-end
-
-function interface = seed_interface()
-    global name2subinfo
-    nkeys = name2subinfo.keys();
-    interface = name2subinfo{choose_random(nkeys)}.(Helper.interface).hsh;
 end
 
 function [subtree, curr_metric_target, metric_met] = synth_repair(interface, not_identity, metric_target, depth)
@@ -95,7 +175,11 @@ function [subtree, curr_metric_target, metric_met] = synth_repair(interface, not
         sub_met = 1;
         %run synth_repair on all children
         for j = 1:length(children_before)
-            child_before = name2subinfo_complete{{children_before(j)}};
+            try
+                child_before = name2subinfo_complete{{children_before(j)}};
+            catch
+                break
+            end
             [child_after, sub_metric, sub_met] = synth_repair(child_before.(Helper.interface).hsh, subtree.identity, curr_metric_target, depth + 1);
             if ~sub_met
                 break
@@ -112,8 +196,19 @@ function [subtree, curr_metric_target, metric_met] = synth_repair(interface, not
     end
 end
 
+function interface = seed_interface()
+    global name2subinfo_complete
+    nkeys = name2subinfo_complete.keys();
+    while 1
+        interface = name2subinfo_complete{choose_random(nkeys)}.(Helper.interface).hsh;
+        if ~Helper.synth_seed_with_roots_only || ~isempty(name2subinfo_complete{choose_random(nkeys)}.IDENTITY.sub_parents)
+            break
+        end
+    end
+end
+
 function subsystem = choose_subsystem(interface, not_identity, metric_target)
-    global name2subinfo
+    global name2subinfo_complete
     global interface2subs
     %collect suitable subsystems
     subsystems = interface2subs{{interface}};
@@ -127,15 +222,17 @@ function subsystem = choose_subsystem(interface, not_identity, metric_target)
 
     switch Helper.synth_target_metric
         case Helper.synth_random
-            subsystem = SubTree(choose_random(subsystems), name2subinfo);
+            subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
     end
 end
 
 function subsystems = remove_not_identity(subsystems, not_identity)
-    for i = 1:length(subsystems)
+    i = 1;
+    while i <= length(subsystems)
         if strcmp(subsystems(i).model_path, not_identity.model_path)
             subsystems = [subsystems(1:i-1); subsystems(i+1:end)];
-            return
+        else
+            i = i + 1;
         end
     end
 end
@@ -151,6 +248,10 @@ function element = choose_random(array)
     element = array(randi(length(array)));
 end
 
+function str = report2string(model_no, root)
+    str = string(model_no) + "," + root.local_depth + "," + root.num_elements + "," + root.num_subsystems + "," + length(root.unique_models) + "," + length(root.unique_subsystems);
+end
+
 function bool = slx_evaluate(slx_identity)
     bool = loadable(slx_identity) && slx_metrics_met(slx_identity);%&& (~Helper.needs_to_be_compilable || compilable(slx_identity))
 end
@@ -163,8 +264,8 @@ function bool = slx_metrics_met(slx_identity, metric_target)
 end
 
 function start_synth_report()
-    Helper.log('synth_report', ",,,,synth_model_count " + string(Helper.synth_model_count + " synth_repair_count " + Helper.synth_repair_count + " synth_max_depth " + Helper.synth_max_depth + " synth_target_metric " + Helper.synth_target_metric))
-    Helper.log('synth_report', "model_no, depth, elements, subs, unique");
+    Helper.log('synth_report', ",,,,synth_model_count " + string(Helper.synth_model_count + " synth_repair_count " + Helper.synth_repair_count + " synth_max_depth " + Helper.synth_max_depth + " synth_target_metric " + Helper.synth_target_metric) + " synth_force_diversity " + Helper.synth_force_diversity)
+    Helper.log('synth_report', "model_no, depth, elements, subs, unique_models, unique_subsystems");
 end
 
 function bool = loadable(slx_identity)

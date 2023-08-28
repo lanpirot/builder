@@ -45,7 +45,8 @@ classdef Helper
 
         %report
         num_subsystems = 'NUM_SUBSYSTEMS'
-        unique_models = 'NUM_UNIQUE_MODELS'
+        unique_models = 'UNIQUE_MODELS'
+        unique_subsystems = 'UNIQUE_SUBSYSTEMS';
         synth_report = Helper.synthesize_playground + filesep + "synth_report.csv";
 
 
@@ -73,16 +74,17 @@ classdef Helper
         deep = "DEEP"
         wish_property = Helper.deep     %set to one of above to build models of a certain property
 
-        synth_model_count = 1000;
+        synth_model_count = 10;
         synth_repair_count = 3;
         synth_target = 0;
         synth_force_diversity = 1;
+        synth_seed_with_roots_only = 1;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
         synth_target_metric = Helper.synth_random
-        synth_max_depth = 8;        
+        synth_max_depth = 1;        
     end
     
     methods(Static)
@@ -131,9 +133,9 @@ classdef Helper
 
         function elements = find_elements(subsystem_handle, depth)
             if ~exist('depth', 'var')
-                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on');
+                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'Variants','AllVariants');
             else
-                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'SearchDepth',depth);
+                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth);
             end
         end
 

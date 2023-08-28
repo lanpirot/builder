@@ -60,18 +60,6 @@ function mine(max_number_of_models)
     interface2subs = dic_int2subs(subs, 0);
     identity2sub = dic_id2sub(subs);
     serialize(interface2subs, -1);
-    
-
-    %SECOND: remove duplicates
-    interface2subs = dic_int2subs(subs, 1);
-    identity2sub = dic_id2sub(subs);
-    serialize(interface2subs, 0);
-
-    %THIRD: propagate chimerability + remove non-chimerable subsystems
-    [interface2subs, identity2sub] = propagate_chimerability(subs, interface2subs, identity2sub);
-    disp("Removing non-chimerable subsystems, now.")
-    interface2subs = remove_non_chimerable(interface2subs, identity2sub);
-    serialize(interface2subs, 1);
 
     fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
 end
@@ -175,13 +163,13 @@ function serialize(interface2subs, outputmode)
     switch outputmode
         case -1
             Helper.file_print(Helper.name2subinfo_complete, jsonencode(subinfo));
-            string_prefix = "Before";
-        case 1
-            Helper.file_print(Helper.name2subinfo_chimerable, jsonencode(subinfo));
             [ikeys, identities] = make_i2s_smaller(interface2subs);
             Helper.file_print(Helper.interface2subs, jsonencode({ikeys, identities}))
+            string_prefix = "Before";
         case 0
             Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
+            [ikeys, identities] = make_i2s_smaller(interface2subs);
+            Helper.file_print(Helper.interface2subs, jsonencode({ikeys, identities}))
     end
 
     disp(string_prefix + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
