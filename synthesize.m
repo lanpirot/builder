@@ -1,5 +1,4 @@
 function synthesize()
-    tic
     Helper.clean_up("Starting synthesis process", Helper.synthesize_playground, [Helper.log_synth_theory Helper.log_synth_practice Helper.synth_report])
     
     global name2subinfo_complete
@@ -24,6 +23,7 @@ function synthesize()
 
     
     metric_target = Helper.synth_target;
+    tic
     [roots, models_synthed] = synth_rounds(metric_target);
     disp(".slx-synthesis file saved " + models_synthed + " times.")
     coverage_report(roots, models_synthed, length(models), length(ks))    
@@ -207,6 +207,7 @@ function interface = seed_interface()
     nkeys = name2subinfo_complete.keys();
     while 1
         interface = name2subinfo_complete{choose_random(nkeys)}.(Helper.interface).hsh;
+        %interface = '+;;+;,+;;+;,';
         if ~Helper.synth_seed_with_roots_only || ~isempty(name2subinfo_complete{choose_random(nkeys)}.IDENTITY.sub_parents)
             break
         end
