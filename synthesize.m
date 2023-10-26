@@ -207,7 +207,7 @@ function interface = seed_interface()
     nkeys = name2subinfo_complete.keys();
     while 1
         interface = name2subinfo_complete{choose_random(nkeys)}.(Helper.interface).hsh;
-        %interface = '+;;+;,+;;+;,';
+        interface = '+;;+;,+;;+;,';
         if ~Helper.synth_seed_with_roots_only || ~isempty(name2subinfo_complete{choose_random(nkeys)}.IDENTITY.sub_parents)
             break
         end
@@ -235,6 +235,9 @@ function subsystem = choose_subsystem(interface, not_identity, metric_target, de
     switch Helper.synth_target_metric
         case Helper.synth_random
             subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
+            if depth == 1
+                subsystem = SubTree(subsystems(end), name2subinfo_complete);
+            end
         case Helper.synth_depth
             subsystem1 = SubTree(choose_random(subsystems), name2subinfo_complete);
             subsystem2 = SubTree(choose_random(subsystems), name2subinfo_complete);

@@ -77,13 +77,13 @@ classdef Helper
         synth_model_count = 100;
         synth_repair_count = 3;
         synth_target = 0;
-        synth_force_diversity = 1;
+        synth_force_diversity = 0;
         synth_seed_with_roots_only = 1;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
-        synth_target_metric = Helper.synth_depth
+        synth_target_metric = Helper.synth_random
         synth_max_depth = 6;
     end
     

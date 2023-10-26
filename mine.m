@@ -19,6 +19,7 @@ function mine(max_number_of_models)
 
         model_path = string(strip(modellist.model_url(i, :), "right"));
         try
+            
             model_handle = load_system(model_path);
             model_name = get_param(model_handle, 'Name');
 
