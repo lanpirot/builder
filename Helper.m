@@ -74,8 +74,8 @@ classdef Helper
         deep = "DEEP"
         wish_property = Helper.deep     %set to one of above to build models of a certain property
 
-        synth_model_count = 10;
-        synth_repair_count = 3;
+        synth_model_count = 100;
+        synth_repair_count = 2;
         synth_target = 0;
         synth_force_diversity = 1;
         synth_seed_with_roots_only = 1;
@@ -84,7 +84,7 @@ classdef Helper
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
         synth_target_metric = Helper.synth_random
-        synth_max_depth = 1;        
+        synth_max_depth = 6;
     end
     
     methods(Static)

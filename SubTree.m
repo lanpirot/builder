@@ -38,6 +38,8 @@ classdef SubTree
             switch Helper.synth_target_metric
                 case Helper.synth_random
                     new_target = curr_metric_target;
+                case Helper.synth_depth
+                    new_target = curr_metric_target;
             end
         end
 
@@ -45,12 +47,17 @@ classdef SubTree
             switch Helper.synth_target_metric
                 case Helper.synth_random
                     new_target = curr_metric_target;
+                case Helper.synth_depth
+                    new_target = curr_metric_target;
             end
+            
         end
 
         function bool = is_metric_met(obj, curr_metric_target, metric_target)
             switch Helper.synth_target_metric
                 case Helper.synth_random
+                    bool = 1;
+                case Helper.synth_depth
                     bool = 1;
             end
         end
@@ -154,7 +161,7 @@ classdef SubTree
 
         function obj = add_level(obj)
             obj.local_depth = obj.local_depth + 1;
-            obj.num_elements = obj.num_elements + 1;
+            obj.num_elements = obj.num_elements + 2;
             obj.num_subsystems = obj.num_subsystems + 1;
         end
     end
