@@ -74,17 +74,17 @@ classdef Helper
         deep = "DEEP"
         wish_property = Helper.deep     %set to one of above to build models of a certain property
 
-        synth_model_count = 100;
+        synth_model_count = 25;
         synth_repair_count = 3;
         synth_target = 0;
-        synth_force_diversity = 0;
+        synth_force_diversity = 1;
         synth_seed_with_roots_only = 1;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
         synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
         synth_depth = 'DEPTH'                       %try to fill a model to the brim till depth n
         synth_target_metric = Helper.synth_random
-        synth_max_depth = 6;
+        synth_max_depth = 5;
     end
     
     methods(Static)
@@ -125,9 +125,9 @@ classdef Helper
 
         function subsystems = find_subsystems(handle, depth)
             if ~exist('depth', 'var')
-                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','On', 'Variants','AllVariants', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
+                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
             else
-                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','On', 'SearchDepth',depth, 'Variants','AllVariants', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
+                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth, 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
             end
         end
 
@@ -140,14 +140,14 @@ classdef Helper
         end
 
         function ports = find_ports(subsystem_handle, block_type_string)
-            ports = find_system(subsystem_handle, 'FindAll','On', 'LookUnderMasks','on', 'FollowLinks','On', 'SearchDepth',1, 'BlockType',block_type_string);
+            ports = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',1, 'BlockType',block_type_string);
         end
 
         function depth = find_subtree_depth(handle)
             depth = 0;
             last_length = 0;
             while 1
-                next_length = length(find_system(handle, 'FindAll','On', 'LookUnderMasks','on', 'FollowLinks','On', 'SearchDepth',depth));
+                next_length = length(find_system(handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth));
                 if next_length > last_length
                     last_length = next_length;
                 else

@@ -53,9 +53,9 @@ function coverage_report(roots, models_synthed, model_count, sub_count)
     disp(string(length(roots)) + " were models were created.")
 
     %size report
-    Helper.log('synth_report', "Elements min_max_med_mean_stddev " + minmaxmedmeanstddev(horzcat(roots.num_elements)))
-    Helper.log('synth_report', "Subsystems min_max_med_mean_stddev " + minmaxmedmeanstddev(horzcat(roots.num_subsystems)))
-    Helper.log('synth_report', "Depths min_max_med_mean_stddev " + minmaxmedmeanstddev(horzcat(roots.local_depth)))   
+    Helper.log('synth_report', "Elements min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.num_elements)))
+    Helper.log('synth_report', "Subsystems min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.num_subsystems)))
+    Helper.log('synth_report', "Depths min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.local_depth)))   
     
 
     %how many models are covered
@@ -110,11 +110,11 @@ function coverage_report(roots, models_synthed, model_count, sub_count)
     Helper.log('synth_report', "========END REPORT END=========")
 end
 
-function out_string = minmaxmedmeanstddev(l)
+function out_string = minmedmaxmedmeanstddev(l)
     out_string = "";
     out_string = out_string + min(l) + ", ";
-    out_string = out_string + max(l) + ", ";
     out_string = out_string + median(l) + ", ";
+    out_string = out_string + max(l) + ", ";
     out_string = out_string + mean(l) + ", ";
     out_string = out_string + std(l);
 end
@@ -128,7 +128,7 @@ function [roots, good_models] = synth_rounds(metric_target)
         disp("Building model " + string(i))
         model_name = char("model" + string(i));
         model_path = Helper.synthesize_playground + filesep + model_name + ".slx";
-        [model_root, ~, metric_met] = synth_repair([], Identity('', '', ''), metric_target, 1);              %if random models are too small or big: choose root subsystem as base
+        [model_root, ~, metric_met] = synth_repair([], Identity('', '', ''), metric_target, 1);
         if ~metric_met
             disp("Building model " + string(i) + " FAILED")
             continue
@@ -206,9 +206,9 @@ function interface = seed_interface()
     global name2subinfo_complete
     nkeys = name2subinfo_complete.keys();
     while 1
-        interface = name2subinfo_complete{choose_random(nkeys)}.(Helper.interface).hsh;
-        interface = '+;;+;,+;;+;,';
-        if ~Helper.synth_seed_with_roots_only || ~isempty(name2subinfo_complete{choose_random(nkeys)}.IDENTITY.sub_parents)
+        chosen_key = choose_random(nkeys);
+        if ~Helper.synth_seed_with_roots_only || isempty(name2subinfo_complete{chosen_key}.IDENTITY.sub_parents)
+            interface = name2subinfo_complete{chosen_key}.(Helper.interface).hsh;
             break
         end
     end
@@ -217,35 +217,43 @@ end
 function subsystem = choose_subsystem(interface, not_identity, metric_target, depth)
     global name2subinfo_complete
     global interface2subs
-    
-    if depth == 1
-        interface = seed_interface();
-    end
-    %collect suitable subsystems
-    subsystems = interface2subs{{interface}};
-    if Helper.synth_force_diversity
-        subsystems = remove_not_identity(subsystems, not_identity);
-    end
-    if isempty(subsystems)
-        subsystem = [];
-        return
-    end
+
+    while 1
+        if depth == 1
+            interface = seed_interface();
+        end
+        %collect suitable subsystems
+        if ~any(find(strcmp(interface2subs.keys(), interface)))
+            continue
+        end
+        subsystems = interface2subs{{interface}};
+        if Helper.synth_force_diversity
+            subsystems = remove_not_identity(subsystems, not_identity);
+        end
+        if isempty(subsystems)
+            subsystem = [];
+            return
+        end
 
     
-    switch Helper.synth_target_metric
-        case Helper.synth_random
-            subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
-            if depth == 1
-                subsystem = SubTree(subsystems(end), name2subinfo_complete);
-            end
-        case Helper.synth_depth
-            subsystem1 = SubTree(choose_random(subsystems), name2subinfo_complete);
-            subsystem2 = SubTree(choose_random(subsystems), name2subinfo_complete);
-            if (depth < Helper.synth_max_depth) == (length(subsystem1.children) < length(subsystem2.children))
-                subsystem = subsystem2;
-            else
-                subsystem = subsystem1;
-            end
+        switch Helper.synth_target_metric
+            case Helper.synth_random
+                subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
+            case Helper.synth_depth
+                subsystem1 = choose_random(subsystems);
+                info1 = name2subinfo_complete{{subsystem1}};
+                subsystem2 = choose_random(subsystems);
+                info2 = name2subinfo_complete{{subsystem2}};
+                %if (depth < Helper.synth_max_depth) == (length(info1.(Helper.children))*info1.(Helper.subtree_depth) < length(info2.(Helper.children))*info2.(Helper.subtree_depth))
+                if (depth < Helper.synth_max_depth) == (length(info1.(Helper.children)) < length(info2.(Helper.children)))
+                    subsystem = SubTree(subsystem2, name2subinfo_complete);
+                else
+                    subsystem = SubTree(subsystem1, name2subinfo_complete);
+                end
+        end
+        if depth > 1 || ~Helper.synth_seed_with_roots_only || isempty(name2subinfo_complete{{struct(subsystem.identity)}}.IDENTITY.sub_parents)
+            break
+        end
     end
 end
 
