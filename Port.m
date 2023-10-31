@@ -16,8 +16,7 @@ classdef Port
             obj.port_type = port_type;
 
             
-            obj.skip_port = Port.check_if_bus(handle);
-            obj.skip_port = Port.check_if_function_trigger_port(handle);
+            obj.skip_port = Port.check_if_bus(handle) || Port.check_if_function_trigger_port(handle);
             
             if ~obj.skip_port
                 obj = obj.get_datatype(handle);
@@ -138,13 +137,11 @@ classdef Port
 
 
         function is_bus = check_if_bus(handle)
-            is_bus = 0;
             params = get_param(handle,'DialogParameters');
-            if isfield(params, 'IsBusElementPort')
+            if isfield(params, 'IsBusElementPort') || (Helper.dimensions && Dimensions.is_bus(get_param(handle, 'CompiledPortDimensions')))
                 is_bus = 1;
-            end
-            if Helper.dimensions && Dimensions.is_bus(get_param(handle, 'CompiledPortDimensions'))
-                is_bus = 1;
+            else
+                is_bus = 0;
             end
         end
 

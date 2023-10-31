@@ -30,7 +30,8 @@ function synthesize()
 end
 
 function coverage_report(roots, models_synthed, model_count, sub_count)
-    Helper.log('synth_report', newline + "========END REPORT:=========" + newline);
+    start_synth_report();
+    Helper.log('synth_report', "========END REPORT:=========");
     Helper.log('synth_report', "Total elapsed time: " + string(toc));
 
     % find first existing root to initialize copy array, then ....
@@ -124,11 +125,13 @@ function [roots, good_models] = synth_rounds(metric_target)
     good_models = 0;
     roots = {};
     for i = 1:Helper.synth_model_count
-        rng(i+1000)
+        rng(i)
         disp("Building model " + string(i))
         model_name = char("model" + string(i));
         model_path = Helper.synthesize_playground + filesep + model_name + ".slx";
+
         [model_root, ~, metric_met] = synth_repair([], Identity('', '', ''), metric_target, 1);
+        
         if ~metric_met
             disp("Building model " + string(i) + " FAILED")
             continue
@@ -158,7 +161,7 @@ end
 
 function [subtree, curr_metric_target, metric_met] = synth_repair(interface, not_identity, metric_target, depth)
     subtree = [];
-    curr_metric_target = -1;
+    curr_metric_target = metric_target;
     metric_met = 0;
 
     if depth > Helper.synth_max_depth
@@ -218,7 +221,9 @@ function subsystem = choose_subsystem(interface, not_identity, metric_target, de
     global name2subinfo_complete
     global interface2subs
 
-    while 1
+    subsystem = [];
+
+    for i = 1:10
         if depth == 1
             interface = seed_interface();
         end
@@ -227,43 +232,34 @@ function subsystem = choose_subsystem(interface, not_identity, metric_target, de
             continue
         end
         subsystems = interface2subs{{interface}};
-        if Helper.synth_force_diversity
-            subsystems = remove_not_identity(subsystems, not_identity);
-        end
-        if isempty(subsystems)
-            subsystem = [];
-            return
-        end
-
     
         switch Helper.synth_target_metric
             case Helper.synth_random
                 subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
             case Helper.synth_depth
-                subsystem1 = choose_random(subsystems);
-                info1 = name2subinfo_complete{{subsystem1}};
-                subsystem2 = choose_random(subsystems);
-                info2 = name2subinfo_complete{{subsystem2}};
-                %if (depth < Helper.synth_max_depth) == (length(info1.(Helper.children))*info1.(Helper.subtree_depth) < length(info2.(Helper.children))*info2.(Helper.subtree_depth))
-                if (depth < Helper.synth_max_depth) == (length(info1.(Helper.children)) < length(info2.(Helper.children)))
-                    subsystem = SubTree(subsystem2, name2subinfo_complete);
+                sample_size = min(length(subsystems), Helper.synth_depth_sample_size - randi(Helper.synth_depth_sample_size - 1));
+                infos = struct('sample',{}, 'children_count',{});
+                for i = 1:sample_size
+                    sample = name2subinfo_complete{{choose_random(subsystems)}};
+                    infos(end + 1) = struct('sample',sample, 'children_count',length(sample.(Helper.children)));
+                end
+                %[~, idx] = sort([infos.children_count]);
+                %infos = infos(idx);                
+                
+                if (depth < Helper.synth_max_depth)
+                    [~, i] = max([infos.children_count]);
+                    subsystem = SubTree(infos(i).sample.IDENTITY, name2subinfo_complete);
                 else
-                    subsystem = SubTree(subsystem1, name2subinfo_complete);
+                    [~, i] = min([infos.children_count]);
+                    subsystem = SubTree(infos(i).sample.IDENTITY, name2subinfo_complete);
                 end
         end
+        if Helper.synth_force_diversity && strcmp(not_identity.model_path, subsystem.identity.model_path) 
+            continue
+        end
+
         if depth > 1 || ~Helper.synth_seed_with_roots_only || isempty(name2subinfo_complete{{struct(subsystem.identity)}}.IDENTITY.sub_parents)
             break
-        end
-    end
-end
-
-function subsystems = remove_not_identity(subsystems, not_identity)
-    i = 1;
-    while i <= length(subsystems)
-        if strcmp(subsystems(i).model_path, not_identity.model_path)
-            subsystems = [subsystems(1:i-1); subsystems(i+1:end)];
-        else
-            i = i + 1;
         end
     end
 end
