@@ -34,34 +34,6 @@ classdef SubTree
             obj.children = subinfos{{sub}}.(Helper.children);
         end
 
-        function new_target = adapt_target_local(obj, curr_metric_target)
-            switch Helper.synth_target_metric
-                case Helper.synth_random
-                    new_target = curr_metric_target;
-                case Helper.synth_depth
-                    new_target = curr_metric_target;
-            end
-        end
-
-        function new_target = adapt_target_descendants(obj, sub_metric, curr_metric_target)
-            switch Helper.synth_target_metric
-                case Helper.synth_random
-                    new_target = curr_metric_target;
-                case Helper.synth_depth
-                    new_target = curr_metric_target;
-            end
-            
-        end
-
-        function bool = is_metric_met(obj, curr_metric_target, metric_target)
-            switch Helper.synth_target_metric
-                case Helper.synth_random
-                    bool = 1;
-                case Helper.synth_depth
-                    bool = 1;
-            end
-        end
-
         function bool = is_leaf(obj)
             bool = isempty(obj.children);
         end

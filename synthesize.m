@@ -22,9 +22,9 @@ function synthesize()
     start_synth_report()
 
     
-    metric_target = Helper.synth_target;
+
     tic
-    [roots, models_synthed] = synth_rounds(metric_target);
+    [roots, models_synthed] = synth_rounds();
     disp(".slx-synthesis file saved " + models_synthed + " times.")
     coverage_report(roots, models_synthed, length(models), length(ks))    
 end
@@ -120,7 +120,7 @@ function out_string = minmedmaxmedmeanstddev(l)
     out_string = out_string + std(l);
 end
 
-function [roots, good_models] = synth_rounds(metric_target)
+function [roots, good_models] = synth_rounds()
     
     good_models = 0;
     roots = {};
@@ -130,7 +130,7 @@ function [roots, good_models] = synth_rounds(metric_target)
         model_name = char("model" + string(i));
         model_path = Helper.synthesize_playground + filesep + model_name + ".slx";
 
-        [model_root, ~, metric_met] = synth_repair([], Identity('', '', ''), metric_target, 1);
+        [model_root, metric_met] = synth_repair([], Identity('', '', ''), 1);
         
         if ~metric_met
             disp("Building model " + string(i) + " FAILED")
@@ -159,25 +159,21 @@ function [roots, good_models] = synth_rounds(metric_target)
     end
 end
 
-function [subtree, curr_metric_target, metric_met] = synth_repair(interface, not_identity, metric_target, depth)
+function [subtree, metric_met] = synth_repair(interface, not_identity, depth)
+    global name2subinfo_complete
     subtree = [];
-    curr_metric_target = metric_target;
     metric_met = 0;
 
-    if depth > Helper.synth_max_depth
+    if stop_repairing(depth)
         return
     end
-    global name2subinfo_complete
+    
     for i = 1:Helper.synth_repair_count
-
-        curr_metric_target = metric_target;
         %choose identity fitting to interface and not_identity
-        subtree = choose_subsystem(interface, not_identity, curr_metric_target, depth);
+        subtree = choose_subsystem(interface, not_identity, depth);
         if isempty(subtree)
             continue
         end
-        curr_metric_target = subtree.adapt_target_local(curr_metric_target);
-
 
         children_before = subtree.children;
         subtree.children = [];
@@ -189,20 +185,25 @@ function [subtree, curr_metric_target, metric_met] = synth_repair(interface, not
             catch
                 break
             end
-            [child_after, sub_metric, sub_met] = synth_repair(child_before.(Helper.interface).hsh, subtree.identity, curr_metric_target, depth + 1);
+            [child_after, sub_met] = synth_repair(child_before.(Helper.interface).hsh, subtree.identity, depth + 1);
             if ~sub_met
                 break
             end
             subtree.children{j} = child_after;
-            curr_metric_target = subtree.adapt_target_descendants(sub_metric, curr_metric_target);
         end
-        if sub_met
-            metric_met = subtree.is_metric_met(curr_metric_target, metric_target);
-            if metric_met
-                return
-            end
-        end
+        metric_met = 1;
+        return
     end
+end
+
+function stop = stop_repairing(depth)
+    stop = 0;
+    switch Helper.synth_target_metric
+        otherwise
+            if depth > Helper.synth_max_depth
+                stop = 1;
+            end
+    end    
 end
 
 function interface = seed_interface()
@@ -217,7 +218,7 @@ function interface = seed_interface()
     end
 end
 
-function subsystem = choose_subsystem(interface, not_identity, metric_target, depth)
+function subsystem = choose_subsystem(interface, not_identity, depth)
     global name2subinfo_complete
     global interface2subs
 
@@ -236,25 +237,12 @@ function subsystem = choose_subsystem(interface, not_identity, metric_target, de
         switch Helper.synth_target_metric
             case Helper.synth_random
                 subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
+            case Helper.synth_width
+                subsystem = sample_and_choose(depth, subsystems, 'children_count', (Helper.children));
             case Helper.synth_depth
-                sample_size = min(length(subsystems), Helper.synth_depth_sample_size - randi(Helper.synth_depth_sample_size - 1));
-                infos = struct('sample',{}, 'children_count',{});
-                for i = 1:sample_size
-                    sample = name2subinfo_complete{{choose_random(subsystems)}};
-                    infos(end + 1) = struct('sample',sample, 'children_count',length(sample.(Helper.children)));
-                end
-                %[~, idx] = sort([infos.children_count]);
-                %infos = infos(idx);                
-                
-                if (depth < Helper.synth_max_depth)
-                    [~, i] = max([infos.children_count]);
-                    subsystem = SubTree(infos(i).sample.IDENTITY, name2subinfo_complete);
-                else
-                    [~, i] = min([infos.children_count]);
-                    subsystem = SubTree(infos(i).sample.IDENTITY, name2subinfo_complete);
-                end
+                subsystem = sample_and_choose(depth, subsystems, 'subtree_depth', (Helper.subtree_depth));
         end
-        if Helper.synth_force_diversity && strcmp(not_identity.model_path, subsystem.identity.model_path) 
+        if Helper.synth_force_diversity && strcmp(not_identity.model_path, subsystem.identity.model_path) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%|| depth + x > Helper.synth_max_depth
             continue
         end
 
@@ -264,12 +252,26 @@ function subsystem = choose_subsystem(interface, not_identity, metric_target, de
     end
 end
 
-function bool = evaluate_subtree(subtree, target)
-    switch Helper.synth_target_metric
-        case Helper.synth_random
-            bool = 1;
-        case Helper.synth_depth
-            bool = 1;
+function subsystem = sample_and_choose(depth, subsystems, property_string, property)
+    global name2subinfo_complete
+    sample_size = min(length(subsystems), Helper.synth_sample_size - randi(Helper.synth_sample_size - 1));
+    infos = struct('sample',{}, property_string,{});
+    for i = 1:sample_size
+        sample = name2subinfo_complete{{choose_random(subsystems)}};
+        switch Helper.synth_target_metric
+            case Helper.synth_width
+                infos(end + 1) = struct('sample',sample, property_string, length(sample.(property)));
+            case Helper.synth_depth
+                infos(end + 1) = struct('sample',sample, property_string, sample.(property));
+        end
+    end              
+    
+    if (depth < Helper.synth_max_depth)
+        [~, i] = max([infos.(property_string)]);
+        subsystem = SubTree(infos(i).sample.IDENTITY, name2subinfo_complete);
+    else
+        [~, i] = min([infos.(property_string)]);
+        subsystem = SubTree(infos(i).sample.IDENTITY, name2subinfo_complete);
     end
 end
 
@@ -282,16 +284,7 @@ function str = report2string(model_no, root)
 end
 
 function bool = slx_evaluate(slx_identity)
-    bool = loadable(slx_identity) && slx_metrics_met(slx_identity);%&& (~Helper.needs_to_be_compilable || compilable(slx_identity))
-end
-
-function bool = slx_metrics_met(slx_identity, metric_target)
-    switch Helper.synth_target_metric
-        case Helper.synth_random
-            bool = 1;
-        case Helper.synth_depth
-            bool = 1;
-    end
+    bool = loadable(slx_identity);%&& (~Helper.needs_to_be_compilable || compilable(slx_identity))
 end
 
 function start_synth_report()
