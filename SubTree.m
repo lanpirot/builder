@@ -34,6 +34,29 @@ classdef SubTree
             obj.children = subinfos{{sub}}.(Helper.children);
         end
 
+        function obj = recursive_subtree(obj, subinfos)
+            tmpchildren = obj.children;
+            obj.children = [];
+            for i = 1:length(tmpchildren)
+                obj.children{i} = SubTree(tmpchildren(i), subinfos);
+                obj.children{i} = obj.children{i}.recursive_subtree(subinfos);
+            end
+        end
+
+        function bool = recursive_same_AST(obj, other_tree)
+            bool = 1;
+            if length(obj.children) ~= length(other_tree.children)
+                bool = 0;
+                return
+            end
+            for i = 1:length(obj.children)
+                if ~ obj.children{i}.recursive_same_AST(other_tree.children{i})
+                    bool = 0;
+                    return
+                end
+            end
+        end
+
         function bool = is_leaf(obj)
             bool = isempty(obj.children);
         end

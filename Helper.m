@@ -76,16 +76,15 @@ classdef Helper
 
         synth_model_count = 100;
         synth_repair_count = 3;
-        synth_force_diversity = 1;
+        synth_force_diversity = 0;
         synth_seed_with_roots_only = 1;
         synth_random = 'RANDOM';                    %just try to synthesize any model
-        synth_model_sub_tree = 'MODEL_SUB_TREE'     %try to emulate a given model's subtree
-        synth_num_elements = 'NUM_ELEMENTS'         %try to get n number of elements in model
+        synth_AST_model = 'AST_MODEL'     %try to emulate a given model's subtree
         synth_width = 'WIDTH'                       %try to fill every level of the model until max_depth
         synth_depth = 'DEPTH'                       %try to create a deep model
         synth_sample_size = 10;
         synth_target_metric = Helper.synth_depth
-        synth_max_depth = 10;
+        synth_max_depth = 5;
     end
     
     methods(Static)
@@ -315,6 +314,10 @@ classdef Helper
                     end
                 end
             end
+        end
+
+        function bool = synth_mode(mode)
+            bool = strcmp(Helper.synth_target_metric, mode);
         end
     end
 end

@@ -121,6 +121,7 @@ function out_string = minmedmaxmedmeanstddev(l)
 end
 
 function [roots, good_models] = synth_rounds()
+    global name2subinfo_complete
     
     good_models = 0;
     roots = {};
@@ -130,15 +131,29 @@ function [roots, good_models] = synth_rounds()
         model_name = char("model" + string(i));
         model_path = Helper.synthesize_playground + filesep + model_name + ".slx";
 
-        [model_root, metric_met] = synth_repair([], Identity('', '', ''), 1);
+        if Helper.synth_mode(Helper.synth_AST_model)
+            while 1
+                try
+                    AST_model = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete);
+                    break
+                catch
+                end
+            end            
+            [model_root, build_success] = synth_repair([], Identity('', '', ''), 1, AST_model);
+        else
+            [model_root, build_success] = synth_repair([], Identity('', '', ''), 1);
+        end
+
         
-        if ~metric_met
+        
+        if ~build_success
             disp("Building model " + string(i) + " FAILED")
             continue
         end
         model_root = model_root.root_report();
         roots{i} = model_root;
         Helper.log('synth_report', report2string(i, model_root));
+
         continue
         %try
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
@@ -159,10 +174,10 @@ function [roots, good_models] = synth_rounds()
     end
 end
 
-function [subtree, metric_met] = synth_repair(interface, not_identity, depth)
+function [subtree, build_success] = synth_repair(interface, not_identity, depth, AST_model)
     global name2subinfo_complete
     subtree = [];
-    metric_met = 0;
+    build_success = 0;
 
     if stop_repairing(depth)
         return
@@ -170,7 +185,11 @@ function [subtree, metric_met] = synth_repair(interface, not_identity, depth)
     
     for i = 1:Helper.synth_repair_count
         %choose identity fitting to interface and not_identity
-        subtree = choose_subsystem(interface, not_identity, depth);
+        if Helper.synth_mode(Helper.synth_AST_model)
+            subtree = choose_subsystem(interface, not_identity, depth, length(AST_model.children));
+        else
+            subtree = choose_subsystem(interface, not_identity, depth);
+        end
         if isempty(subtree)
             continue
         end
@@ -182,17 +201,24 @@ function [subtree, metric_met] = synth_repair(interface, not_identity, depth)
         for j = 1:length(children_before)
             try
                 child_before = name2subinfo_complete{{children_before(j)}};
+                if Helper.synth_mode(Helper.synth_AST_model)
+                    [child_after, sub_met] = synth_repair(child_before.(Helper.interface).hsh, subtree.identity, depth + 1, AST_model.children{j});
+                else
+                    [child_after, sub_met] = synth_repair(child_before.(Helper.interface).hsh, subtree.identity, depth + 1);
+                end
+                if ~sub_met
+                    break
+                end
+                subtree.children{j} = child_after;
             catch
+                sub_met = 0;
                 break
             end
-            [child_after, sub_met] = synth_repair(child_before.(Helper.interface).hsh, subtree.identity, depth + 1);
-            if ~sub_met
-                break
-            end
-            subtree.children{j} = child_after;
         end
-        metric_met = 1;
-        return
+        if isempty(children_before) || (j == length(children_before) && sub_met)
+            build_success = 1;
+            return
+        end
     end
 end
 
@@ -206,27 +232,37 @@ function stop = stop_repairing(depth)
     end    
 end
 
-function interface = seed_interface()
+function interface = seed_interface(AST_children_count)
     global name2subinfo_complete
     nkeys = name2subinfo_complete.keys();
     while 1
         chosen_key = choose_random(nkeys);
-        if ~Helper.synth_seed_with_roots_only || isempty(name2subinfo_complete{chosen_key}.IDENTITY.sub_parents)
+        if ~Helper.synth_seed_with_roots_only || Identity(name2subinfo_complete{chosen_key}.IDENTITY).is_root()
             interface = name2subinfo_complete{chosen_key}.(Helper.interface).hsh;
-            break
+            if Helper.synth_mode(Helper.synth_AST_model)
+                if ~exist("AST_children_count", 'var') || length(name2subinfo_complete{chosen_key}.(Helper.children)) == AST_children_count
+                    return
+                end
+            else 
+                return
+            end
         end
     end
 end
 
-function subsystem = choose_subsystem(interface, not_identity, depth)
+function subsystem = choose_subsystem(interface, not_identity, depth, AST_children_count)
     global name2subinfo_complete
     global interface2subs
 
     subsystem = [];
 
     for i = 1:10
-        if depth == 1
-            interface = seed_interface();
+        if depth <= 1
+            if Helper.synth_mode(Helper.synth_AST_model) && depth == 1
+                interface = seed_interface(AST_children_count);
+            else
+                interface = seed_interface();
+            end
         end
         %collect suitable subsystems
         if ~any(find(strcmp(interface2subs.keys(), interface)))
@@ -241,13 +277,31 @@ function subsystem = choose_subsystem(interface, not_identity, depth)
                 subsystem = sample_and_choose(depth, subsystems, 'children_count', (Helper.children));
             case Helper.synth_depth
                 subsystem = sample_and_choose(depth, subsystems, 'subtree_depth', (Helper.subtree_depth));
+            case Helper.synth_AST_model
+                if depth >= 1
+                    subsystem = pick_first(subsystems, AST_children_count);
+                else
+                    subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
+                end
         end
-        if Helper.synth_force_diversity && strcmp(not_identity.model_path, subsystem.identity.model_path) %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%|| depth + x > Helper.synth_max_depth
+        if isempty(subsystem) || (Helper.synth_force_diversity && strcmp(not_identity.model_path, subsystem.identity.model_path))
             continue
         end
 
-        if depth > 1 || ~Helper.synth_seed_with_roots_only || isempty(name2subinfo_complete{{struct(subsystem.identity)}}.IDENTITY.sub_parents)
-            break
+        if depth > 1 || ~Helper.synth_seed_with_roots_only || Identity(name2subinfo_complete{{struct(subsystem.identity)}}.IDENTITY).is_root()
+            return
+        end
+    end
+end
+
+function subsystem = pick_first(subsystems, children_count)
+    global name2subinfo_complete
+    subsystem = [];
+    for i = 1:length(subsystems)
+        j = randi(length(subsystems));
+        if length(name2subinfo_complete{{subsystems(j)}}.(Helper.children)) == children_count
+            subsystem = SubTree(subsystems(j), name2subinfo_complete);
+            return
         end
     end
 end
