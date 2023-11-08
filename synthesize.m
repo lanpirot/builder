@@ -140,6 +140,9 @@ function [roots, good_models] = synth_rounds()
                 end
             end            
             [model_root, build_success] = synth_repair([], Identity('', '', ''), 1, AST_model);
+            if build_success
+                build_success = model_root.recursive_same_AST(AST_model);
+            end
         else
             [model_root, build_success] = synth_repair([], Identity('', '', ''), 1);
         end
@@ -155,7 +158,7 @@ function [roots, good_models] = synth_rounds()
         Helper.log('synth_report', report2string(i, model_root));
 
         continue
-        %try
+        try
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
             if additional_level
                 model_root = model_root.add_level();
@@ -166,10 +169,10 @@ function [roots, good_models] = synth_rounds()
                good_models = good_models + 1;
                disp("Saved model " + string(i))
             end
-        %catch ME
-        %    disp("Saving model " + string(i) + " FAILED")
-        %    Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
-        %end
+        catch ME
+            disp("Saving model " + string(i) + " FAILED")
+            Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
+        end
         delete(Helper.synthesize_playground + filesep + "*.slmx");
     end
 end
@@ -225,6 +228,8 @@ end
 function stop = stop_repairing(depth)
     stop = 0;
     switch Helper.synth_target_metric
+        case Helper.synth_AST_model
+            return
         otherwise
             if depth > Helper.synth_max_depth
                 stop = 1;
@@ -309,14 +314,14 @@ end
 function subsystem = sample_and_choose(depth, subsystems, property_string, property)
     global name2subinfo_complete
     sample_size = min(length(subsystems), Helper.synth_sample_size - randi(Helper.synth_sample_size - 1));
-    infos = struct('sample',{}, property_string,{});
+    infos = struct('sample',cell(1:sample_size), property_string,cell(1:sample_size));
     for i = 1:sample_size
         sample = name2subinfo_complete{{choose_random(subsystems)}};
         switch Helper.synth_target_metric
             case Helper.synth_width
-                infos(end + 1) = struct('sample',sample, property_string, length(sample.(property)));
+                infos(i) = struct('sample',sample, property_string, length(sample.(property)));
             case Helper.synth_depth
-                infos(end + 1) = struct('sample',sample, property_string, sample.(property));
+                infos(i) = struct('sample',sample, property_string, sample.(property));
         end
     end              
     

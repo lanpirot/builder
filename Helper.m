@@ -76,7 +76,7 @@ classdef Helper
 
         synth_model_count = 100;
         synth_repair_count = 3;
-        synth_force_diversity = 0;
+        synth_force_diversity = 1;
         synth_seed_with_roots_only = 1;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_AST_model = 'AST_MODEL'     %try to emulate a given model's subtree

@@ -11,13 +11,24 @@ function mine(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:max_number_of_models
+    %for i = 1:max_number_of_models
+
+    for i = 644:max_number_of_models
         if needs_to_be_compilable && ~modellist.compilable(i)
             continue
         end
         Helper.create_garbage_dir();
 
         model_path = string(strip(modellist.model_url(i, :), "right"));
+
+
+        %model_path = "C:/svns/simucomp2/models/SLNET_v1/SLNET/SLNET_GitHub/161657273/Kugle-MATLAB-master/Simulation/subsystems/SensorModels.slx";
+        if strcmp(model_path, "C:/svns/simucomp2/models/SLNET_v1/SLNET/SLNET_GitHub/161657273/Kugle-MATLAB-master/Simulation/subsystems/SensorModels.slx")
+            disp("a")
+        end
+
+
+
         try
             
             model_handle = load_system(model_path);
