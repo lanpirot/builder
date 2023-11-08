@@ -1,3 +1,5 @@
+
+
 function synthesize()
     Helper.clean_up("Starting synthesis process", Helper.synthesize_playground, [Helper.log_synth_theory Helper.log_synth_practice Helper.synth_report])
     
