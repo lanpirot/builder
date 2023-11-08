@@ -63,7 +63,12 @@ classdef Interface
 
         function mapping = get_mapping(old, new)
             mapping = -1;
-            if ~Helper.special_ports_equi(old.specialports, new.specialports)  || (~Helper.input_output_number_compability && (length(old.inports) ~= length(new.inports) || length(old.outports) ~= length(new.outports))) || (Helper.input_output_number_compability && (length(old.inports) < length(new.inports) || length(old.outports) > length(new.outports)))
+            if ~Helper.special_ports_equi(old.specialports, new.specialports) || (~Helper.input_output_number_compability && (length(old.inports) ~= length(new.inports) || length(old.outports) ~= length(new.outports))) || (Helper.input_output_number_compability && (length(old.inports) < length(new.inports) || length(old.outports) > length(new.outports)))
+                return
+            end
+
+            if ~Helper.needs_to_be_compilable
+                mapping = struct('inmapping', 1:length(new.inports), 'outmapping', 1:length(new.outports));
                 return
             end
 
@@ -75,9 +80,5 @@ classdef Interface
             end
             mapping = struct('inmapping', inmapping, 'outmapping', outmapping);
         end
-    end
-
-
-    methods (Static)
     end
 end

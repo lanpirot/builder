@@ -74,7 +74,7 @@ classdef Helper
         deep = "DEEP"
         wish_property = Helper.deep     %set to one of above to build models of a certain property
 
-        synth_model_count = 100;
+        synth_model_count = 15;
         synth_repair_count = 2;
         synth_force_diversity = 1;
         synth_seed_with_roots_only = 1;
@@ -83,8 +83,8 @@ classdef Helper
         synth_width = 'WIDTH'                       %try to fill every level of the model until max_depth
         synth_depth = 'DEPTH'                       %try to create a deep model
         synth_sample_size = 10;
-        synth_target_metric = Helper.synth_depth
-        synth_max_depth = 6;
+        synth_mode = Helper.synth_AST_model
+        synth_max_depth = 3;
     end
     
     methods(Static)
@@ -316,8 +316,8 @@ classdef Helper
             end
         end
 
-        function bool = synth_mode(mode)
-            bool = strcmp(Helper.synth_target_metric, mode);
+        function bool = is_synth_mode(mode)
+            bool = strcmp(Helper.synth_mode, mode);
         end
     end
 end

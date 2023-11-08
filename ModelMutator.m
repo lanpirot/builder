@@ -230,7 +230,6 @@ classdef ModelMutator
         end        
 
         function connections = get_wiring(subsystem)
-            ModelMutator.make_subsystem_editable(subsystem)
             connections = struct;
             connections.in_source_ports = {};
             connections.out_destination_ports = {};
@@ -345,6 +344,7 @@ classdef ModelMutator
         function copy_to = copy_to_non_root(copy_to, copy_from, copied_element, mapping)
             %get prior wiring
             connected_blocks = ModelMutator.get_wiring(copy_to.get_qualified_name());
+            ModelMutator.make_subsystem_editable(copy_to.get_qualified_name())
             ModelMutator.remove_lines(copy_to.get_qualified_name());
             if copy_from.is_root()
                 %copy from root to subsystem
@@ -399,8 +399,8 @@ classdef ModelMutator
                     src = srcdsts{2};
                     src = src(d);
                     for j=1:length(dests)
-                        ModelMutator.try_add_line(system.sub_parents, src, dests(j))
-                        ModelMutator.try_add_line(system.sub_parents, dests(j), src)
+                        ModelMutator.try_add_line(system.sub_parents, src, dests(j))%try both directions, as first port has to be THE outport
+                        ModelMutator.try_add_line(system.sub_parents, dests(j), src)%try both directions, as first port has to be THE outport
                     end
                 end
             end

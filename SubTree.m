@@ -17,16 +17,14 @@ classdef SubTree
             for i = 1:length(obj.children)
                 obj.children{i}.is_discrepant_to_slx()
             end
-            handle = load_system(obj.synthed_identity.model_path);
             obj_handle = get_param(obj.synthed_identity.get_qualified_name(), "Handle");
-            num_elements = Helper.find_num_elements_in_contained_subsystems(obj_handle);
-            num_subsystems = length(Helper.get_contained_subsystems(obj_handle, 1000));
-            if obj.num_elements ~= num_elements || obj.num_subsystems - 1 ~= num_subsystems
+            slx_num_elements = Helper.find_num_elements_in_contained_subsystems(obj_handle);
+            slx_num_subsystems = length(Helper.get_contained_subsystems(obj_handle, 1000));
+            if obj.num_elements ~= slx_num_elements || obj.num_subsystems - 1 ~= slx_num_subsystems
                 disp("Warning: Discrepancy found between Theory-Model and actual slx-Model")
                 disp(obj.synthed_identity)
                 disp("")
             end
-            close_system(obj.synthed_identity.model_path)
         end
 
         function obj = SubTree(sub, subinfos)
@@ -57,19 +55,11 @@ classdef SubTree
             end
         end
 
-        function bool = is_leaf(obj)
-            bool = isempty(obj.children);
-        end
-
         function [obj, model_handle, additional_level] = build_root(obj, model_name)
             global name2subinfo_complete
             slx_id = Identity(model_name, '', Helper.synthesize_playground + filesep + model_name);
             obj.synthed_identity = slx_id;
-            try
-                close_system(slx_id.sub_name)
-            catch
-                close_system(slx_id.sub_name, 0)
-            end
+            close_system(slx_id.sub_name, 0)
             new_system(slx_id.sub_name);
             save_system(slx_id.sub_name, slx_id.model_path)
 
@@ -89,26 +79,27 @@ classdef SubTree
         end
 
         function obj = build_sub(obj, copy_to, slx_id, slx_parents)
+            global name2subinfo_complete
             copy_from = obj.identity;
             copy_to = Identity(copy_to);
             copy_into = Identity(copy_to.sub_name, slx_parents, slx_id.model_path);
             
             
 
-            global name2subinfo_complete
+            
             copy_from_interface = Interface(name2subinfo_complete{{struct(copy_from)}}.(Helper.interface));
             copy_to_interface = Interface(name2subinfo_complete{{struct(copy_to)}}.(Helper.interface));
+            load_system(copy_from.model_path)
+
             mapping = copy_to_interface.get_mapping(copy_from_interface);
             copied_element = Identity(copy_from.sub_name, copy_into.sub_parents, slx_id.model_path);
-
-            load_system(copy_to.model_path)
-            load_system(copy_from.model_path)
             copy_into = ModelMutator.copy_to_non_root(copy_into, copy_from, copied_element, mapping);
             obj.synthed_identity = copy_into;
             ModelMutator.make_subsystem_editable(copy_into.get_qualified_name());
-            close_system(copy_from.model_path)
-            close_system(copy_to.model_path)
             ModelMutator.annotate(copy_into.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
+
+
+            close_system(copy_from.model_path)
 
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
