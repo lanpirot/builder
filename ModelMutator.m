@@ -313,19 +313,16 @@ classdef ModelMutator
             additional_level = 0;
             if copy_from.is_root()
                 %copy from root to root
-                close_system(model_name)
-                delete(root_model_path)
-
-                load_system(copy_from.model_path)
-                save_system(copy_from.sub_name, root_model_path)
-                close_system(copy_from.sub_name)
-                load_system(root_model_path)
-                %instead of the following:
-                %copyfile(copy_from.model_path, root_model_path);
-                %load_system(root_model_path);
+                copyfile(copy_from.model_path, root_model_path + ".slx");
+                load_system(root_model_path);
                 copy_to = Identity(char(model_name), '', root_model_path);
             else
                 %copy from subsystem to root
+                new_system(model_name);
+                save_system(model_name, root_model_path)
+                load_system(copy_from.model_path)
+
+
                 copy_to.sub_name = model_name;
                 Simulink.BlockDiagram.deleteContents(copy_to.get_qualified_name())
                 try
@@ -346,18 +343,17 @@ classdef ModelMutator
             connected_blocks = ModelMutator.get_wiring(copy_to.get_qualified_name());
             ModelMutator.make_subsystem_editable(copy_to.get_qualified_name())
             ModelMutator.remove_lines(copy_to.get_qualified_name());
+            delete_block(copy_to.get_qualified_name())
             if copy_from.is_root()
                 %copy from root to subsystem
-                Simulink.BlockDiagram.createSubsystem(get_param(copy_to.get_qualified_name(), 'Handle'), 'Name', copied_element.sub_name) %creating wrapping subystem to not disturb subystem's innards (e.g. stateflow)
+                add_block('simulink/Ports & Subsystems/Subsystem', copied_element.get_qualified_name());
                 Simulink.SubSystem.deleteContents(copied_element.get_qualified_name())
                 Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
                 set_param(copied_element.get_qualified_name(), 'Name', copy_to.get_sub_name_for_diagram())
             else
                 %copy from subsystem to subsystem
-                delete_block(copy_to.get_qualified_name())
                 copy_to.sub_name = [copy_to.sub_name  ' synthed'];
                 add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
-                
             end
             %now, rewire
             ModelMutator.add_lines(copy_to, connected_blocks, mapping)
@@ -399,17 +395,13 @@ classdef ModelMutator
                     src = srcdsts{2};
                     src = src(d);
                     for j=1:length(dests)
-                        ModelMutator.try_add_line(system.sub_parents, src, dests(j))%try both directions, as first port has to be THE outport
-                        ModelMutator.try_add_line(system.sub_parents, dests(j), src)%try both directions, as first port has to be THE outport
+                        if strcmp(get_param(src, 'PortType'), 'outport')
+                            add_line(system.sub_parents, src, dests(j), 'autorouting','on');
+                        else
+                            add_line(system.sub_parents, dests(j), src, 'autorouting','on');
+                        end
                     end
                 end
-            end
-        end
-
-        function try_add_line(system, src, dst)
-            try
-                add_line(system, src, dst, 'autorouting','on');
-            catch
             end
         end
 

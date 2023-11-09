@@ -59,17 +59,16 @@ classdef SubTree
             global name2subinfo_complete
             slx_id = Identity(model_name, '', Helper.synthesize_playground + filesep + model_name);
             obj.synthed_identity = slx_id;
+            
+            
             close_system(slx_id.sub_name, 0)
-            new_system(slx_id.sub_name);
-            save_system(slx_id.sub_name, slx_id.model_path)
 
-            load_system(obj.identity.model_path)
             [slx_id, additional_level] = ModelMutator.copy_to_root(slx_id.sub_name, slx_id.model_path, obj.identity, slx_id);
             ModelMutator.make_subsystem_editable(slx_id.get_qualified_name());
             set_param(model_name, 'Lock', 'off')
             set_param(model_name, "LockLinksToLibrary", "off")
-            close_system(obj.identity.model_path)
             ModelMutator.annotate(slx_id.get_qualified_name(), "Copied system from: " + obj.identity.hash() + newline + "to: " + slx_id.hash())
+            close_system(obj.identity.model_path)
             
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
@@ -89,16 +88,15 @@ classdef SubTree
             
             copy_from_interface = Interface(name2subinfo_complete{{struct(copy_from)}}.(Helper.interface));
             copy_to_interface = Interface(name2subinfo_complete{{struct(copy_to)}}.(Helper.interface));
-            load_system(copy_from.model_path)
 
+            
+            load_system(copy_from.model_path)
             mapping = copy_to_interface.get_mapping(copy_from_interface);
             copied_element = Identity(copy_from.sub_name, copy_into.sub_parents, slx_id.model_path);
             copy_into = ModelMutator.copy_to_non_root(copy_into, copy_from, copied_element, mapping);
             obj.synthed_identity = copy_into;
             ModelMutator.make_subsystem_editable(copy_into.get_qualified_name());
             ModelMutator.annotate(copy_into.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
-
-
             close_system(copy_from.model_path)
 
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);

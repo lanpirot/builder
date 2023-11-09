@@ -24,9 +24,11 @@ function synthesize()
     start_synth_report()
 
     
-
+    
+    bdclose all;
     tic
     [roots, models_synthed] = synth_rounds();
+    disp("Total time building/saving " + toc)
     disp(".slx-synthesis file saved " + models_synthed + " times.")
     coverage_report(roots, models_synthed, length(models), length(ks))    
 end
@@ -142,7 +144,7 @@ function [roots, good_models] = synth_rounds()
                 end
             end            
             [model_root, build_success] = synth_repair([], Identity('', '', ''), 1, AST_model);
-            if build_success
+            if build_success && Helper.synth_double_check
                 build_success = model_root.recursive_same_AST(AST_model);
             end
         else
@@ -158,20 +160,24 @@ function [roots, good_models] = synth_rounds()
         model_root = model_root.root_report();
         roots{i} = model_root;
         Helper.log('synth_report', report2string(i, model_root));
-
-        %continue
+        
         try
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
             if additional_level
                 model_root = model_root.add_level();
             end
-            if slx_evaluate(slx_handle)
-               slx_save(slx_handle, model_path);
-               load_system(model_path)
-               model_root.is_discrepant_to_slx
-               close_system(model_path)
-               good_models = good_models + 1;
-               disp("Saved model " + string(i))
+            if Helper.synth_double_check && ~slx_evaluate(slx_handle)
+                dips("Error")
+            end
+
+            slx_save(slx_handle, model_path);
+
+            good_models = good_models + 1;
+            disp("Saved model " + string(i))
+            if Helper.synth_double_check
+                load_system(model_path)
+                model_root.is_discrepant_to_slx()
+                close_system(model_path)
             end
         catch ME
             disp("Saving model " + string(i) + " FAILED")
