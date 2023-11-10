@@ -74,7 +74,7 @@ classdef Helper
         deep = "DEEP"
         wish_property = Helper.deep     %set to one of above to build models of a certain property
 
-        synth_dry_build = 0;
+        synth_dry_build = 1;
         synth_double_check = 0;
         synth_force_diversity = 1;
         synth_seed_with_roots_only = 1;
@@ -87,7 +87,7 @@ classdef Helper
         synth_depth = 'DEPTH'                       %try to create a deep model
         synth_sample_size = 10;
         synth_mode = Helper.synth_depth
-        synth_max_depth = 3;
+        synth_max_depth = 200;
     end
     
     methods(Static)

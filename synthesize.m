@@ -126,11 +126,14 @@ end
 
 function [roots, good_models] = synth_rounds()
     global name2subinfo_complete
+    global depth_reached
     
     good_models = 0;
     roots = {};
     for i = 1:Helper.synth_model_count
         rng(i)
+        depth_reached = 0;
+
         disp("Building model " + string(i))
         model_name = char("model" + string(i));
         model_path = Helper.synthesize_playground + filesep + model_name + ".slx";
@@ -244,6 +247,12 @@ function stop = stop_repairing(depth)
     switch Helper.synth_mode
         case Helper.synth_AST_model
             return
+        case Helper.synth_depth
+            global depth_reached
+            if depth > Helper.synth_max_depth
+                depth_reached = 1;
+            end
+            return
         otherwise
             if depth > Helper.synth_max_depth
                 stop = 1;
@@ -327,6 +336,7 @@ end
 
 function subsystem = sample_and_choose(depth, subsystems, property)
     global name2subinfo_complete
+    global depth_reached
     sample_size = min(length(subsystems), Helper.synth_sample_size - randi(Helper.synth_sample_size - 1));
     for i = 1:sample_size
         alt_choice = name2subinfo_complete{{choose_random(subsystems)}};
@@ -334,7 +344,7 @@ function subsystem = sample_and_choose(depth, subsystems, property)
         if strcmp(Helper.synth_mode, Helper.synth_width)
             alt_choice_num = length(alt_choice_num);
         end
-        if i == 1 || (depth < Helper.synth_max_depth) && choice_num < alt_choice_num || (depth >= Helper.synth_max_depth) && choice_num > alt_choice_num 
+        if i == 1 || choice_num < alt_choice_num && (depth < Helper.synth_max_depth) && (~strcmp(Helper.synth_mode, Helper.synth_depth) || depth_reached == 0) || choice_num > alt_choice_num  && (depth >= Helper.synth_max_depth || depth_reached == 1)
             choice = alt_choice;
             choice_num = alt_choice_num;
         end
