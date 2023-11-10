@@ -346,8 +346,7 @@ classdef ModelMutator
             delete_block(copy_to.get_qualified_name())
             if copy_from.is_root()
                 %copy from root to subsystem
-                add_block('simulink/Ports & Subsystems/Subsystem', copied_element.get_qualified_name());
-                Simulink.SubSystem.deleteContents(copied_element.get_qualified_name())
+                add_block('built-in/Subsystem', copied_element.get_qualified_name())
                 Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
                 set_param(copied_element.get_qualified_name(), 'Name', copy_to.get_sub_name_for_diagram())
             else

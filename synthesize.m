@@ -160,6 +160,10 @@ function [roots, good_models] = synth_rounds()
         model_root = model_root.root_report();
         roots{i} = model_root;
         Helper.log('synth_report', report2string(i, model_root));
+
+        if Helper.synth_dry_build
+            continue
+        end
         
         try
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
