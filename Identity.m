@@ -40,7 +40,7 @@ classdef Identity
         end
 
         function model_name = get_model_name(obj)
-            tmp = split(obj.model_path, filesep);
+            tmp = split(obj.model_path, '/');
             tmp = split(tmp{end}, '.');
             model_name = tmp{1};
         end

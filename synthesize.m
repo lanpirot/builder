@@ -131,6 +131,7 @@ function [roots, good_models] = synth_rounds()
     good_models = 0;
     roots = {};
     for i = 1:Helper.synth_model_count
+        i = 10;
         rng(i)
         depth_reached = 0;
 

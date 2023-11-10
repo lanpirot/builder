@@ -120,7 +120,7 @@ classdef ModelMutator
             load_system(copy_from.model_path)
             copy_to = Identity(old_sub.identity.sub_name, Helper.change_root_parent(old_sub.identity.sub_parents, char(obj.model_name)), obj.root_model_path);
             copied_element = Identity(['sub' int2str(Helper.found_alt(1))], copy_to.sub_parents, obj.root_model_path);
-            copy_to = copy_SS(obj.model_name, obj.model_path, copy_from, copy_to, copied_element, mapping);
+            copy_to = ModelMutator.copy_SS(obj.model_name, obj.root_model_path, copy_from, copy_to, copied_element, mapping);
             ModelMutator.annotate(copy_to.get_qualified_name(), "Copied system from: " + copy_from.get_qualified_name() + newline + " into: " + old_sub.identity.hash())
             %BuilderModel.annotate(copy_to.model_name, "Copied system into: " + '<a href="matlab:open_system(''' + copy_to.ancestor_names + ''')">Click Here</a>')
             ModelMutator.annotate(obj.model_name, "Copied " + copy_from.get_qualified_name() + " to: " + copy_to.get_qualified_name())
@@ -305,7 +305,7 @@ classdef ModelMutator
             if copy_to.is_root()
                 copy_to = ModelMutator.copy_to_root(model_name, model_path, copy_from, copy_to);
             else
-                ModelMutator.copy_to_non_root(copy_to, copy_from, copied_element, mapping)
+                copy_to = ModelMutator.copy_to_non_root(copy_to, copy_from, copied_element, mapping);
             end
         end
 
@@ -318,6 +318,7 @@ classdef ModelMutator
                 copy_to = Identity(char(model_name), '', root_model_path);
             else
                 %copy from subsystem to root
+                delete(root_model_path);close_system(model_name, 0);%in mutate.m, the file exists, here
                 new_system(model_name);
                 save_system(model_name, root_model_path)
                 load_system(copy_from.model_path)
@@ -377,7 +378,7 @@ classdef ModelMutator
         end
 
         function add_special_lines(system, ports, ph)
-            special_lines = {{ports.Enable,ph.Enable}, {ports.Trigger,ph.Trigger}, {[ports.LConn ports.RConn],[ph.LConn ph.RConn]},{ph.Ifaction,ports.Ifaction}, {ports.Reset, ph.Reset}};
+            special_lines = {{ports.Enable,ph.Enable}, {ports.Trigger,ph.Trigger}, {[ports.LConn ports.RConn],[ph.LConn ph.RConn]},{ph.Ifaction,ports.Ifaction},{ports.Reset, ph.Reset}};
             for i=1:length(special_lines)
                 srcdsts = special_lines{i};
                 
@@ -394,10 +395,13 @@ classdef ModelMutator
                     src = srcdsts{2};
                     src = src(d);
                     for j=1:length(dests)
-                        if strcmp(get_param(src, 'PortType'), 'outport')
-                            add_line(system.sub_parents, src, dests(j), 'autorouting','on');
-                        else
-                            add_line(system.sub_parents, dests(j), src, 'autorouting','on');
+                        try
+                            if strcmp(get_param(src, 'PortType'), 'outport')
+                                add_line(system.sub_parents, src, dests(j), 'autorouting','on');
+                            else
+                                add_line(system.sub_parents, dests(j), src, 'autorouting','on');
+                            end
+                        catch
                         end
                     end
                 end
