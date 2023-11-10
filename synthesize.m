@@ -325,7 +325,7 @@ end
 function subsystem = pick_first(subsystems, children_count)
     global name2subinfo_complete
     subsystem = [];
-    for i = 1:length(subsystems)
+    for i = 1:min(length(subsystems), 10*log(length(subsystems)))
         j = randi(length(subsystems));
         if length(name2subinfo_complete{{subsystems(j)}}.(Helper.children)) == children_count
             subsystem = SubTree(subsystems(j), name2subinfo_complete);

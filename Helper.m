@@ -79,15 +79,15 @@ classdef Helper
         synth_force_diversity = 1;
         synth_seed_with_roots_only = 1;
 
-        synth_model_count = 100;
+        synth_model_count = 1000;
         synth_repair_count = 3;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_AST_model = 'AST_MODEL'     %try to emulate a given model's subtree
         synth_width = 'WIDTH'                       %try to fill every level of the model until max_depth
         synth_depth = 'DEPTH'                       %try to create a deep model
         synth_sample_size = 10;
-        synth_mode = Helper.synth_depth
-        synth_max_depth = 200;
+        synth_mode = Helper.synth_AST_model
+        synth_max_depth = 1;
     end
     
     methods(Static)
