@@ -331,7 +331,7 @@ classdef ModelMutator
                 catch
                     %if it is a stateflow chart or non-root allowed subsystem
                     additional_level = 1;
-                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+"/"+copy_from.sub_name)
+                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+"/"+copy_from.sub_name)%,'CopyOption','nolink')
                     copy_to.sub_parents = copy_to.sub_name;
                     copy_to.sub_name = copy_from.sub_name;                    
                 end

@@ -68,7 +68,7 @@ classdef SubTree
             set_param(model_name, 'Lock', 'off')
             set_param(model_name, "LockLinksToLibrary", "off")
             ModelMutator.annotate(slx_id.get_qualified_name(), "Copied system from: " + obj.identity.hash() + newline + "to: " + slx_id.hash())
-            close_system(obj.identity.model_path)
+            %close_system(obj.identity.model_path)
             
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
@@ -97,7 +97,7 @@ classdef SubTree
             obj.synthed_identity = copy_into;
             ModelMutator.make_subsystem_editable(copy_into.get_qualified_name());
             ModelMutator.annotate(copy_into.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
-            close_system(copy_from.model_path)
+            %close_system(copy_from.model_path)
 
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
