@@ -36,8 +36,10 @@ classdef SubTree
             tmpchildren = obj.children;
             obj.children = [];
             for i = 1:length(tmpchildren)
-                obj.children{i} = SubTree(tmpchildren(i), subinfos);
-                obj.children{i} = obj.children{i}.recursive_subtree(subinfos);
+                if subinfos.isKey({tmpchildren(i)})
+                    obj.children{end + 1} = SubTree(tmpchildren(i), subinfos);
+                    obj.children{end} = obj.children{end}.recursive_subtree(subinfos);
+                end
             end
         end
 

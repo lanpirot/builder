@@ -16,7 +16,7 @@ classdef Port
             obj.port_type = port_type;
 
             
-            obj.skip_port = Port.check_if_bus(handle) || Port.check_if_function_trigger_port(handle);
+            obj.skip_port = Port.check_if_bus(handle) || Port.check_if_function_trigger_port(handle) || Port.check_if_physical(handle, obj.port_type);
             
             if ~obj.skip_port
                 obj = obj.get_datatype(handle);
@@ -153,6 +153,10 @@ classdef Port
                 end
             catch
             end
+        end
+
+        function is_physical = check_if_physical(handle, port_type)
+            is_physical = strcmp(get_param(handle, "PortRotationType"), 'physical') || strcmp(port_type, 'PMIOPort');
         end
     end
 end

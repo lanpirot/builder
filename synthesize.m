@@ -1,5 +1,3 @@
-
-
 function synthesize()
     Helper.clean_up("Starting synthesis process", Helper.synthesize_playground, [Helper.log_synth_theory Helper.log_synth_practice Helper.synth_report])
     
@@ -23,7 +21,7 @@ function synthesize()
     interface2subs = dictionary(interface2subs{1}, interface2subs{2});
     start_synth_report()
 
-    
+    slnet_report()
     
     bdclose all;
     tic
@@ -31,6 +29,22 @@ function synthesize()
     disp("Total time building/saving " + toc)
     disp(".slx-synthesis file saved " + models_synthed + " times.")
     coverage_report(roots, models_synthed, length(models), length(ks))    
+end
+
+function slnet_report()
+    global name2subinfo_complete
+
+    roots = {};
+    ks = name2subinfo_complete.keys();
+    for i = 1:length(ks)
+        if Identity(name2subinfo_complete{{ks{i}}}.IDENTITY).is_root()
+            subtree = SubTree(name2subinfo_complete{{ks{i}}}.(Helper.identity), name2subinfo_complete);
+            subtree = subtree.recursive_subtree(name2subinfo_complete);
+            subtree = subtree.root_report();
+            roots{end + 1} = subtree;
+        end
+    end
+    coverage_report(roots, length(roots), length(roots), length(name2subinfo_complete.keys()))
 end
 
 function coverage_report(roots, models_synthed, model_count, sub_count)

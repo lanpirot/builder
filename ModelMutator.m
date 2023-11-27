@@ -353,7 +353,11 @@ classdef ModelMutator
             else
                 %copy from subsystem to subsystem
                 copy_to.sub_name = [copy_to.sub_name  ' synthed'];
-                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+                try
+                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+                catch
+                    disp("")
+                end
             end
             %now, rewire
             ModelMutator.add_lines(copy_to, connected_blocks, mapping)

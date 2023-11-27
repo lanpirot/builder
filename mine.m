@@ -20,13 +20,10 @@ function mine(max_number_of_models)
             continue
         end
         Helper.create_garbage_dir();
-
-        model_path = string(strip(modellist.model_url(i, :), "right"));
-
+        model_path = string(strip(modellist.model_url(i, :), "right"));    
 
 
         try
-            
             model_handle = load_system(model_path);
             model_name = get_param(model_handle, 'Name');
 
@@ -75,7 +72,7 @@ end
 function subs2 = remove_skips(subs)
     subs2 = {};
     for i = 1:length(subs)
-        if ~subs{i}.skip()
+        if ~subs{i}.skip
             subs2{end + 1} = subs{i};
         end
     end
@@ -111,6 +108,9 @@ end
 function identity2sub = dic_id2sub(subs)
     identity2sub = dictionary();
     for i = 1:length(subs)
+        if isempty(subs{i}.identity)
+            continue
+        end
         identity2sub(subs{i}.identity) = subs{i};
     end
 end

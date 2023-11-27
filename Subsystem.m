@@ -11,6 +11,8 @@ classdef Subsystem
         direct_children = {};
 
         is_chimerable = 0;  %a subsystem without buses + either a leaf subsystem or all children without buses + all children could be swapped with compatible ones from other models
+
+        skip = 0;
     end
     
     methods
@@ -28,6 +30,7 @@ classdef Subsystem
             end
             obj.handle = subsystem_handle;
             obj.interface = Interface(obj.handle);
+            obj = obj.skip_it();
             if obj.skip()
                 return
             end
@@ -81,12 +84,17 @@ classdef Subsystem
             eq = obj.interface.is_equivalent(other_interface) && obj.num_local_elements == other_num_local_el;
         end
 
-        function bool = skip(obj)
-            bool = obj.interface.skip;
+        function obj = skip_it(obj)
+            bool = obj.skip || obj.interface.skip;
+            try
+                bool = bool || (~isempty(get_param(obj.handle,'MaskCallbackString')) && startsWith(get_param(obj.handle,'MaskType'),'ROS'));
+            catch
+            end
+            obj.skip = bool;
         end
 
         function [obj, is_chimerable] = propagate_chimerability(obj, interface2subs, identity2sub)
-            if obj.skip()
+            if obj.skip
                 dips("")
             end
             is_chimerable = 0;

@@ -82,7 +82,7 @@ classdef Helper
         synth_model_count = 100;
         synth_repair_count = 3;
         synth_random = 'RANDOM';                    %just try to synthesize any model
-        synth_AST_model = 'AST_MODEL'     %try to emulate a given model's subtree
+        synth_AST_model = 'AST_MODEL'               %try to emulate a given model's subtree
         synth_width = 'WIDTH'                       %try to fill every level of the model until max_depth
         synth_depth = 'DEPTH'                       %try to create a deep model
         synth_sample_size = 10;
