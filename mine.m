@@ -12,7 +12,7 @@ function mine(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:max_number_of_models
+    for i = 1:1%max_number_of_models
         path(old_path);
 
     
@@ -20,7 +20,7 @@ function mine(max_number_of_models)
             continue
         end
         Helper.create_garbage_dir();
-        model_path = string(strip(modellist.model_url(i, :), "right"));    
+        model_path = string(strip(modellist.model_url(i, :), "right"));
 
 
         try
@@ -202,7 +202,10 @@ function subs = compute_interfaces_for_subs(subs, model_handle, model_path)
     subsystems(end + 1) = model_handle;%the root subsystem
     for j = 1:length(subsystems)
         if Subsystem.is_subsystem(subsystems(j))
-            subs{end + 1} = Subsystem(subsystems(j), model_path);
+            next_sub = Subsystem(subsystems(j), model_path);
+            if ~next_sub.skip
+                subs{end + 1} = next_sub;
+            end
         end
     end
 end

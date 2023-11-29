@@ -31,7 +31,7 @@ classdef Subsystem
             obj.handle = subsystem_handle;
             obj.interface = Interface(obj.handle);
             obj = obj.skip_it();
-            if obj.skip()
+            if obj.skip
                 return
             end
             obj = obj.compute_fields(model_path);
@@ -40,16 +40,15 @@ classdef Subsystem
         function obj = compute_fields(obj, model_path)
             obj.identity = Identity(get_param(obj.handle, 'Name'), get_param(obj.handle, 'Parent'), model_path);
 
-            if strfind(obj.identity.sub_name, '{') || strfind(obj.identity.sub_name, '}') || strfind(obj.identity.sub_parents, '{') || strfind(obj.identity.sub_parents, '}')
-                obj.identity = [];
-                obj.skip = 1;
-                return
-            end
-
             obj.num_local_elements = length(Helper.find_elements(obj.handle, 1));
             obj.local_depth = Helper.get_depth(obj.handle);
             obj.subtree_depth = Helper.find_subtree_depth(obj.handle);
             obj = obj.get_direct_children();
+
+            if contains(obj.identity.sub_name, '{') || contains(obj.identity.sub_name, '}') || contains(obj.identity.sub_parents, '{') || contains(obj.identity.sub_parents, '}') || ~isempty(obj.direct_children) && (contains(horzcat(horzcat(obj.direct_children{:}).sub_name),'{') || contains(horzcat(horzcat(obj.direct_children{:}).sub_name),'}'))
+                obj.skip = 1;
+                return
+            end
         end
 
         function obj = get_direct_children(obj)
