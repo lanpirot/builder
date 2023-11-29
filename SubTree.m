@@ -37,8 +37,7 @@ classdef SubTree
             obj.children = [];
             for i = 1:length(tmpchildren)
                 if subinfos.isKey({tmpchildren(i)})
-                    obj.children{end + 1} = SubTree(tmpchildren(i), subinfos);
-                    obj.children{end} = obj.children{end}.recursive_subtree(subinfos);
+                    obj.children{end + 1} = SubTree(tmpchildren(i), subinfos).recursive_subtree(subinfos);
                 end
             end
         end
@@ -149,6 +148,59 @@ classdef SubTree
             obj.local_depth = obj.local_depth + 1;
             obj.num_elements = obj.num_elements + 2;
             obj.num_subsystems = obj.num_subsystems + 1;
+        end
+
+        function [obj, mutation_performed] = mutate_bigger(obj)
+            if rand * obj.local_depth * obj.local_depth < 1
+                [obj, mutation_performed] = obj.mutate_this();
+                if ~mutation_performed
+                    [obj, mutation_performed] = obj.mutate_children();
+                end                
+            else
+                [obj, mutation_performed] = obj.mutate_children();
+                if ~mutation_performed
+                    [obj, mutation_performed] = obj.mutate_this();
+                end
+            end
+        end
+
+        function [obj, mutation_performed] = mutate_children(obj)
+            mutation_performed = 0;         
+            for i = randperm(length(obj.children))
+                old_child = obj.children{i};
+                [new_child, mu] = old_child.mutate_bigger();
+                if mu
+                    mutation_performed = 1;
+                    %replace report stats
+                    obj.num_elements = obj.num_elements + (new_child.num_elements - old_child.num_elements);
+                    obj.num_subsystems = obj.num_subsystems + (new_child.num_subsystems - old_child.num_subsystems);
+                    obj.children{i} = new_child;
+                    obj.local_depth = 0;
+                    for j = 1:length(obj.children)
+                        obj.local_depth = max(obj.local_depth, obj.children{j}.local_depth + 1);
+                    end
+                    return
+                end
+            end
+        end
+
+        function [obj, mutation_performed] = mutate_this(obj)
+            global name2subinfo_complete
+            mutation_performed = 0;
+            interface = name2subinfo_complete{{struct(obj.identity)}}.(Helper.interface);
+            equivalent_obj = choose_subsystem(interface, Identity('', '', ''), 1).recursive_subtree(name2subinfo_complete).root_report();
+            if equivalent_obj.is_bigger(obj)
+                mutation_performed = 1;
+                obj = equivalent_obj;
+            end
+        end
+
+        function bool = is_bigger(obj, other_obj)
+            bool = obj.num_subsystems > other_obj.num_subsystems;
+        end
+
+        function bool = is_giant(obj)
+            bool = obj.local_depth > Helper.slnet_max_depth && obj.num_elements > Helper.slnet_max_elements && obj.num_subsystems > Helper.slnet_max_subs;
         end
     end
 end

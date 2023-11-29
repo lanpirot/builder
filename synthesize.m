@@ -21,7 +21,7 @@ function synthesize()
     interface2subs = dictionary(interface2subs{1}, interface2subs{2});
     start_synth_report()
 
-    slnet_report()
+    %slnet_report()
     
     bdclose all;
     tic
@@ -152,22 +152,41 @@ function [roots, good_models] = synth_rounds()
         model_name = char("model" + string(i));
         model_path = Helper.synthesize_playground + filesep + model_name + ".slx";
 
-        if Helper.is_synth_mode(Helper.synth_AST_model)
+        if Helper.is_synth_mode(Helper.synth_giant)
             while 1
                 try
-                    AST_model = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete);
+                    model_root = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete).root_report();
                     break
                 catch
                 end
-            end            
-            [model_root, build_success] = synth_repair([], Identity('', '', ''), 1, AST_model);
-            if build_success && Helper.synth_double_check
-                build_success = model_root.recursive_same_AST(AST_model);
             end
+            mutate_chances = 100;
+            while ~model_root.is_giant() && mutate_chances
+                [model_root, mutation_performed] = model_root.mutate_bigger();
+                mutate_chances = mutate_chances - 1;
+                if mutation_performed
+                    fprintf(string(model_root.num_elements) + "\t\t" + string(model_root.num_subsystems) + "\t\t" + string(model_root.local_depth + "\n"));
+                    mutate_chances = 100;
+                end
+            end
+            build_success = model_root.is_giant();
         else
-            [model_root, build_success] = synth_repair([], Identity('', '', ''), 1);
+            if Helper.is_synth_mode(Helper.synth_AST_model)
+                while 1
+                    try
+                        AST_model = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete);
+                        break
+                    catch
+                    end
+                end            
+                [model_root, build_success] = synth_repair([], Identity('', '', ''), 1, AST_model);
+                if build_success && Helper.synth_double_check
+                    build_success = model_root.recursive_same_AST(AST_model);
+                end
+            else
+                [model_root, build_success] = synth_repair([], Identity('', '', ''), 1);
+            end
         end
-
         
         
         if ~build_success
@@ -272,104 +291,6 @@ function stop = stop_repairing(depth)
                 stop = 1;
             end
     end    
-end
-
-function interface = seed_interface(AST_children_count)
-    global name2subinfo_complete
-    nkeys = name2subinfo_complete.keys();
-    while 1
-        chosen_key = choose_random(nkeys);
-        if ~Helper.synth_seed_with_roots_only || Identity(name2subinfo_complete{chosen_key}.IDENTITY).is_root()
-            interface = name2subinfo_complete{chosen_key}.(Helper.interface).hsh;
-            if Helper.is_synth_mode(Helper.synth_AST_model)
-                if ~exist("AST_children_count", 'var') || length(name2subinfo_complete{chosen_key}.(Helper.children)) == AST_children_count
-                    return
-                end
-            else 
-                return
-            end
-        end
-    end
-end
-
-function subsystem = choose_subsystem(interface, not_identity, depth, AST_children_count)
-    global name2subinfo_complete
-    global interface2subs
-
-    subsystem = [];
-
-    for i = 1:10
-        if depth <= 1
-            if Helper.is_synth_mode(Helper.synth_AST_model) && depth == 1
-                interface = seed_interface(AST_children_count);
-            else
-                interface = seed_interface();
-            end
-        end
-        %collect suitable subsystems
-        if ~any(find(strcmp(interface2subs.keys(), interface)))
-            continue
-        end
-        subsystems = interface2subs{{interface}};
-    
-        switch Helper.synth_mode
-            case Helper.synth_random
-                subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
-            case Helper.synth_width
-                subsystem = sample_and_choose(depth, subsystems, Helper.children);
-            case Helper.synth_depth
-                subsystem = sample_and_choose(depth, subsystems, Helper.subtree_depth);
-            case Helper.synth_AST_model
-                if depth >= 1
-                    subsystem = pick_first(subsystems, AST_children_count);
-                else
-                    subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
-                end
-        end
-        if isempty(subsystem) || (Helper.synth_force_diversity && strcmp(not_identity.model_path, subsystem.identity.model_path))
-            continue
-        end
-
-        if depth > 1 || ~Helper.synth_seed_with_roots_only || Identity(name2subinfo_complete{{struct(subsystem.identity)}}.IDENTITY).is_root()
-            return
-        end
-    end
-end
-
-function subsystem = pick_first(subsystems, children_count)
-    global name2subinfo_complete
-    subsystem = [];
-    for i = 1:min(length(subsystems), 10*log(length(subsystems)))
-        j = randi(length(subsystems));
-        if length(name2subinfo_complete{{subsystems(j)}}.(Helper.children)) == children_count
-            subsystem = SubTree(subsystems(j), name2subinfo_complete);
-            return
-        end
-    end
-end
-
-function subsystem = sample_and_choose(depth, subsystems, property)
-    global name2subinfo_complete
-    global depth_reached
-    sample_size = min(length(subsystems), Helper.synth_sample_size - randi(Helper.synth_sample_size - 1));
-    for i = 1:sample_size
-        alt_choice = name2subinfo_complete{{choose_random(subsystems)}};
-        alt_choice_num = alt_choice.(property);
-        if strcmp(Helper.synth_mode, Helper.synth_width)
-            alt_choice_num = length(alt_choice_num);
-        end
-        if i == 1 || choice_num < alt_choice_num && (depth < Helper.synth_max_depth) && (~strcmp(Helper.synth_mode, Helper.synth_depth) || depth_reached == 0) || choice_num > alt_choice_num  && (depth >= Helper.synth_max_depth || depth_reached == 1)
-            choice = alt_choice;
-            choice_num = alt_choice_num;
-        end
-    end
-
-    subsystem = SubTree(choice.IDENTITY, name2subinfo_complete);
-    return
-end
-
-function element = choose_random(array)
-    element = array(randi(length(array)));
 end
 
 function str = report2string(model_no, root)
