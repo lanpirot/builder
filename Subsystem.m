@@ -45,7 +45,7 @@ classdef Subsystem
             obj.subtree_depth = Helper.find_subtree_depth(obj.handle);
             obj = obj.get_direct_children();
 
-            if contains(obj.identity.sub_name, '{') || contains(obj.identity.sub_name, '}') || contains(obj.identity.sub_parents, '{') || contains(obj.identity.sub_parents, '}') || ~isempty(obj.direct_children) && (contains(horzcat(horzcat(obj.direct_children{:}).sub_name),'{') || contains(horzcat(horzcat(obj.direct_children{:}).sub_name),'}'))
+            if contains(obj.identity.sub_name, '{') || contains(obj.identity.sub_name, '}') || contains(obj.identity.sub_name, '%') || contains(obj.identity.sub_parents, '{') || contains(obj.identity.sub_parents, '}') || contains(obj.identity.sub_parents, '%') || ~isempty(obj.direct_children) && (contains(horzcat(horzcat(obj.direct_children{:}).sub_name),'{') || contains(horzcat(horzcat(obj.direct_children{:}).sub_name),'}') || contains(horzcat(horzcat(obj.direct_children{:}).sub_name),'%'))
                 obj.skip = 1;
                 return
             end

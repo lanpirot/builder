@@ -165,7 +165,6 @@ function [roots, good_models] = synth_rounds()
                 [model_root, mutation_performed] = model_root.mutate_bigger();
                 mutate_chances = mutate_chances - 1;
                 if mutation_performed
-                    fprintf(string(model_root.num_elements) + "\t\t" + string(model_root.num_subsystems) + "\t\t" + string(model_root.local_depth + "\n"));
                     mutate_chances = 100;
                 end
             end

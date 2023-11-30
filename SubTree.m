@@ -73,36 +73,41 @@ classdef SubTree
             
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
-                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, [slx_id.get_qualified_name()]);
+                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, slx_id.get_qualified_name(), Identity.is_direct_child(obj.identity, obj.children{i}.identity));
             end
             model_handle = get_param(model_name, 'Handle');
         end
 
-        function obj = build_sub(obj, copy_to, slx_id, slx_parents)
+        function obj = build_sub(obj, copy_to, slx_id, slx_parents, dry_build)
             global name2subinfo_complete
             copy_from = obj.identity;
             copy_to = Identity(copy_to);
             copy_into = Identity(copy_to.sub_name, slx_parents, slx_id.model_path);
-            
-            
 
-            
-            copy_from_interface = Interface(name2subinfo_complete{{struct(copy_from)}}.(Helper.interface));
-            copy_to_interface = Interface(name2subinfo_complete{{struct(copy_to)}}.(Helper.interface));
-
-            
-            load_system(copy_from.model_path)
-            mapping = copy_to_interface.get_mapping(copy_from_interface);
-            copied_element = Identity(copy_from.sub_name, copy_into.sub_parents, slx_id.model_path);
-            copy_into = ModelMutator.copy_to_non_root(copy_into, copy_from, copied_element, mapping);
-            obj.synthed_identity = copy_into;
-            ModelMutator.make_subsystem_editable(copy_into.get_qualified_name());
-            ModelMutator.annotate(copy_into.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
-            %close_system(copy_from.model_path)
+            if ~dry_build
+                copy_from_interface = Interface(name2subinfo_complete{{struct(copy_from)}}.(Helper.interface));
+                try
+                copy_to_interface = Interface(name2subinfo_complete{{struct(copy_to)}}.(Helper.interface));
+                catch ME
+                    disp("")
+                end
+    
+                
+                load_system(copy_from.model_path)
+                mapping = copy_to_interface.get_mapping(copy_from_interface);
+                copied_element = Identity(copy_from.sub_name, copy_into.sub_parents, slx_id.model_path);
+                copy_into = ModelMutator.copy_to_non_root(copy_into, copy_from, copied_element, mapping);
+                obj.synthed_identity = copy_into;
+                ModelMutator.make_subsystem_editable(copy_into.get_qualified_name());
+                ModelMutator.annotate(copy_into.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
+                %close_system(copy_from.model_path)
+            else
+                obj.synthed_identity = copy_into;
+            end
 
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
-                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, [slx_parents '/' copy_into.sub_name]);
+                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, [slx_parents '/' copy_into.sub_name], Identity.is_direct_child(obj.identity, obj.children{i}.identity));
             end
         end
 
@@ -188,7 +193,7 @@ classdef SubTree
             global name2subinfo_complete
             mutation_performed = 0;
             interface = name2subinfo_complete{{struct(obj.identity)}}.(Helper.interface);
-            equivalent_obj = choose_subsystem(interface, Identity('', '', ''), 1).recursive_subtree(name2subinfo_complete).root_report();
+            equivalent_obj = choose_subsystem(interface.hsh, Identity('', '', ''), 10).recursive_subtree(name2subinfo_complete).root_report();
             if equivalent_obj.is_bigger(obj)
                 mutation_performed = 1;
                 obj = equivalent_obj;

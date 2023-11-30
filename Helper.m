@@ -74,12 +74,12 @@ classdef Helper
         deep = "DEEP"
         wish_property = Helper.deep     %set to one of above to build models of a certain property
 
-        synth_dry_build = 1;
+        synth_dry_build = 0;
         synth_double_check = 0;
         synth_force_diversity = 1;
         synth_seed_with_roots_only = 1;
 
-        synth_model_count = 10;
+        synth_model_count = 100;
         synth_repair_count = 3;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_AST_model = 'AST_MODEL'               %try to emulate a given model's subtree
@@ -91,8 +91,8 @@ classdef Helper
         synth_max_depth = 50;
 
         slnet_max_depth = 10;
-        slnet_max_elements = 100000;
-        slnet_max_subs = 10000;
+        slnet_max_elements = 10000;
+        slnet_max_subs = 1000;
     end
     
     methods(Static)

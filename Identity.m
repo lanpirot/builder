@@ -50,5 +50,9 @@ classdef Identity
         function identical = is_identical(obj1, obj2)
             identical = strcmp(obj1.(Helper.sub_name), obj2.(Helper.sub_name)) && strcmp(obj1.(Helper.sub_parents), obj2.(Helper.sub_parents)) && strcmp(obj1.(Helper.model_path), obj2.(Helper.model_path));
         end
+
+        function bool = is_direct_child(obj1, obj2)
+            bool = strcmp(obj2.sub_parents, obj1.sub_name) || strcmp(obj2.sub_parents, [obj1.sub_parents '/' obj1.sub_name]);
+        end
     end
 end

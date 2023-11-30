@@ -12,7 +12,7 @@ function mine(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:max_number_of_models
+    for i = 1:10%max_number_of_models
         path(old_path);
 
     
@@ -21,6 +21,7 @@ function mine(max_number_of_models)
         end
         Helper.create_garbage_dir();
         model_path = string(strip(modellist.model_url(i, :), "right"));
+        %model_path = 'C:/svns/simucomp2/models/SLNET_v1/SLNET/SLNET_GitHub/190860622/simulink-master/Sin5k.slx';
 
 
         try
@@ -73,6 +74,10 @@ function subs2 = remove_skips(subs)
     subs2 = {};
     for i = 1:length(subs)
         if ~subs{i}.skip
+            %check if child is actually in list
+            %for j = 1:length(subs{i}.direct_children)
+                
+            %end
             subs2{end + 1} = subs{i};
         end
     end
