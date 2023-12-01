@@ -92,8 +92,12 @@ classdef SubTree
                     disp("")
                 end
     
-                
-                load_system(copy_from.model_path)
+                try
+                    load_system(copy_from.model_path)
+                catch
+                    close_system(Identity.get_model_name2(copy_from.model_path));
+                    load_system(copy_from.model_path)
+                end
                 mapping = copy_to_interface.get_mapping(copy_from_interface);
                 copied_element = Identity(copy_from.sub_name, copy_into.sub_parents, slx_id.model_path);
                 copy_into = ModelMutator.copy_to_non_root(copy_into, copy_from, copied_element, mapping);

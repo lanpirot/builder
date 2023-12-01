@@ -22,6 +22,7 @@ function synthesize()
     start_synth_report()
 
     %slnet_report()
+    %return
     
     bdclose all;
     tic
@@ -145,6 +146,7 @@ function [roots, good_models] = synth_rounds()
     good_models = 0;
     roots = {};
     for i = 1:Helper.synth_model_count
+        i = 63;
         rng(i)
         depth_reached = 0;
 

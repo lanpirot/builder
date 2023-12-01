@@ -61,7 +61,7 @@ function gather_models(max_number_of_models)
         end
         
         row = replace(model_url + sprintf('\t') + project_url + sprintf('\t') + string(loadable) + sprintf('\t') + string(compilable) + sprintf('\t') + string(closable), "\", "/") + newline;
-        fprintf(fileID, row);
+        fprintf(fileID, "%s", row);
     end
     fclose(fileID);
     disp("Saved gathered model info to " + string(Helper.modellist))

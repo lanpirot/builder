@@ -54,5 +54,11 @@ classdef Identity
         function bool = is_direct_child(obj1, obj2)
             bool = strcmp(obj2.sub_parents, obj1.sub_name) || strcmp(obj2.sub_parents, [obj1.sub_parents '/' obj1.sub_name]);
         end
+
+        function model_name = get_model_name2(path)
+            tmp = split(path, '/');
+            tmp = split(tmp{end}, '.');
+            model_name = tmp{1};
+        end
     end
 end

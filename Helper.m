@@ -247,7 +247,7 @@ classdef Helper
         function file_print(file_name, message)
             my_fileID = fopen(file_name, "a+");
             message = replace(message, '\"', '\\"');
-            fprintf(my_fileID, message);
+            fprintf(my_fileID, "%s", message);
             fclose(my_fileID);
         end
 
@@ -277,7 +277,7 @@ classdef Helper
         function log(file_name, message)
             file_name = Helper.(file_name);
             my_fileID = fopen(file_name, "a+");
-            fprintf(my_fileID, replace(string(message), "\", "/") + newline);
+            fprintf(my_fileID, "%s", replace(string(message), "\", "/") + newline);
             fclose(my_fileID);
         end
 

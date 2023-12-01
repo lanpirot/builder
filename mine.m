@@ -12,7 +12,7 @@ function mine(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:10%max_number_of_models
+    for i = 1:max_number_of_models
         path(old_path);
 
     
@@ -21,7 +21,6 @@ function mine(max_number_of_models)
         end
         Helper.create_garbage_dir();
         model_path = string(strip(modellist.model_url(i, :), "right"));
-        %model_path = 'C:/svns/simucomp2/models/SLNET_v1/SLNET/SLNET_GitHub/190860622/simulink-master/Sin5k.slx';
 
 
         try
@@ -74,13 +73,38 @@ function subs2 = remove_skips(subs)
     subs2 = {};
     for i = 1:length(subs)
         if ~subs{i}.skip
-            %check if child is actually in list
-            %for j = 1:length(subs{i}.direct_children)
-                
-            %end
-            subs2{end + 1} = subs{i};
+            subs2{end + 1} = remove_missing_children(subs{i}, i, subs);
         end
     end
+end
+
+function sub = remove_missing_children(sub, i, subs)
+    model_path = sub.identity.model_path;
+    children = sub.direct_children;
+    found_children = {};
+    for c = 1:length(children)
+        found = 0;
+        delta = 1;
+        while i + delta <= length(subs) && strcmp(subs{i + delta}.identity.model_path, model_path)
+            if Identity.is_identical(children{c}, subs{i + delta}.identity)
+                found = ~subs{i + delta}.skip;
+                break
+            end
+            delta = delta + 1;
+        end
+        delta = 1;
+        while ~found && i > delta && strcmp(subs{i - delta}.identity.model_path, model_path)
+            if Identity.is_identical(children{c}, subs{i - delta}.identity)
+                found = ~subs{i - delta}.skip;
+                break
+            end
+            delta = delta + 1;
+        end
+        if found
+            found_children{end + 1} = children{c};
+        end
+    end
+    sub.direct_children = found_children;
 end
 
 function interface2subs = remove_non_chimerable(interface2subs, identity2sub)
@@ -113,7 +137,7 @@ end
 function identity2sub = dic_id2sub(subs)
     identity2sub = dictionary();
     for i = 1:length(subs)
-        if isempty(subs{i}.identity)
+        if subs{i}.skip
             continue
         end
         identity2sub(subs{i}.identity) = subs{i};
