@@ -12,16 +12,14 @@ function mine(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:max_number_of_models
+    for i = 1:100%max_number_of_models
         path(old_path);
-
     
         if needs_to_be_compilable && ~modellist.compilable(i)
             continue
         end
         Helper.create_garbage_dir();
         model_path = string(strip(modellist.model_url(i, :), "right"));
-
 
         try
             model_handle = load_system(model_path);
@@ -249,6 +247,7 @@ end
 function try_close(name, model_path)
     try_end(name)
     try
+        bdclose all;
         close_system(model_path)
     catch ME
         log(Helper.project_dir, 'log_close', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);

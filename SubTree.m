@@ -73,7 +73,7 @@ classdef SubTree
             
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
-                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, slx_id.get_qualified_name(), Identity.is_direct_child(obj.identity, obj.children{i}.identity));
+                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, slx_id.get_qualified_name(), Identity.is_identical(Identity(slx_children(i)), obj.children{i}.identity));
             end
             model_handle = get_param(model_name, 'Handle');
         end
@@ -84,13 +84,11 @@ classdef SubTree
             copy_to = Identity(copy_to);
             copy_into = Identity(copy_to.sub_name, slx_parents, slx_id.model_path);
 
-            if ~dry_build
+            if dry_build
+                obj.synthed_identity = copy_into;
+            else
                 copy_from_interface = Interface(name2subinfo_complete{{struct(copy_from)}}.(Helper.interface));
-                try
                 copy_to_interface = Interface(name2subinfo_complete{{struct(copy_to)}}.(Helper.interface));
-                catch ME
-                    disp("")
-                end
     
                 try
                     load_system(copy_from.model_path)
@@ -105,13 +103,11 @@ classdef SubTree
                 ModelMutator.make_subsystem_editable(copy_into.get_qualified_name());
                 ModelMutator.annotate(copy_into.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
                 %close_system(copy_from.model_path)
-            else
-                obj.synthed_identity = copy_into;
             end
 
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
-                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, [slx_parents '/' copy_into.sub_name], Identity.is_direct_child(obj.identity, obj.children{i}.identity));
+                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, [slx_parents '/' copy_into.sub_name], Identity.is_identical(Identity(slx_children(i)), obj.children{i}.identity));
             end
         end
 

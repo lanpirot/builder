@@ -231,29 +231,13 @@ classdef ModelMutator
 
         function connections = get_wiring(subsystem)
             connections = struct;
-            connections.in_source_ports = {};
-            connections.out_destination_ports = {};
             lines = get_param(subsystem, 'LineHandles');
-            for i=1:length(lines.Inport)
-                line = lines.Inport(i);
-                if line == -1
-                    connections.in_source_ports{end + 1} = -1;
-                else
-                    connections.in_source_ports{end + 1} = get_param(line, "SrcPortHandle");
-                end
-            end
 
-            for i=1:length(lines.Outport)
-                line = lines.Outport(i);
-                if line == -1
-                    connections.out_destination_ports{end + 1} = -1;
-                else
-                    connections.out_destination_ports{end + 1} = get_param(line, "DstPortHandle");
-                end
-            end
+            connections.in_source_ports = ModelMutator.get_wiring_of(lines.Inport, "SrcPortHandle");
+            connections.out_destination_ports = ModelMutator.get_wiring_of(lines.Outport, "DstPortHandle");
+            connections.Enable = ModelMutator.get_wiring_of(lines.Enable, "SrcPortHandle");
+            connections.Trigger = ModelMutator.get_wiring_of(lines.Trigger, "SrcPortHandle");
 
-            connections.Enable = get_param(lines.Enable, "SrcPortHandle");
-            connections.Trigger = get_param(lines.Trigger, "SrcPortHandle");
             connections.LConn = {};
             connections.RConn = {};
             pc = get_param(subsystem, 'PortConnectivity');
@@ -266,6 +250,18 @@ classdef ModelMutator
             end
             connections.Ifaction = get_param(lines.Ifaction, "SrcPortHandle");
             connections.Reset = lines.Reset;
+        end
+
+        function out_connection = get_wiring_of(lines_in, param_string)
+            out_connection = {};
+            for i=1:length(lines_in)
+                line = lines_in(i);
+                if line == -1
+                    out_connection{end + 1} = -1;
+                else
+                    out_connection{end + 1} = get_param(line, param_string);
+                end
+            end
         end
 
         function remove_lines(subsystem)
@@ -336,7 +332,20 @@ classdef ModelMutator
                     copy_to.sub_name = copy_from.sub_name;                    
                 end
             end
+            set_param(copy_to.get_qualified_name(),"Lock","off")
+            ModelMutator.resolve_all_links(copy_to.get_qualified_name())
             %we don't need to rewire the inputs/outputs after copying
+        end
+
+        function resolve_all_links(sys_name)
+            handle = get_param(sys_name,'handle');
+            subsystem_handles = Helper.find_subsystems(handle);
+            for i = 1:length(subsystem_handles)
+                try
+                    set_param(subsystem_handles(i),'LinkStatus','none')
+                catch
+                end
+            end
         end
 
         function copy_to = copy_to_non_root(copy_to, copy_from, copied_element, mapping)
@@ -348,19 +357,20 @@ classdef ModelMutator
             if copy_from.is_root()
                 %copy from root to subsystem
                 add_block('built-in/Subsystem', copied_element.get_qualified_name())
-                Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
+                try
+                    Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
+                catch ME
+                    disp("")
+                end
                 set_param(copied_element.get_qualified_name(), 'Name', copy_to.get_sub_name_for_diagram())
             else
                 %copy from subsystem to subsystem
                 copy_to.sub_name = [copy_to.sub_name  ' synthed'];
-                try
-                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
-                catch
-                    disp("")
-                end
+                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
             end
             %now, rewire
             ModelMutator.add_lines(copy_to, connected_blocks, mapping)
+            ModelMutator.resolve_all_links(copy_to.get_qualified_name())
         end
 
         function add_lines(system, ports, mapping)
