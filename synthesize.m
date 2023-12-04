@@ -21,8 +21,9 @@ function synthesize()
     interface2subs = dictionary(interface2subs{1}, interface2subs{2});
     start_synth_report()
 
-    slnet_report()
-    return
+    %only for a complete report about all snlnet models
+    %slnet_report()
+    %return
     
     bdclose all;
     tic
