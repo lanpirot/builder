@@ -5,12 +5,12 @@ function synthesize()
     name2subinfo_complete = Helper.parse_json(Helper.name2subinfo_complete);
     name2subinfo_complete = Helper.build_sub_info(name2subinfo_complete);
     ks = name2subinfo_complete.keys();
-    models = {};
+    models = cell(1,length(ks));
     for i = 1:length(ks)
         n2i = name2subinfo_complete{ks(i)};
         n2i.sub_id = i;
         name2subinfo_complete{ks(i)} = n2i;
-        models = [models n2i.(Helper.identity).model_path];
+        models{i} = n2i.(Helper.identity).model_path;
     end
     models = unique(models);
     global model2id
