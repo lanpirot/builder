@@ -332,8 +332,8 @@ classdef ModelMutator
                     copy_to.sub_name = copy_from.sub_name;                    
                 end
             end
-            set_param(copy_to.get_qualified_name(),"Lock","off")
-            ModelMutator.resolve_all_links(copy_to.get_qualified_name())
+            %set_param(copy_to.get_qualified_name(),"Lock","off")
+            %ModelMutator.resolve_all_links(copy_to.get_qualified_name())
             %we don't need to rewire the inputs/outputs after copying
         end
 
@@ -350,9 +350,19 @@ classdef ModelMutator
 
         function copy_to = copy_to_non_root(copy_to, copy_from, copied_element, mapping)
             %get prior wiring
+            try
+                get_param(copy_to.get_qualified_name(),'handle');
+            catch
+                copy_to.sub_name = [copy_to.sub_name  ' synthed'];
+            end
             connected_blocks = ModelMutator.get_wiring(copy_to.get_qualified_name());
             ModelMutator.make_subsystem_editable(copy_to.get_qualified_name())
             ModelMutator.remove_lines(copy_to.get_qualified_name());
+            if strcmp(copy_to.sub_name, 'OperationalStateMachine')
+                disp(copy_to.sub_parents)
+                disp("")
+            end
+
             delete_block(copy_to.get_qualified_name())
             if copy_from.is_root()
                 %copy from root to subsystem
@@ -370,7 +380,7 @@ classdef ModelMutator
             end
             %now, rewire
             ModelMutator.add_lines(copy_to, connected_blocks, mapping)
-            ModelMutator.resolve_all_links(copy_to.get_qualified_name())
+            %ModelMutator.resolve_all_links(copy_to.get_qualified_name())
         end
 
         function add_lines(system, ports, mapping)

@@ -21,8 +21,8 @@ function synthesize()
     interface2subs = dictionary(interface2subs{1}, interface2subs{2});
     start_synth_report()
 
-    %slnet_report()
-    %return
+    slnet_report()
+    return
     
     bdclose all;
     tic
@@ -43,6 +43,7 @@ function slnet_report()
             subtree = subtree.recursive_subtree(name2subinfo_complete);
             subtree = subtree.root_report();
             roots{end + 1} = subtree;
+            Helper.log('synth_report', report2string(i, subtree));
         end
     end
     coverage_report(roots, length(roots), length(roots), length(name2subinfo_complete.keys()))
@@ -146,7 +147,6 @@ function [roots, good_models] = synth_rounds()
     good_models = 0;
     roots = {};
     for i = 1:Helper.synth_model_count
-        %i = 43;
         rng(i)
         depth_reached = 0;
 
@@ -222,7 +222,7 @@ function [roots, good_models] = synth_rounds()
             end
         catch ME
             disp("Saving model " + string(i) + " FAILED")
-            Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
+            Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(i))
         end
         delete(Helper.synthesize_playground + filesep + "*.slmx");
     end
