@@ -79,7 +79,7 @@ classdef Helper
         synth_force_diversity = 1;
         synth_seed_with_roots_only = 1;
 
-        synth_model_count = 10;
+        synth_model_count = 1000;
         synth_repair_count = 3;
         synth_random = 'RANDOM';                    %just try to synthesize any model
         synth_AST_model = 'AST_MODEL'               %try to emulate a given model's subtree
@@ -90,9 +90,14 @@ classdef Helper
         synth_mode = Helper.synth_giant
         synth_max_depth = 50;
 
-        slnet_max_depth = 5;                       %SLNET max: 15
-        slnet_max_elements = 106;                %SLNET max: 106823
-        slnet_max_subs = 13;                     %SLNET max: 13501
+
+        slnet_max_depth = 15;                       %SLNET max: 15
+        slnet_max_elements = 106823;                %SLNET max: 106823
+        slnet_max_subs = 13501;                     %SLNET max: 13501
+
+        %slnet_max_depth = 5;                       %SLNET max: 15
+        %slnet_max_elements = 106;                %SLNET max: 106823
+        %slnet_max_subs = 13;                     %SLNET max: 13501
     end
     
     methods(Static)

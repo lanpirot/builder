@@ -87,18 +87,14 @@ classdef Subsystem
 
         function obj = skip_it(obj)
             bool = obj.interface.skip;
+            try
+                bool = bool || startsWith(get_param(obj.handle,'ReferenceBlock'), obj.identity.get_model_name()); %|| any(strcmp({'unresolved','breakWithoutHierarchy','restore','propagate','restoreHierarchy','propagateHierarchy'},get_param(obj.handle, 'LinkStatus')))
+            catch
+            end
+
             subs_to_test = Helper.find_subsystems(obj.handle);
             if isfloat(subs_to_test)
                 bool = bool || any(startsWith(get_param(subs_to_test,'MaskType'),'ROS'));
-            else
-                i = 1;
-                while ~bool && i <= length(subs_to_test)
-                    try
-                        bool = startsWith(get_param(subs_to_test{i},'MaskType'),'ROS');                                            
-                    catch
-                    end
-                    i = i + 1;
-                end
             end
             obj.skip = bool;
         end

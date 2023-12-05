@@ -231,7 +231,11 @@ classdef ModelMutator
 
         function connections = get_wiring(subsystem)
             connections = struct;
+            try
             lines = get_param(subsystem, 'LineHandles');
+            catch ME
+                disp("")
+            end
 
             connections.in_source_ports = ModelMutator.get_wiring_of(lines.Inport, "SrcPortHandle");
             connections.out_destination_ports = ModelMutator.get_wiring_of(lines.Outport, "DstPortHandle");
@@ -265,7 +269,11 @@ classdef ModelMutator
         end
 
         function remove_lines(subsystem)
+            try
             line_handles = get_param(subsystem, "LineHandles");
+            catch ME
+                disp("")
+            end
 
             
             ModelMutator.remove_lines2(line_handles.Inport);
@@ -322,15 +330,15 @@ classdef ModelMutator
 
                 copy_to.sub_name = model_name;
                 Simulink.BlockDiagram.deleteContents(copy_to.get_qualified_name())
-                try
-                    Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
-                catch
+                % try
+                %     Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+                % catch
                     %if it is a stateflow chart or non-root allowed subsystem
                     additional_level = 1;
-                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+"/"+copy_from.sub_name)%,'CopyOption','nolink')
+                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+"/"+copy_from.sub_name,'CopyOption','nolink');
                     copy_to.sub_parents = copy_to.sub_name;
                     copy_to.sub_name = copy_from.sub_name;                    
-                end
+                %end
             end
             %set_param(copy_to.get_qualified_name(),"Lock","off")
             %ModelMutator.resolve_all_links(copy_to.get_qualified_name())
@@ -376,7 +384,7 @@ classdef ModelMutator
             else
                 %copy from subsystem to subsystem
                 copy_to.sub_name = [copy_to.sub_name  ' synthed'];
-                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name())
+                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name(),'CopyOption','nolink');
             end
             %now, rewire
             ModelMutator.add_lines(copy_to, connected_blocks, mapping)

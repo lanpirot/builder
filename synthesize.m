@@ -72,7 +72,7 @@ function coverage_report(roots, models_synthed, model_count, sub_count)
         roots_copy(end + 1) = struct(roots{i});
     end
     roots = roots_copy;
-    disp(string(length(roots)) + " were models were created.")
+    disp(string(length(roots)) + " models were created.")
 
     %size report
     Helper.log('synth_report', "Elements min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.num_elements)))
@@ -143,11 +143,19 @@ end
 
 function [roots, good_models] = synth_rounds()
     global name2subinfo_complete
+    global model2id
+    global interface2subs
+    savename2subinfo_complete = name2subinfo_complete;
+    savemodel2id = model2id;
+    saveinterface2subs = interface2subs;
     global depth_reached
     
     good_models = 0;
     roots = {};
     for i = 1:Helper.synth_model_count
+        name2subinfo_complete = savename2subinfo_complete;
+        model2id = savemodel2id;
+        interface2subs = saveinterface2subs;
         rng(i)
         depth_reached = 0;
 
@@ -170,6 +178,7 @@ function [roots, good_models] = synth_rounds()
                 if mutation_performed
                     mutate_chances = 100;
                 end
+                disp(report2string(i, model_root))
             end
             build_success = model_root.is_giant();
         else

@@ -12,7 +12,7 @@ function mine(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:1000%max_number_of_models
+    for i = 1:max_number_of_models
         path(old_path);
     
         if needs_to_be_compilable && ~modellist.compilable(i)
@@ -24,6 +24,10 @@ function mine(max_number_of_models)
         try
             model_handle = load_system(model_path);
             model_name = get_param(model_handle, 'Name');
+
+            if model_is_problem_file(model_name)
+                errar("")
+            end
 
             try 
                 systemcomposer.loadModel(model_name);%skip architecture models
@@ -65,6 +69,10 @@ function mine(max_number_of_models)
     serialize(interface2subs, -1);
 
     fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
+end
+
+function bool = model_is_problem_file(name)
+    bool = strcmp(name, 'hdlsllib') || 0; %fill with other problematic files, i.e. models with names that clash with auto-loaded models
 end
 
 function subs2 = remove_skips(subs)
