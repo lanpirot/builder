@@ -4,7 +4,7 @@ function subsystem = choose_subsystem(interface, not_identity, depth, AST_childr
 
     subsystem = [];
 
-    for i = 1:10
+    for i = 1:Helper.choose_retries
         if depth <= 1
             if Helper.is_synth_mode(Helper.synth_AST_model) && depth == 1
                 interface = seed_interface(AST_children_count);

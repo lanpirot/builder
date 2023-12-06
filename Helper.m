@@ -87,6 +87,8 @@ classdef Helper
         synth_giant = "GIANT"                       %build giant models, efficiently
         synth_depth = 'DEPTH'                       %try to create a deep model
         synth_sample_size = 10;
+        mutate_chances = 100;
+        choose_retries = 10;
         synth_mode = Helper.synth_giant
         synth_max_depth = 50;
 

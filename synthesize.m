@@ -152,7 +152,7 @@ function [roots, good_models] = synth_rounds()
     
     good_models = 0;
     roots = {};
-    for i = 1:Helper.synth_model_count
+    for i = 82:Helper.synth_model_count
         name2subinfo_complete = savename2subinfo_complete;
         model2id = savemodel2id;
         interface2subs = saveinterface2subs;
@@ -171,14 +171,14 @@ function [roots, good_models] = synth_rounds()
                 catch
                 end
             end
-            mutate_chances = 100;
+            mutate_chances = Helper.mutate_chances;
             while ~model_root.is_giant() && mutate_chances
                 [model_root, mutation_performed] = model_root.mutate_bigger();
                 mutate_chances = mutate_chances - 1;
                 if mutation_performed
-                    mutate_chances = 100;
+                    mutate_chances = Helper.mutate_chances;
                 end
-                disp(report2string(i, model_root))
+                %disp(report2string(i, model_root))
             end
             build_success = model_root.is_giant();
         else
@@ -213,6 +213,7 @@ function [roots, good_models] = synth_rounds()
         end
         
         try
+            disp("Saving model " + string(i) + " ...")
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
             if additional_level
                 model_root = model_root.add_level();
