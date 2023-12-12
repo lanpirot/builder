@@ -93,13 +93,13 @@ classdef Helper
         synth_max_depth = 50;
 
 
-        slnet_max_depth = 15;                       %SLNET max: 15
-        slnet_max_elements = 106823;                %SLNET max: 106823
-        slnet_max_subs = 13501;                     %SLNET max: 13501
+        %slnet_max_depth = 15;                       %SLNET max: 15
+        %slnet_max_elements = 106823;                %SLNET max: 106823
+        %slnet_max_subs = 13501;                     %SLNET max: 13501
 
-        %slnet_max_depth = 5;                       %SLNET max: 15
-        %slnet_max_elements = 106;                %SLNET max: 106823
-        %slnet_max_subs = 13;                     %SLNET max: 13501
+        slnet_max_depth = 5;                       %SLNET max: 15
+        slnet_max_elements = 106;                %SLNET max: 106823
+        slnet_max_subs = 13;                     %SLNET max: 13501
     end
     
     methods(Static)

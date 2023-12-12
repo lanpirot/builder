@@ -383,7 +383,6 @@ classdef ModelMutator
                 set_param(copied_element.get_qualified_name(), 'Name', copy_to.get_sub_name_for_diagram())
             else
                 %copy from subsystem to subsystem
-                copy_to.sub_name = [copy_to.sub_name  ' synthed'];
                 add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name(),'CopyOption','nolink');
             end
             %now, rewire
