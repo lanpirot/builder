@@ -1,6 +1,10 @@
 function gather_models(max_number_of_models)
-    disp("Starting gathering process")
+    addpath(pwd)
+    addpath(genpath('utils'), '-begin');
+    set(0, 'DefaultFigureVisible', 'off');
     warning('off','all')
+
+    disp("Starting gathering process")
     modellist = [dir(fullfile(Helper.models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.models_path, "**" + filesep + "*.mdl"))];
     project_dir = Helper.project_dir;
     project_info = tdfread(Helper.project_info, 'tab');
@@ -10,6 +14,9 @@ function gather_models(max_number_of_models)
         max_number_of_models = length(modellist);
     end    
     for i = 1:max_number_of_models
+        if i == 5446 %so broken, it skips out of the try-catch block
+            continue
+        end
         disp("Now gathering model no. " + string(i))
         cd(project_dir)
         model = modellist(i);
@@ -18,7 +25,13 @@ function gather_models(max_number_of_models)
             model.name = replace(model.name, ' ', '');
         end
         folder = strsplit(model.folder, filesep);
-        project_id = double(string(folder{Helper.project_id_pwd_number}));
+
+        
+        %assumes, you unzipped SLNET projects to a directory each named by a number
+        %did you forget a "/" at the end of the filename?
+        project_id = double(string(folder{count(Helper.project_dir, filesep) + 2}));      
+        
+        
         project_info_row = find(project_info.path == project_id);
         project_url = project_info.url(project_info_row,:);
         project_url = Helper.rstrip(project_url);

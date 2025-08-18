@@ -152,11 +152,11 @@ function [roots, good_models] = synth_rounds()
     
     good_models = 0;
     roots = {};
-    for i = 82:Helper.synth_model_count
+    for i = 1:Helper.synth_model_count
         name2subinfo_complete = savename2subinfo_complete;
         model2id = savemodel2id;
         interface2subs = saveinterface2subs;
-        rng(i)
+        rng(i, 'twister')
         depth_reached = 0;
 
         disp("Building model " + string(i))

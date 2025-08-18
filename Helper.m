@@ -2,7 +2,7 @@ classdef Helper
     properties(Constant)
         models_path = system_constants.models_path
         project_dir = system_constants.project_dir
-        log_path = system_constants.project_dir + "logs" + system_constants.dir_separator
+        log_path = system_constants.project_dir + "logs" + filesep
 
 
         project_info = Helper.log_path + "project_info.tsv";
@@ -50,8 +50,6 @@ classdef Helper
         synth_report = Helper.synthesize_playground + filesep + "synth_report.csv";
 
 
-        project_id_pwd_number = system_constants.project_pwd_number;
-
         interface_header = "UUID,ChildUUIDs,Subsystem Path,Model Path,Project URL,Inports,Outports,...";
 
         first_level_divider = ",";
@@ -81,11 +79,11 @@ classdef Helper
 
         synth_model_count = 1000;
         synth_repair_count = 3;
-        synth_random = 'RANDOM';                    %just try to synthesize any model
+        synth_random =    'RANDOM';                 %just try to synthesize any model
         synth_AST_model = 'AST_MODEL'               %try to emulate a given model's subtree
-        synth_width = 'WIDTH'                       %try to fill every level of the model until max_depth
-        synth_giant = "GIANT"                       %build giant models, efficiently
-        synth_depth = 'DEPTH'                       %try to create a deep model
+        synth_width =     'WIDTH'                   %try to fill every level of the model until max_depth
+        synth_giant =     'GIANT'                   %build giant models, efficiently
+        synth_depth =     'DEPTH'                   %try to create a deep model
         synth_sample_size = 10;
         mutate_chances = 100;
         choose_retries = 10;
@@ -253,7 +251,7 @@ classdef Helper
 
         function file_print(file_name, message)
             my_fileID = fopen(file_name, "a+");
-            message = replace(message, '\"', '\\"');
+            %message = replace(message, '\"', '\\"');
             fprintf(my_fileID, "%s", message);
             fclose(my_fileID);
         end
