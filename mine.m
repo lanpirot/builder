@@ -1,4 +1,7 @@
 function mine(max_number_of_models)
+    addpath(pwd)
+    addpath(genpath('utils'), '-begin');
+    set(0, 'DefaultFigureVisible', 'off');
     warning('off','all')
     old_path = path;
     disp("Starting mining process")

@@ -14,7 +14,7 @@ function gather_models(max_number_of_models)
         max_number_of_models = length(modellist);
     end    
     for i = 1:max_number_of_models
-        if i == 5446 %so broken, it skips out of the try-catch block
+        if i == 5446 %this model is so broken, it skips out of the try-catch block
             continue
         end
         disp("Now gathering model no. " + string(i))
