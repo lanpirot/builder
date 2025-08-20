@@ -5,7 +5,7 @@ function mine(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:100 % max_number_of_models
+    for i = 1:1000 % max_number_of_models
         path(old_path);
     
         if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)

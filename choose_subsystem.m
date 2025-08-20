@@ -32,7 +32,7 @@ function subsystem = choose_subsystem(interface, not_identity, depth, AST_childr
                     subsystem = SubTree(choose_random(subsystems), name2subinfo_complete);
                 end
             case Helper.synth_giant
-                subsystem = sample_and_choose(depth, subsystems, Helper.subtree_depth);
+                subsystem = sample_and_choose(depth, subsystems, Helper.children);
         end
         if isempty(subsystem) || (Helper.synth_force_diversity && strcmp(not_identity.model_path, subsystem.identity.model_path))
             continue
@@ -77,11 +77,11 @@ end
 function subsystem = sample_and_choose(depth, subsystems, property)
     global name2subinfo_complete
     global depth_reached
-    sample_size = min(length(subsystems), Helper.synth_sample_size - randi(Helper.synth_sample_size - 1));
+    sample_size = min(length(subsystems), randi(Helper.synth_sample_size));
     for i = 1:sample_size
-        alt_choice = name2subinfo_complete{{choose_random(subsystems)}};
+        alt_choice = name2subinfo_complete{{choose_random(subsystems)}};%{{subsystems(max(1,end-i))}};
         alt_choice_num = alt_choice.(property);
-        if Helper.is_synth_mode(Helper.synth_width) %|| Helper.is_synth_mode(Helper.synth_giant)
+        if isempty(alt_choice_num) || isstruct(alt_choice_num)
             alt_choice_num = length(alt_choice_num);
         end
         if i == 1 || choice_num < alt_choice_num && (depth < Helper.synth_max_depth) && (~strcmp(Helper.synth_mode, Helper.synth_depth) || depth_reached == 0) || choice_num > alt_choice_num  && (depth >= Helper.synth_max_depth || depth_reached == 1)

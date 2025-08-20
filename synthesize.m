@@ -174,6 +174,7 @@ function [roots, good_models] = synth_rounds()
             mutate_chances = Helper.mutate_chances;
             while ~model_root.is_giant() && mutate_chances
                 [model_root, mutation_performed] = model_root.mutate_bigger();
+                %fprintf("%i %i\n", model_root.num_elements, model_root.num_subsystems);
                 mutate_chances = mutate_chances - 1;
                 if mutation_performed
                     mutate_chances = Helper.mutate_chances;
