@@ -151,6 +151,8 @@ classdef SubTree
                 obj.unique_models = [all_models model2id(cellstr(obj.identity.model_path))];
                 obj.unique_subsystems = [all_subsystems name2subinfo_complete{{struct(obj.identity)}}.sub_id];
             end
+
+
         end
 
         function obj = add_level(obj)

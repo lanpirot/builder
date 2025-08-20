@@ -87,17 +87,17 @@ classdef Helper
         synth_sample_size = 10;
         mutate_chances = 100;
         choose_retries = 10;
-        synth_mode = Helper.synth_width
+        synth_mode = Helper.synth_giant
         synth_max_depth = 20;                      %set(0, 'RecursionLimit', 1000)
 
 
-        %slnet_max_depth = 15;                       %SLNET max: 15
-        %slnet_max_elements = 123823;                %SLNET max: 106823
-        %slnet_max_subs = 15301;                     %SLNET max: 13501
+        slnet_max_depth = 15;                       %SLNET max: 15
+        slnet_max_elements = 123823;                %SLNET max: 106823
+        slnet_max_subs = 15301;                     %SLNET max: 13501
 		
-        slnet_max_depth = 9;                         %SLNET max: 15
-        slnet_max_elements = 10600;                    %SLNET max: 106823
-        slnet_max_subs = 1300;                         %SLNET max: 13501
+        %slnet_max_depth = 9;                         %SLNET max: 15
+        %slnet_max_elements = 10600;                    %SLNET max: 106823
+        %slnet_max_subs = 1300;                         %SLNET max: 13501
     end
     
     methods(Static)
