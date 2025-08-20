@@ -47,14 +47,9 @@ function mine(max_number_of_models)
     subs = remove_skips(subs);
     disp(string(length(subs)) + " Subsystems were taken into account (no bus ports present etc.).")
 
-
-    %FIRST: complete dictionary containing all subs
+    %identity2sub = dic_id2sub(subs); %only needed for chimerability
     interface2subs = dic_int2subs(subs);
-    serialize(interface2subs, 0);
-
-    %THEN: dictionary only for unique subsystems
-    serialize(interface2subs, 1);
-    %identity2sub = dic_id2sub(subs); not needed anymore?
+    serialize(interface2subs);
     fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
     cd(origin)
 end
@@ -203,31 +198,28 @@ function [interface2subs, identity2sub] = propagate_chimerability(subs, interfac
     disp("We propagated is_chimerable to " + string(chimerable_count) + " subsystems in " + string(propagation_rounds) + " rounds.")
 end
 
-function serialize(interface2subs, remove_duplicates)
+function serialize(interface2subs)
     %serialize sub_info
     subinfo = {};
     ikeys = interface2subs.keys();
 
-    string_prefix = "After";
-    switch remove_duplicates
-        case 0
-            for i = 1:length(ikeys)
-                subinfo = [subinfo interface2subs(ikeys(i)).sort().less_fields().subsystems];
-            end
-            Helper.file_print(Helper.name2subinfo_complete, jsonencode(subinfo));
-            [ikeys, identities] = make_i2s_smaller(interface2subs);
-            Helper.file_print(Helper.interface2subs, jsonencode({ikeys, identities}))
-            string_prefix = "Before";
-        case 1
-            for i = 1:length(ikeys)
-                subinfo = [subinfo interface2subs(ikeys(i)).remove_duplicates().less_fields().subsystems];
-            end
-            Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
-            [ikeys, identities] = make_i2s_smaller(interface2subs);
-            Helper.file_print(Helper.interface2subs, jsonencode({ikeys, identities}))
+    for i = 1:length(ikeys)
+        subinfo = [subinfo interface2subs(ikeys(i)).sort().less_fields().subsystems];
     end
-
+    Helper.file_print(Helper.name2subinfo_complete, jsonencode(subinfo));
+    [ikeys, identities] = make_i2s_smaller(interface2subs);
+    Helper.file_print(Helper.interface2subs, jsonencode({ikeys, identities}))
+    string_prefix = "Before";
     disp(string_prefix + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
+
+
+    for i = 1:length(ikeys)
+        subinfo = [subinfo interface2subs(ikeys(i)).remove_duplicates().subsystems];
+    end
+    Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
+    disp("After" + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
+
+    
 end
 
 function [ikeys, identities] = make_i2s_smaller(i2s)
