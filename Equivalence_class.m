@@ -23,6 +23,7 @@ classdef Equivalence_class
 
         function obj = sort(obj)
             num_elements = cellfun(@(x) x.num_local_elements, obj.subsystems);
+
             [~, sortIdx] = sort(num_elements);
             obj.subsystems = obj.subsystems(sortIdx);
         end

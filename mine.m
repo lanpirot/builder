@@ -204,7 +204,8 @@ function serialize(interface2subs)
     ikeys = interface2subs.keys();
 
     for i = 1:length(ikeys)
-        subinfo = [subinfo interface2subs(ikeys(i)).sort().less_fields().subsystems];
+        interface2subs(ikeys(i)) = interface2subs(ikeys(i)).sort();
+        subinfo = [subinfo interface2subs(ikeys(i)).less_fields().subsystems];
     end
     Helper.file_print(Helper.name2subinfo_complete, jsonencode(subinfo));
     [ikeys, identities] = make_i2s_smaller(interface2subs);
@@ -213,13 +214,12 @@ function serialize(interface2subs)
     disp(string_prefix + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
 
 
+    subinfo = {};
     for i = 1:length(ikeys)
         subinfo = [subinfo interface2subs(ikeys(i)).remove_duplicates().subsystems];
     end
     Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
     disp("After" + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
-
-    
 end
 
 function [ikeys, identities] = make_i2s_smaller(i2s)
