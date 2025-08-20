@@ -184,16 +184,22 @@ function [roots, good_models] = synth_rounds()
             build_success = model_root.is_giant();
         else
             if Helper.is_synth_mode(Helper.synth_AST_model)
-                while 1
-                    try
-                        AST_model = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete);
-                        break
-                    catch
+                tries_given = 1;
+                while Helper.mutate_chances > tries_given
+                    while 1
+                        try
+                            AST_model = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete);
+                            break
+                        catch
+                        end
                     end
-                end            
-                [model_root, build_success] = synth_repair([], Identity('', '', ''), 1, AST_model);
-                if build_success && Helper.synth_double_check
-                    build_success = model_root.recursive_same_AST(AST_model);
+                    [model_root, build_success] = synth_repair([], Identity('', '', ''), 1, AST_model);
+                    if build_success && model_root.recursive_same_AST(AST_model)
+                        break
+                    else
+                        tries_given = tries_given + 1;
+                        fprintf("Trying one more time: %i\n", tries_given)
+                    end
                 end
             else
                 [model_root, build_success] = synth_repair([], Identity('', '', ''), 1);
