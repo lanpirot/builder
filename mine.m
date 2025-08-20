@@ -5,7 +5,7 @@ function mine(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:10 % max_number_of_models
+    for i = 1:100 % max_number_of_models
         path(old_path);
     
         if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)
@@ -49,12 +49,11 @@ function mine(max_number_of_models)
 
 
     %FIRST: complete dictionary containing all subs
-    interface2subs = dic_int2subs(subs, 0);
-    serialize(interface2subs, -1);
+    interface2subs = dic_int2subs(subs);
+    serialize(interface2subs, 0);
 
     %THEN: dictionary only for unique subsystems
-    interface2subs = dic_int2subs(subs, 1);
-    serialize(interface2subs, 0);
+    serialize(interface2subs, 1);
     %identity2sub = dic_id2sub(subs); not needed anymore?
     fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
     cd(origin)
@@ -136,13 +135,13 @@ function interface2subs = remove_non_chimerable(interface2subs, identity2sub)
     end
 end
 
-function interface2subs = dic_int2subs(subs, remove_duplicates)
+function interface2subs = dic_int2subs(subs)
     interface2subs  = dictionary();
     for i = 1:length(subs)
         hash = subs{i}.interface.hash();
         if isConfigured(interface2subs) && interface2subs.isKey(hash)
             eq = interface2subs(hash);
-            eq = eq.add_subsystem(subs{i}, remove_duplicates);
+            eq = eq.add_subsystem(subs{i});
         else
             eq = Equivalence_class(subs{i});
         end
@@ -204,22 +203,25 @@ function [interface2subs, identity2sub] = propagate_chimerability(subs, interfac
     disp("We propagated is_chimerable to " + string(chimerable_count) + " subsystems in " + string(propagation_rounds) + " rounds.")
 end
 
-function serialize(interface2subs, outputmode)
+function serialize(interface2subs, remove_duplicates)
     %serialize sub_info
     subinfo = {};
     ikeys = interface2subs.keys();
-    for i = 1:length(ikeys)
-        subinfo = [subinfo interface2subs(ikeys(i)).less_fields().subsystems];
-    end
 
     string_prefix = "After";
-    switch outputmode
-        case -1
+    switch remove_duplicates
+        case 0
+            for i = 1:length(ikeys)
+                subinfo = [subinfo interface2subs(ikeys(i)).sort().less_fields().subsystems];
+            end
             Helper.file_print(Helper.name2subinfo_complete, jsonencode(subinfo));
             [ikeys, identities] = make_i2s_smaller(interface2subs);
             Helper.file_print(Helper.interface2subs, jsonencode({ikeys, identities}))
             string_prefix = "Before";
-        case 0
+        case 1
+            for i = 1:length(ikeys)
+                subinfo = [subinfo interface2subs(ikeys(i)).remove_duplicates().less_fields().subsystems];
+            end
             Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
             [ikeys, identities] = make_i2s_smaller(interface2subs);
             Helper.file_print(Helper.interface2subs, jsonencode({ikeys, identities}))

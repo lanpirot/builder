@@ -1,4 +1,4 @@
-classdef Subsystem
+classdef Subsystem < handle
     properties
         handle
         identity

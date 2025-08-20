@@ -62,7 +62,7 @@ function runnable = try_simulate(model_name, loadable, compilable)
     runnable = 0;
     if loadable && compilable
         try
-            end_sim_time = 0.001;
+            end_sim_time = 0.00001;
             start_real_time = tic;
             while end_sim_time < 10 && toc(start_real_time) < 60
                 out = sim(model_name, 'StartTime', '0', 'StopTime', string(end_sim_time));

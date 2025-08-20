@@ -14,15 +14,23 @@ classdef Equivalence_class
             obj.subsystems = {subsystem};
         end
 
-        function obj = add_subsystem(obj, subsystem, remove_duplicates)
+        function obj = add_subsystem(obj, subsystem)
             if ~strcmp(obj.hash, subsystem.interface.hash())
                 throw(MException('Equivalence_class', 'This subsystem is not equivalent to others in class')) 
             end
-            next_index = obj.get_index(subsystem);
-            if next_index > 0 || ~remove_duplicates
-                next_index = abs(next_index);
-                obj.subsystems = [obj.subsystems(1:next_index - 1) {subsystem} obj.subsystems(next_index:end)];
-            end
+            obj.subsystems{end+1} = subsystem;
+        end
+
+        function obj = sort(obj)
+            num_elements = cellfun(@(x) x.num_local_elements, obj.subsystems);
+            [~, sortIdx] = sort(num_elements);
+            obj.subsystems = obj.subsystems(sortIdx);
+        end
+
+        function obj = remove_duplicates(obj)
+            num_elements = cellfun(@(x) x.num_local_elements, obj.subsystems);
+            [~, uniqueIdx] = unique(num_elements);
+            obj.subsystems = obj.subsystems(uniqueIdx);
         end
 
         function obj = less_fields(obj)
