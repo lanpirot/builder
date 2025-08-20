@@ -3,6 +3,7 @@ function mine(max_number_of_models)
     addpath(genpath('utils'), '-begin');
     set(0, 'DefaultFigureVisible', 'off');
     warning('off','all')
+
     old_path = path;
     disp("Starting mining process")
     Helper.reset_logs([Helper.name2subinfo, Helper.name2subinfo_chimerable, Helper.interface2subs, Helper.name2subinfo_complete, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
@@ -15,10 +16,10 @@ function mine(max_number_of_models)
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:max_number_of_models
+    for i = 1:100 % max_number_of_models
         path(old_path);
     
-        if needs_to_be_compilable && ~modellist.compilable(i)
+        if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i)
             continue
         end
         Helper.create_garbage_dir();
@@ -27,6 +28,10 @@ function mine(max_number_of_models)
         try
             model_handle = load_system(model_path);
             model_name = get_param(model_handle, 'Name');
+            try
+                set_param(model_name, 'SimMechanicsOpenEditorOnUpdate', 'off')
+            catch
+            end
 
             if model_is_problem_file(model_name)
                 errar("")
@@ -60,17 +65,21 @@ function mine(max_number_of_models)
         end
         cd(project_dir)
         Helper.clear_garbage()
+        close all force;
     end
     disp("We analyzed " + string(length(subs)) + " Subsystems altogether.")
     subs = remove_skips(subs);
-    disp(string(length(subs)) + " Subsystems were taken into account (no buses present etc.).")
+    disp(string(length(subs)) + " Subsystems were taken into account (no bus ports present etc.).")
 
 
     %FIRST: complete dictionary containing all subs
     interface2subs = dic_int2subs(subs, 0);
-    identity2sub = dic_id2sub(subs);
     serialize(interface2subs, -1);
 
+    %THEN: dictionary only for unique subsystems
+    interface2subs = dic_int2subs(subs, 1);
+    serialize(interface2subs, 0);
+    %identity2sub = dic_id2sub(subs); not needed anymore?
     fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
 end
 

@@ -57,8 +57,8 @@ classdef Helper
         third_level_divider = "+";
 
 
-        dimensions = 0
-        data_types = 0
+        dimensions = 1
+        data_types = 1
         needs_to_be_compilable = Helper.dimensions || Helper.data_types
 
         input_output_number_compability = 0     %a subsystem can be exchanged, if the other subsystem has less inputs and more outputs (that are all equivalent)
@@ -77,7 +77,7 @@ classdef Helper
         synth_force_diversity = 1;
         synth_seed_with_roots_only = 1;
 
-        synth_model_count = 1000;
+        synth_model_count = 12;
         synth_repair_count = 3;
         synth_random =    'RANDOM';                 %just try to synthesize any model
         synth_AST_model = 'AST_MODEL'               %try to emulate a given model's subtree
@@ -88,16 +88,16 @@ classdef Helper
         mutate_chances = 100;
         choose_retries = 10;
         synth_mode = Helper.synth_giant
-        synth_max_depth = 50;
+        synth_max_depth = 900;                      %set(0, 'RecursionLimit', 1000)
 
 
         %slnet_max_depth = 15;                       %SLNET max: 15
-        %slnet_max_elements = 106823;                %SLNET max: 106823
-        %slnet_max_subs = 13501;                     %SLNET max: 13501
-
-        slnet_max_depth = 5;                       %SLNET max: 15
-        slnet_max_elements = 106;                %SLNET max: 106823
-        slnet_max_subs = 13;                     %SLNET max: 13501
+        %slnet_max_elements = 123823;                %SLNET max: 106823
+        %slnet_max_subs = 15301;                     %SLNET max: 13501
+		
+        slnet_max_depth = 5;                         %SLNET max: 15
+        slnet_max_elements = 106;                    %SLNET max: 106823
+        slnet_max_subs = 13;                         %SLNET max: 13501
     end
     
     methods(Static)
@@ -271,6 +271,7 @@ classdef Helper
         end
 
         function clean_up(startmessage, playground_path, logs)
+            set(0, 'DefaultFigureVisible', 'off');
             warning('off','all')
             disp(startmessage)
             mkdir(playground_path)

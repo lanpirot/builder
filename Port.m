@@ -125,10 +125,11 @@ classdef Port
         end
 
         function type = get_type(type_field)
-            if length(type_field.Inport) + length(type_field.Outport) ~= 1
-                dips("a")
+            if isempty(type_field) || length(type_field.Inport) + length(type_field.Outport) ~= 1
+                type = 'notype';
+                return
             end
-            if length(type_field.Inport) == 1
+            if isscalar(type_field.Inport)
                 type = type_field.Inport{1};
                 return
             end

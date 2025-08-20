@@ -23,5 +23,5 @@ SLNET
 
 1. In `system_constants.m` state where your `SLNET` directory is located and where you want the output of the synthesizerto be stored at.
 2. Next, run `gather_models.m`. This will scan the whole database for suitable models, i.e., models that are loadable/compilable.
-3. To build the database of Subsystems and their meta-information, use `miner.m`.
+3. To build the database of Subsystems and their meta-information, use `mine.m`.
 4. Finally, run the `synthesize.m` script to generate the various synthetic models, which you can then use to evaluate your tool with. 
