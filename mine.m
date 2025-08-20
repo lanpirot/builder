@@ -1,49 +1,25 @@
 function mine(max_number_of_models)
-    addpath(pwd)
-    addpath(genpath('utils'), '-begin');
-    set(0, 'DefaultFigureVisible', 'off');
-    warning('off','all')
+    [old_path,models_evaluated,subs,project_dir,needs_to_be_compilable,modellist,origin] = startinit();
 
-    old_path = path;
-    disp("Starting mining process")
-    Helper.reset_logs([Helper.name2subinfo, Helper.name2subinfo_chimerable, Helper.interface2subs, Helper.name2subinfo_complete, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
-    models_evaluated = 0;
-    subs = {};
-    project_dir = Helper.project_dir;
-    needs_to_be_compilable = Helper.needs_to_be_compilable;
 
-    modellist = tdfread(Helper.modellist, 'tab');
     if ~exist("max_number_of_models",'var')
         max_number_of_models = height(modellist.model_url);
     end
-    for i = 1:100 % max_number_of_models
+    for i = 1:10 % max_number_of_models
         path(old_path);
     
-        if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i)
+        if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)
             continue
         end
-        Helper.create_garbage_dir();
-        model_path = string(strip(modellist.model_url(i, :), "right"));
+        Helper.create_garbage_dir(mfilename);
+        
 
         try
-            model_handle = load_system(model_path);
-            model_name = get_param(model_handle, 'Name');
-            try
-                set_param(model_name, 'SimMechanicsOpenEditorOnUpdate', 'off')
-            catch
-            end
+            [model_path, model_handle, model_name] = prepare_model(modellist.model_url(i, :));
 
-            if model_is_problem_file(model_name)
-                errar("")
-            end
-
-            try 
-                systemcomposer.loadModel(model_name);%skip architecture models
+            if is_architecture_model(model_name) || model_is_problem_file(model_name)
                 cd(project_dir)
-                close(model_name)
-                try_close(model_name, model_path)                
                 continue
-            catch
             end
 
             if needs_to_be_compilable
@@ -64,7 +40,7 @@ function mine(max_number_of_models)
             try_close(model_name, model_path);
         end
         cd(project_dir)
-        Helper.clear_garbage()
+        Helper.clear_garbage(mfilename)
         close all force;
     end
     disp("We analyzed " + string(length(subs)) + " Subsystems altogether.")
@@ -81,6 +57,28 @@ function mine(max_number_of_models)
     serialize(interface2subs, 0);
     %identity2sub = dic_id2sub(subs); not needed anymore?
     fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
+    cd(origin)
+end
+
+function [model_path, model_handle, model_name] = prepare_model(raw_model_url)
+    model_path = string(strip(raw_model_url, "right"));
+    model_handle = load_system(model_path);
+    model_name = get_param(model_handle, 'Name');
+    try
+        set_param(model_name, 'SimMechanicsOpenEditorOnUpdate', 'off')
+    catch
+    end
+end
+
+function bool = is_architecture_model(model_name)
+    try
+        systemcomposer.loadModel(model_name);%skip architecture models
+        close(model_name)
+        try_close(model_name, model_path)                
+        bool = true;
+    catch
+        bool = false;
+    end
 end
 
 function bool = model_is_problem_file(name)
@@ -277,4 +275,22 @@ end
 function log(project_dir, file_name, message)
     cd(project_dir)
     Helper.log(file_name, message);
+end
+
+function [old_path,models_evaluated,subs,project_dir,needs_to_be_compilable,modellist,origin] = startinit()
+    origin = pwd;
+    addpath(origin)
+    addpath(genpath('utils'), '-begin');
+    set(0, 'DefaultFigureVisible', 'off');
+    warning('off','all')
+    
+    old_path = path;
+    disp("Starting mining process")
+    Helper.reset_logs([Helper.name2subinfo, Helper.name2subinfo_chimerable, Helper.interface2subs, Helper.name2subinfo_complete, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
+    models_evaluated = 0;
+    subs = {};
+    project_dir = Helper.project_dir;
+    needs_to_be_compilable = Helper.needs_to_be_compilable;
+    
+    modellist = tdfread(Helper.modellist, 'tab');
 end

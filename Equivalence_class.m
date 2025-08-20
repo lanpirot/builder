@@ -15,7 +15,7 @@ classdef Equivalence_class
         end
 
         function obj = add_subsystem(obj, subsystem, remove_duplicates)
-            if obj.hash ~= subsystem.interface.hash()
+            if ~strcmp(obj.hash, subsystem.interface.hash())
                 throw(MException('Equivalence_class', 'This subsystem is not equivalent to others in class')) 
             end
             next_index = obj.get_index(subsystem);

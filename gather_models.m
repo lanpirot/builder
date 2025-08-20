@@ -10,9 +10,7 @@ function gather_models(max_number_of_models)
             continue
         end
         
-        [project_url, model_url] = prepare_model(modellist, i, project_info);
-        cd(project_dir)
-        Helper.create_garbage_dir()
+        [project_url, model_url] = prepare_model(modellist, i, project_info, project_dir);
         [loadable, model_name] = try_load(model_url);
         compilable = try_compile(model_name, loadable);
         runnable = try_simulate(model_name, loadable, compilable);
@@ -67,11 +65,14 @@ function runnable = try_simulate(model_name, loadable, compilable)
             end_sim_time = 0.001;
             start_real_time = tic;
             while end_sim_time < 10 && toc(start_real_time) < 60
-                sim(model_name, 'StartTime', '0', 'StopTime', string(end_sim_time));
+                out = sim(model_name, 'StartTime', '0', 'StopTime', string(end_sim_time));
+                if ~isempty(out.ErrorMessage)
+                    return
+                end
                 end_sim_time = end_sim_time * 2;
             end
             runnable = 1;
-        catch ME
+        catch
         end
     end
 end
@@ -87,7 +88,7 @@ function closable = try_close(model_url, model_name, loadable)
     end
 end
 
-function [project_url, model_url] = prepare_model(modellist, i, project_info)
+function [project_url, model_url] = prepare_model(modellist, i, project_info, project_dir)
     disp("Now gathering model no. " + string(i))
     model = modellist(i);
     if contains(model.name, ' ')
@@ -105,6 +106,8 @@ function [project_url, model_url] = prepare_model(modellist, i, project_info)
     project_url = Helper.rstrip(project_url);
 
     model_url = string(fullfile(model.folder, model.name));
+    cd(project_dir)
+    Helper.create_garbage_dir(mfilename)
 end
 
 function [project_dir, project_info, fileID, modellist] =  startinit()
@@ -123,7 +126,7 @@ function [project_dir, project_info, fileID, modellist] =  startinit()
 end
 
 function clean_up()
-    Helper.clear_garbage();
+    Helper.clear_garbage(mfilename);
     close all force;
     bdclose all
 end

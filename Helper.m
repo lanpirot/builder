@@ -256,14 +256,14 @@ classdef Helper
             fclose(my_fileID);
         end
 
-        function create_garbage_dir()
-            mkdir(Helper.garbage_out)
-            cd(Helper.garbage_out)
+        function create_garbage_dir(filename)
+            mkdir(Helper.garbage_out+filename)
+            cd(Helper.garbage_out+filename)
         end
 
-        function clear_garbage()
+        function clear_garbage(filename)
             try
-                rmdir(Helper.garbage_out + "*", 's');
+                rmdir(Helper.garbage_out + filename + "*", 's');
             catch ME
                 %log(Helper.project_dir, 'log_garbage_out', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
             end
