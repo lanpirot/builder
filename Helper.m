@@ -105,10 +105,11 @@ classdef Helper
                 case Helper.synth_width
                     synth.model_count = 100;
                     synth.repair_level_count = 3;
-                    synth.repair_root_count = synth.repair_level_count;
+                    synth.repair_root_count = 3 * synth.repair_level_count;
                     synth.choose_sample_size = 10;
                     synth.mutate_chances = 100;
                     synth.choose_retries = 10;
+                    synth.min_height = 10;
                     synth.max_depth = 20;
                 case Helper.synth_giant
                     synth.model_count = 100;
@@ -124,7 +125,7 @@ classdef Helper
                 case Helper.synth_depth
                     synth.model_count = 100;
                     synth.repair_level_count = 3;
-                    synth.repair_root_count = synth.repair_level_count;
+                    synth.repair_root_count = 20;
                     synth.choose_sample_size = 10;
                     synth.mutate_chances = 100;
                     synth.choose_retries = 5;

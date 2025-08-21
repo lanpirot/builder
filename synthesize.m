@@ -3,7 +3,7 @@ function synthesize()
     global synth name2subinfo_complete interface2subs model2id
     synth = struct();
     %Helper.profiles(profiles(chosen, dry, check, diverse, roots_only, compilable)
-    Helper.profiles(Helper.synth_giant, 1, 0, 1, 1, 1)
+    Helper.profiles(Helper.synth_width, 1, 0, 1, 1, 1)
     
     
     name2subinfo_complete = Helper.parse_json(Helper.name2subinfo_complete);
@@ -171,7 +171,7 @@ function [roots, good_models] = synth_rounds()
                 end
             end
             mutate_chances = synth.mutate_chances;
-            while ~double_check(model_root) && mutate_chances
+            while ~double_check_root(model_root) && mutate_chances
                 [model_root, mutation_performed] = model_root.mutate_bigger();
                 fprintf("%i %i %i\n", model_root.local_depth, model_root.num_elements, model_root.num_subsystems);
                 mutate_chances = mutate_chances - 1;
@@ -180,7 +180,7 @@ function [roots, good_models] = synth_rounds()
                 end
                 %disp(report2string(i, model_root))
             end
-            build_success = double_check(model_root);
+            build_success = double_check_root(model_root);
         else
             if Helper.is_synth_mode(Helper.synth_AST_model)
                 while 1
@@ -280,14 +280,21 @@ function [subtree, build_success] = synth_repair(interface, not_identity, depth,
                 break
             end
         end
-        if (isempty(children_before) || (j == length(children_before) && sub_met)) && ((nargin < 4 && double_check(subtree)) || (nargin >=4 && double_check(subtree, AST_model)))
-            build_success = 1;
-            return
+        if (isempty(children_before) || (j == length(children_before) && sub_met)) 
+            if depth ~= 1
+                build_success = 1;
+                return
+            end
+            subtree = subtree.report();
+            if (nargin < 4 && double_check_root(subtree)) || (nargin >=4 && double_check_root(subtree, AST_model))
+                build_success = 1;
+                return
+            end
         end
     end
 end
 
-function bool = double_check(subtree, AST_model)
+function bool = double_check_root(subtree, AST_model)
     global synth
     bool = 0;
     switch synth.mode
@@ -296,11 +303,11 @@ function bool = double_check(subtree, AST_model)
         case Helper.synth_AST_model
             bool = subtree.recursive_same_AST(AST_model);
         case Helper.synth_width
-            bool = subtree.local_depth > synth.min_height;
+            bool = subtree.local_depth >= synth.min_height;
         case Helper.synth_giant
             bool = subtree.local_depth > synth.slnet_max_depth && subtree.num_elements > synth.slnet_max_elements && subtree.num_subsystems > synth.slnet_max_subs;
         case Helper.synth_depth
-            bool = subtree.local_depth > synth.min_height && subtree.local_depth < synth.max_height;
+            bool = ~isempty(subtree.local_depth) && subtree.local_depth >= synth.min_depth && subtree.local_depth <= synth.max_depth;
     end
 end
 
