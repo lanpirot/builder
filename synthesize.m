@@ -1,12 +1,11 @@
 function synthesize()
     Helper.clean_up("Starting synthesis process", Helper.synthesize_playground, [Helper.log_synth_theory Helper.log_synth_practice Helper.synth_report])
-    global sy
-    sy = struct();
+    global synth name2subinfo_complete interface2subs model2id
+    synth = struct();
     %Helper.profiles(profiles(chosen, dry, check, diverse, roots_only, compilable)
     Helper.profiles(Helper.synth_giant, 1, 0, 1, 1, 1)
     
     
-    global name2subinfo_complete
     name2subinfo_complete = Helper.parse_json(Helper.name2subinfo_complete);
     name2subinfo_complete = Helper.build_sub_info(name2subinfo_complete);
     ks = name2subinfo_complete.keys();
@@ -18,10 +17,8 @@ function synthesize()
         models{i} = n2i.(Helper.identity).model_path;
     end
     models = unique(models);
-    global model2id
     model2id = dictionary(models, 1:length(models));
 
-    global interface2subs
     interface2subs = Helper.parse_json(Helper.interface2subs);
     interface2subs = dictionary(interface2subs{1}, interface2subs{2});
     start_synth_report()
@@ -47,7 +44,7 @@ function slnet_report()
         if Identity(name2subinfo_complete{{ks{i}}}.IDENTITY).is_root()
             subtree = SubTree(name2subinfo_complete{{ks{i}}}.(Helper.identity), name2subinfo_complete);
             subtree = subtree.recursive_subtree(name2subinfo_complete);
-            subtree = subtree.root_report();
+            subtree = subtree.report();
             roots{end + 1} = subtree;
             Helper.log('synth_report', report2string(i, subtree));
         end
@@ -147,14 +144,14 @@ function out_string = minmedmaxmedmeanstddev(l)
 end
 
 function [roots, good_models] = synth_rounds()
-    global name2subinfo_complete model2id interface2subs depth_reached sy
+    global name2subinfo_complete model2id interface2subs depth_reached synth
     savename2subinfo_complete = name2subinfo_complete;
     savemodel2id = model2id;
     saveinterface2subs = interface2subs;
     
     good_models = 0;
     roots = {};
-    for i = 1:sy.synth_model_count
+    for i = 1:synth.model_count
         name2subinfo_complete = savename2subinfo_complete;
         model2id = savemodel2id;
         interface2subs = saveinterface2subs;
@@ -168,39 +165,32 @@ function [roots, good_models] = synth_rounds()
         if Helper.is_synth_mode(Helper.synth_giant)
             while 1
                 try
-                    model_root = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete).root_report();
+                    model_root = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete).report();
                     break
                 catch
                 end
             end
-            mutate_chances = sy.mutate_chances;
-            while ~model_root.is_giant() && mutate_chances
+            mutate_chances = synth.mutate_chances;
+            while ~double_check(model_root) && mutate_chances
                 [model_root, mutation_performed] = model_root.mutate_bigger();
                 fprintf("%i %i %i\n", model_root.local_depth, model_root.num_elements, model_root.num_subsystems);
                 mutate_chances = mutate_chances - 1;
                 if mutation_performed
-                    mutate_chances = sy.mutate_chances;
+                    mutate_chances = synth.mutate_chances;
                 end
                 %disp(report2string(i, model_root))
             end
-            build_success = model_root.is_giant();
+            build_success = double_check(model_root);
         else
             if Helper.is_synth_mode(Helper.synth_AST_model)
-                tries_given = 1;
-                while sy.mutate_chances > tries_given
-                    while 1
-                        try
-                            AST_model = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete);
-                            break
-                        catch
-                        end
-                    end
-                    [model_root, build_success] = synth_repair([], Identity('', '', ''), 1, AST_model);
-                    if build_success && model_root.recursive_same_AST(AST_model)
+                while 1
+                    try
+                        AST_model = choose_subsystem([], Identity('', '', ''), 0).recursive_subtree(name2subinfo_complete);
                         break
+                    catch
                     end
-                    tries_given = tries_given + 1;
                 end
+                [model_root, build_success] = synth_repair([], Identity('', '', ''), 1, AST_model);
             else
                 [model_root, build_success] = synth_repair([], Identity('', '', ''), 1);
             end
@@ -211,11 +201,11 @@ function [roots, good_models] = synth_rounds()
             disp("Building model " + string(i) + " FAILED")
             continue
         end
-        model_root = model_root.root_report();
+        model_root = model_root.report();
         roots{i} = model_root;
         Helper.log('synth_report', report2string(i, model_root));
 
-        if sy.synth_dry_build
+        if synth.dry_build
             continue
         end
         
@@ -225,7 +215,7 @@ function [roots, good_models] = synth_rounds()
             if additional_level
                 model_root = model_root.add_level();
             end
-            if sy.synth_double_check && ~slx_evaluate(slx_handle)
+            if synth.double_check && ~slx_evaluate(slx_handle)
                 dips("Error")
             end
 
@@ -233,7 +223,7 @@ function [roots, good_models] = synth_rounds()
 
             good_models = good_models + 1;
             disp("Saved model " + string(i))
-            if sy.synth_double_check
+            if synth.double_check
                 load_system(model_path)
                 model_root.is_discrepant_to_slx()
                 close_system(model_path)
@@ -247,15 +237,18 @@ function [roots, good_models] = synth_rounds()
 end
 
 function [subtree, build_success] = synth_repair(interface, not_identity, depth, AST_model)
-    global name2subinfo_complete sy
+    global name2subinfo_complete synth
     subtree = [];
     build_success = 0;
 
     if stop_repairing(depth)
         return
     end
-    
-    for i = 1:sy.synth_repair_count
+    max_repairs = synth.repair_level_count;
+    if depth == 1
+        max_repairs = synth.repair_root_count;
+    end
+    for i = 1:max_repairs
         %choose identity fitting to interface and not_identity
         if Helper.is_synth_mode(Helper.synth_AST_model)
             subtree = choose_subsystem(interface, not_identity, depth, length(AST_model.children));
@@ -287,27 +280,44 @@ function [subtree, build_success] = synth_repair(interface, not_identity, depth,
                 break
             end
         end
-        if isempty(children_before) || (j == length(children_before) && sub_met)
+        if (isempty(children_before) || (j == length(children_before) && sub_met)) && ((nargin < 4 && double_check(subtree)) || (nargin >=4 && double_check(subtree, AST_model)))
             build_success = 1;
             return
         end
     end
 end
 
+function bool = double_check(subtree, AST_model)
+    global synth
+    bool = 0;
+    switch synth.mode
+        case Helper.synth_random
+            bool = 1;
+        case Helper.synth_AST_model
+            bool = subtree.recursive_same_AST(AST_model);
+        case Helper.synth_width
+            bool = subtree.local_depth > synth.min_height;
+        case Helper.synth_giant
+            bool = subtree.local_depth > synth.slnet_max_depth && subtree.num_elements > synth.slnet_max_elements && subtree.num_subsystems > synth.slnet_max_subs;
+        case Helper.synth_depth
+            bool = subtree.local_depth > synth.min_height && subtree.local_depth < synth.max_height;
+    end
+end
+
 function stop = stop_repairing(depth)
-    global sy
+    global synth
     stop = 0;
-    switch sy.synth_mode
+    switch synth.mode
         case Helper.synth_AST_model
             return
         case Helper.synth_depth
             global depth_reached
-            if depth > sy.synth_max_depth
+            if depth > synth.max_depth
                 depth_reached = 1;
             end
             return
         otherwise
-            if depth > sy.synth_max_depth
+            if depth > synth.max_depth
                 stop = 1;
             end
     end    
@@ -318,20 +328,20 @@ function str = report2string(model_no, root)
 end
 
 function bool = slx_evaluate(slx_identity)
-    bool = loadable(slx_identity);%&& (~sy.needs_to_be_compilable || compilable(slx_identity))
+    bool = loadable(slx_identity);%&& (~synth.needs_to_be_compilable || compilable(slx_identity))
 end
 
 function start_synth_report()
-    global sy
-    Helper.log('synth_report', ",,,,synth_model_count " + string(sy.synth_model_count + " synth_repair_count " + sy.synth_repair_count + " synth_max_depth " + sy.synth_max_depth + " synth_mode " + sy.synth_mode) + " synth_force_diversity " + sy.synth_force_diversity)
+    global synth
+    Helper.log('synth_report', ",,,,synth_model_count " + string(synth.model_count + " repair_level_count " + synth.repair_level_count + " synth_max_depth " + synth.max_depth + " synth_mode " + synth.mode) + " synth_force_diversity " + synth.force_diversity)
     Helper.log('synth_report', "model_no, depth, elements, subs, unique_models, unique_subsystems");
 end
 
 function bool = loadable(slx_identity)
-    global sy
+    global synth
     try
         load_system(slx_identity)
-        if ~sy.needs_to_be_compilable || compilable(slx_identity)
+        if ~synth.needs_to_be_compilable || compilable(slx_identity)
             bool = 1;
         end        
     catch

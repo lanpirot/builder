@@ -78,53 +78,58 @@ classdef Helper
     methods(Static)
         function profiles(chosen, dry, check, diverse, roots_only, compilable)
             set(0, 'RecursionLimit', 500)
-            global sy
-            sy.synth_mode = chosen;
-            sy.synth_dry_build = dry;
-            sy.synth_double_check = check;
-            sy.synth_force_diversity = diverse;
-            sy.synth_seed_with_roots_only = roots_only;
-            sy.needs_to_be_compilable = compilable;
+            global synth
+            synth.mode = chosen;
+            synth.dry_build = dry;
+            synth.double_check = check;
+            synth.force_diversity = diverse;
+            synth.seed_with_roots_only = roots_only;
+            synth.needs_to_be_compilable = compilable;
             switch chosen
                 case Helper.synth_random
-                    sy.synth_model_count = 1000;
-                    sy.synth_repair_count = 3;
-                    sy.synth_sample_size = 10;
-                    sy.mutate_chances = 100;
-                    sy.choose_retries = 10;
-                    sy.synth_max_depth = 20;
+                    synth.model_count = 1000;
+                    synth.repair_level_count = 3;
+                    synth.repair_root_count = synth.repair_level_count;
+                    synth.choose_sample_size = 10;
+                    synth.mutate_chances = 100;
+                    synth.choose_retries = 10;
+                    synth.max_depth = 20;
                 case Helper.synth_AST_model
-                    sy.synth_model_count = 1000;
-                    sy.synth_repair_count = 2;
-                    sy.synth_sample_size = 10;
-                    sy.mutate_chances = 100;
-                    sy.choose_retries = 5;
-                    sy.synth_max_depth = 20;
+                    synth.model_count = 1000;
+                    synth.repair_level_count = 2;
+                    synth.repair_root_count = 20 * synth.repair_level_count;
+                    synth.choose_sample_size = 10;
+                    synth.mutate_chances = 100;
+                    synth.choose_retries = 5;
+                    synth.max_depth = 20;
                 case Helper.synth_width
-                    sy.synth_model_count = 100;
-                    sy.synth_repair_count = 3;
-                    sy.synth_sample_size = 10;
-                    sy.mutate_chances = 100;
-                    sy.choose_retries = 10;
-                    sy.synth_max_depth = 20;
+                    synth.model_count = 100;
+                    synth.repair_level_count = 3;
+                    synth.repair_root_count = synth.repair_level_count;
+                    synth.choose_sample_size = 10;
+                    synth.mutate_chances = 100;
+                    synth.choose_retries = 10;
+                    synth.max_depth = 20;
                 case Helper.synth_giant
-                    sy.synth_model_count = 100;
-                    sy.synth_repair_count = 3;
-                    sy.synth_sample_size = 10;
-                    sy.mutate_chances = 100;
-                    sy.choose_retries = 10;
-                    sy.synth_max_depth = 20;
-                    sy.slnet_max_depth = 15;                       %SLNET max: 15
-                    sy.slnet_max_elements = 123823;                %SLNET max: 106823
-                    sy.slnet_max_subs = 15301;                     %SLNET max: 13501
+                    synth.model_count = 100;
+                    synth.repair_level_count = 3;
+                    synth.repair_root_count = 2 * synth.repair_level_count;
+                    synth.choose_sample_size = 10;
+                    synth.mutate_chances = 100;
+                    synth.choose_retries = 10;
+                    synth.max_depth = 20;
+                    synth.slnet_max_depth = 15;                       %SLNET max: 15
+                    synth.slnet_max_elements = 123823;                %SLNET max: 106823
+                    synth.slnet_max_subs = 15301;                     %SLNET max: 13501
                 case Helper.synth_depth
-                    sy.synth_model_count = 100;
-                    sy.synth_repair_count = 3;
-                    sy.synth_sample_size = 10;
-                    sy.mutate_chances = 100;
-                    sy.choose_retries = 5;
-                    sy.synth_min_depth = 50;
-                    sy.synth_max_depth = 150;
+                    synth.model_count = 100;
+                    synth.repair_level_count = 3;
+                    synth.repair_root_count = synth.repair_level_count;
+                    synth.choose_sample_size = 10;
+                    synth.mutate_chances = 100;
+                    synth.choose_retries = 5;
+                    synth.min_depth = 50;
+                    synth.max_depth = 150;
                     set(0, 'RecursionLimit', 5000)
             end
         end
@@ -359,8 +364,8 @@ classdef Helper
         end
 
         function bool = is_synth_mode(mode)
-            global sy
-            bool = strcmp(sy.synth_mode, mode);
+            global synth
+            bool = strcmp(synth.mode, mode);
         end
     end
 end

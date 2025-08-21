@@ -115,12 +115,6 @@ classdef SubTree
             end
         end
 
-        function obj = root_report(obj)
-            obj = obj.report();
-            obj.unique_models = unique(obj.unique_models);
-            obj.unique_subsystems = unique(obj.unique_subsystems);
-        end
-
         function obj = report(obj)
             global name2subinfo_complete model2id
             local_elements = name2subinfo_complete{{struct(obj.identity)}}.(Helper.num_local_elements);
@@ -186,7 +180,7 @@ classdef SubTree
             global name2subinfo_complete
             mutation_performed = 0;
             interface = name2subinfo_complete{{struct(obj.identity)}}.(Helper.interface);
-            equivalent_obj = choose_subsystem(interface.hsh, Identity('', '', ''), 10).recursive_subtree(name2subinfo_complete).root_report();
+            equivalent_obj = choose_subsystem(interface.hsh, Identity('', '', ''), obj.local_depth).recursive_subtree(name2subinfo_complete).report();
             if equivalent_obj.is_bigger(obj)
                 mutation_performed = 1;
                 obj = equivalent_obj;
@@ -195,11 +189,6 @@ classdef SubTree
 
         function bool = is_bigger(obj, other_obj)
             bool = obj.num_subsystems > other_obj.num_subsystems;
-        end
-
-        function bool = is_giant(obj)
-            global sy
-            bool = obj.local_depth > sy.slnet_max_depth && obj.num_elements > sy.slnet_max_elements && obj.num_subsystems > sy.slnet_max_subs;
         end
     end
 end
