@@ -22,7 +22,7 @@ classdef Helper
         
         %Subsystem.m
         num_local_elements = 'NUM_LOCAL_ELEMENTS'
-        local_depth = 'LOCAL_DEPTH' %sub_depth
+        local_depth = 'LOCAL_DEPTH'
         subtree_depth = 'SUBTREE_DEPTH'
         children = 'CHILDREN'
 
@@ -56,11 +56,6 @@ classdef Helper
         second_level_divider = ";";
         third_level_divider = "+";
 
-
-        dimensions = 1
-        data_types = 1
-        needs_to_be_compilable = Helper.dimensions || Helper.data_types
-
         input_output_number_compability = 0     %a subsystem can be exchanged, if the other subsystem has less inputs and more outputs (that are all equivalent)
 
 
@@ -70,37 +65,70 @@ classdef Helper
         random = "RANDOM"
         shallow = "SHALLOW"
         deep = "DEEP"
-        wish_property = Helper.deep     %set to one of above to build models of a certain property
+        wish_property = Helper.deep     %set to one of above to build models of a certain property for mutation
 
-        synth_dry_build = 1;
-        synth_double_check = 0;
-        synth_force_diversity = 1;
-        synth_seed_with_roots_only = 1;
 
-        synth_model_count = 1000;
-        synth_repair_count = 2;
         synth_random =    'RANDOM';                 %just try to synthesize any model
         synth_AST_model = 'AST_MODEL'               %try to emulate a given model's subtree
         synth_width =     'WIDTH'                   %try to fill every level of the model until max_depth
         synth_giant =     'GIANT'                   %build giant models, efficiently
         synth_depth =     'DEPTH'                   %try to create a deep model
-        synth_sample_size = 10;
-        mutate_chances = 100;
-        choose_retries = 5;
-        synth_mode = Helper.synth_AST_model
-        synth_max_depth = 20;                      %set(0, 'RecursionLimit', 1000)
-
-
-        slnet_max_depth = 15;                       %SLNET max: 15
-        slnet_max_elements = 123823;                %SLNET max: 106823
-        slnet_max_subs = 15301;                     %SLNET max: 13501
-		
-        %slnet_max_depth = 9;                         %SLNET max: 15
-        %slnet_max_elements = 10600;                    %SLNET max: 106823
-        %slnet_max_subs = 1300;                         %SLNET max: 13501
     end
     
     methods(Static)
+        function profiles(chosen, dry, check, diverse, roots_only, compilable)
+            set(0, 'RecursionLimit', 500)
+            global sy
+            sy.synth_mode = chosen;
+            sy.synth_dry_build = dry;
+            sy.synth_double_check = check;
+            sy.synth_force_diversity = diverse;
+            sy.synth_seed_with_roots_only = roots_only;
+            sy.needs_to_be_compilable = compilable;
+            switch chosen
+                case Helper.synth_random
+                    sy.synth_model_count = 1000;
+                    sy.synth_repair_count = 3;
+                    sy.synth_sample_size = 10;
+                    sy.mutate_chances = 100;
+                    sy.choose_retries = 10;
+                    sy.synth_max_depth = 20;
+                case Helper.synth_AST_model
+                    sy.synth_model_count = 1000;
+                    sy.synth_repair_count = 2;
+                    sy.synth_sample_size = 10;
+                    sy.mutate_chances = 100;
+                    sy.choose_retries = 5;
+                    sy.synth_max_depth = 20;
+                case Helper.synth_width
+                    sy.synth_model_count = 100;
+                    sy.synth_repair_count = 3;
+                    sy.synth_sample_size = 10;
+                    sy.mutate_chances = 100;
+                    sy.choose_retries = 10;
+                    sy.synth_max_depth = 20;
+                case Helper.synth_giant
+                    sy.synth_model_count = 100;
+                    sy.synth_repair_count = 3;
+                    sy.synth_sample_size = 10;
+                    sy.mutate_chances = 100;
+                    sy.choose_retries = 10;
+                    sy.synth_max_depth = 20;
+                    sy.slnet_max_depth = 15;                       %SLNET max: 15
+                    sy.slnet_max_elements = 123823;                %SLNET max: 106823
+                    sy.slnet_max_subs = 15301;                     %SLNET max: 13501
+                case Helper.synth_depth
+                    sy.synth_model_count = 100;
+                    sy.synth_repair_count = 3;
+                    sy.synth_sample_size = 10;
+                    sy.mutate_chances = 100;
+                    sy.choose_retries = 5;
+                    sy.synth_min_depth = 50;
+                    sy.synth_max_depth = 150;
+                    set(0, 'RecursionLimit', 5000)
+            end
+        end
+
         function af = found_alt(found)
             persistent alts_found
             if isempty(alts_found)
@@ -331,7 +359,8 @@ classdef Helper
         end
 
         function bool = is_synth_mode(mode)
-            bool = strcmp(Helper.synth_mode, mode);
+            global sy
+            bool = strcmp(sy.synth_mode, mode);
         end
     end
 end

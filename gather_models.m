@@ -62,16 +62,16 @@ function runnable = try_simulate(model_name, loadable, compilable)
     runnable = 0;
     if loadable && compilable
         try
-            end_sim_time = 0.00001;
+            set_param(model_name, 'SimulationCommand', 'start');
+            set_param(model_name, 'SimulationCommand', 'pause');
             start_real_time = tic;
-            while end_sim_time < 3 && toc(start_real_time) < 60
-                out = sim(model_name, 'StartTime', '0', 'StopTime', string(end_sim_time));
-                if ~isempty(out.ErrorMessage)
-                    return
-                end
-                end_sim_time = end_sim_time * 2;
+            sim_time = 0;
+            while sim_time < 1 && toc(start_real_time) < 15
+                set_param(model_name, 'SimulationCommand', 'step')
+                sim_time = get_param(model_name, 'SimulationTime');
             end
-            runnable = 1;
+            runnable = double(sim_time > 0);
+            set_param(model_name, 'SimulationCommand', 'stop')
         catch
         end
     end
@@ -81,7 +81,7 @@ function closable = try_close(model_url, model_name, loadable)
     closable = 0;
     if loadable
         try
-            close_system(model_url)
+            close_system(model_url, 0)
         catch            
         end
         closable = double(~bdIsLoaded(model_name));

@@ -122,37 +122,24 @@ classdef SubTree
         end
 
         function obj = report(obj)
-            global name2subinfo_complete
-            global model2id
+            global name2subinfo_complete model2id
             local_elements = name2subinfo_complete{{struct(obj.identity)}}.(Helper.num_local_elements);
-            if isempty(obj.children)
-                obj.local_depth = 0;
-                obj.num_elements = local_elements;
-                obj.num_subsystems = 1;
-                obj.unique_models = model2id(cellstr(obj.identity.model_path));
-                obj.unique_subsystems = name2subinfo_complete{{struct(obj.identity)}}.sub_id;
-            else
-                subtree_local_depth = 0;
-                subtree_num_elements = 0;
-                subtree_num_subsystems = 0;
-                all_models = [];
-                all_subsystems = [];
+            obj.unique_models = model2id(cellstr(obj.identity.model_path));
+            obj.unique_subsystems = name2subinfo_complete{{struct(obj.identity)}}.sub_id;
+            obj.local_depth = 0;
+            obj.num_elements = local_elements;
+            obj.num_subsystems = 1;
+            if ~isempty(obj.children)
                 for i = 1:length(obj.children)
                     obj.children{i} = obj.children{i}.report();
-                    subtree_local_depth = max(subtree_local_depth, obj.children{i}.local_depth);
-                    subtree_num_elements = subtree_num_elements + obj.children{i}.num_elements;
-                    subtree_num_subsystems = subtree_num_subsystems + obj.children{i}.num_subsystems;
-                    all_models = [all_models obj.children{i}.unique_models];
-                    all_subsystems = [all_subsystems obj.children{i}.unique_subsystems];
+                    obj.local_depth = max(obj.local_depth, obj.children{i}.local_depth);
+                    obj.num_elements = obj.num_elements + obj.children{i}.num_elements;
+                    obj.num_subsystems = obj.num_subsystems + obj.children{i}.num_subsystems;
+                    obj.unique_models = union(obj.unique_models, obj.children{i}.unique_models);
+                    obj.unique_subsystems = union(obj.unique_subsystems, obj.children{i}.unique_subsystems);
                 end
-                obj.local_depth = subtree_local_depth + 1;
-                obj.num_elements = subtree_num_elements + local_elements;
-                obj.num_subsystems = subtree_num_subsystems + 1;
-                obj.unique_models = [all_models model2id(cellstr(obj.identity.model_path))];
-                obj.unique_subsystems = [all_subsystems name2subinfo_complete{{struct(obj.identity)}}.sub_id];
+                obj.local_depth = obj.local_depth + 1;
             end
-
-
         end
 
         function obj = add_level(obj)
@@ -211,7 +198,8 @@ classdef SubTree
         end
 
         function bool = is_giant(obj)
-            bool = obj.local_depth > Helper.slnet_max_depth && obj.num_elements > Helper.slnet_max_elements && obj.num_subsystems > Helper.slnet_max_subs;
+            global sy
+            bool = obj.local_depth > sy.slnet_max_depth && obj.num_elements > sy.slnet_max_elements && obj.num_subsystems > sy.slnet_max_subs;
         end
     end
 end
