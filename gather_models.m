@@ -5,8 +5,8 @@ function gather_models(max_number_of_models)
     end
 
 
-    for i = 1:max_number_of_models
-        if i == 5446 %this model is so broken, it breaks out of the try-catch block
+    for i = 6548:max_number_of_models
+        if ismember(i, [5446]) %this model is so broken, it breaks out of the try-catch block
             continue
         end
         
@@ -89,7 +89,7 @@ function closable = try_close(model_url, model_name, loadable)
 end
 
 function [project_url, model_url] = prepare_model(modellist, i, project_info, project_dir)
-    disp("Now gathering model no. " + string(i))
+    disp("Now gathering model no. " + string(i) + " " + string(modellist(i).name))
     model = modellist(i);
     if contains(model.name, ' ')
         movefile([model.folder filesep model.name], [model.folder filesep replace(model.name, ' ', '')])
@@ -128,5 +128,8 @@ end
 function clean_up()
     Helper.clear_garbage(mfilename);
     close all force;
-    bdclose all
+    try
+        bdclose all
+    catch 
+    end
 end

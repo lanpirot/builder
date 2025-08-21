@@ -47,7 +47,6 @@ classdef Helper
         num_subsystems = 'NUM_SUBSYSTEMS'
         unique_models = 'UNIQUE_MODELS'
         unique_subsystems = 'UNIQUE_SUBSYSTEMS';
-        synth_report = Helper.synthesize_playground + filesep + "synth_report.csv";
 
 
         interface_header = "UUID,ChildUUIDs,Subsystem Path,Model Path,Project URL,Inports,Outports,...";
@@ -81,10 +80,12 @@ classdef Helper
             global synth
             synth.mode = chosen;
             synth.dry_build = dry;
-            synth.double_check = check;
+            synth.double_check_file = check;
             synth.force_diversity = diverse;
             synth.seed_with_roots_only = roots_only;
             synth.needs_to_be_compilable = compilable;
+            synth.playground =  Helper.synthesize_playground + "_" + synth.needs_to_be_compilable + "_" + synth.mode;
+            synth.report = synth.playground + filesep + "synth_report.csv";
             switch chosen
                 case Helper.synth_random
                     synth.model_count = 1000;
@@ -311,11 +312,16 @@ classdef Helper
             mkdir(playground_path)
             delete(playground_path + filesep + "*");
             Helper.reset_logs(logs);
-            clear('all');
+            %clear('all');
         end
 
         function log(file_name, message)
-            file_name = Helper.(file_name);
+            global synth
+            try
+                file_name = Helper.(file_name);
+            catch
+                file_name = synth.(file_name);
+            end
             my_fileID = fopen(file_name, "a+");
             fprintf(my_fileID, "%s", replace(string(message), "\", "/") + newline);
             fclose(my_fileID);

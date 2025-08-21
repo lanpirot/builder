@@ -1,10 +1,10 @@
 function synthesize()
-    Helper.clean_up("Starting synthesis process", Helper.synthesize_playground, [Helper.log_synth_theory Helper.log_synth_practice Helper.synth_report])
     global synth name2subinfo_complete interface2subs model2id
     synth = struct();
     %Helper.profiles(profiles(chosen, dry, check, diverse, roots_only, compilable)
-    Helper.profiles(Helper.synth_width, 1, 0, 1, 1, 1)
-    
+    Helper.profiles(Helper.synth_AST_model, 0, 0, 1, 1, 1)
+    Helper.clean_up("Starting synthesis process", synth.playground, [Helper.log_synth_theory Helper.log_synth_practice synth.report])
+
     
     name2subinfo_complete = Helper.parse_json(Helper.name2subinfo_complete);
     name2subinfo_complete = Helper.build_sub_info(name2subinfo_complete);
@@ -46,7 +46,7 @@ function slnet_report()
             subtree = subtree.recursive_subtree(name2subinfo_complete);
             subtree = subtree.report();
             roots{end + 1} = subtree;
-            Helper.log('synth_report', report2string(i, subtree));
+            Helper.log('report', report2string(i, subtree));
         end
     end
     coverage_report(roots, length(roots), length(roots), length(name2subinfo_complete.keys()))
@@ -54,8 +54,8 @@ end
 
 function coverage_report(roots, models_synthed, model_count, sub_count)
     start_synth_report();
-    Helper.log('synth_report', "========END REPORT:=========");
-    Helper.log('synth_report', "Total elapsed time: " + string(toc));
+    Helper.log('report', "========END REPORT:=========");
+    Helper.log('report', "Total elapsed time: " + string(toc));
 
     % find first existing root to initialize copy array, then ....
     for i=1:length(roots)
@@ -77,19 +77,19 @@ function coverage_report(roots, models_synthed, model_count, sub_count)
     disp(string(length(roots)) + " models were created.")
 
     %size report
-    Helper.log('synth_report', "Elements min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.num_elements)))
-    Helper.log('synth_report', "Subsystems min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.num_subsystems)))
-    Helper.log('synth_report', "Depths min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.local_depth)))   
+    Helper.log('report', "Elements min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.num_elements)))
+    Helper.log('report', "Subsystems min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.num_subsystems)))
+    Helper.log('report', "Depths min_med_max_mean_stddev " + minmedmaxmedmeanstddev(horzcat(roots.local_depth)))   
     
 
     %how many models are covered
     all_models = horzcat(roots.unique_models);
     unique_models = unique(all_models);
-    Helper.log('synth_report', "Ratio of models covered: " + string(length(unique_models) / model_count) + " (of " + model_count + " models)");
+    Helper.log('report', "Ratio of models covered: " + string(length(unique_models) / model_count) + " (of " + model_count + " models)");
     %how many subsystems are covered
     all_subs = horzcat(roots.unique_subsystems);
     unique_subs = unique(all_subs);
-    Helper.log('synth_report', "Ratio of subsystems covered: " + string(length(unique_subs)/sub_count) + " (of " + sub_count + " subsystems)")
+    Helper.log('report', "Ratio of subsystems covered: " + string(length(unique_subs)/sub_count) + " (of " + sub_count + " subsystems)")
 
     %what is the overlap between models
     overlap_ratios = struct;
@@ -122,16 +122,16 @@ function coverage_report(roots, models_synthed, model_count, sub_count)
     end
     model_means = vertcat(overlap_ratios.model_mean);
     model_medians = vertcat(overlap_ratios.model_median);
-    Helper.log('synth_report', "Maximum of mean model overlaps: " + string(max(model_means)))
-    Helper.log('synth_report', "Maximum of median model overlaps: " + string(max(model_medians)))
-    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + model_total_overlap + " model overlaps (max: " + string(models_synthed^2) + ").")
+    Helper.log('report', "Maximum of mean model overlaps: " + string(max(model_means)))
+    Helper.log('report', "Maximum of median model overlaps: " + string(max(model_medians)))
+    Helper.log('report', "In our set of " + string(models_synthed) + " models, we had " + model_total_overlap + " model overlaps (max: " + string(models_synthed^2) + ").")
 
     subsystem_means = vertcat(overlap_ratios.subsystem_mean);
     subsystem_medians = vertcat(overlap_ratios.subsystem_median);
-    Helper.log('synth_report', "Maximum of mean subsystem overlaps: " + string(max(subsystem_means)))
-    Helper.log('synth_report', "Maximum of median subsystem overlaps: " + string(max(subsystem_medians)))
-    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + subsystem_total_overlap + " complete subsystem overlaps (max: " + string(models_synthed^2) + ").")
-    Helper.log('synth_report', "========END REPORT END=========")
+    Helper.log('report', "Maximum of mean subsystem overlaps: " + string(max(subsystem_means)))
+    Helper.log('report', "Maximum of median subsystem overlaps: " + string(max(subsystem_medians)))
+    Helper.log('report', "In our set of " + string(models_synthed) + " models, we had " + subsystem_total_overlap + " complete subsystem overlaps (max: " + string(models_synthed^2) + ").")
+    Helper.log('report', "========END REPORT END=========")
 end
 
 function out_string = minmedmaxmedmeanstddev(l)
@@ -160,7 +160,7 @@ function [roots, good_models] = synth_rounds()
 
         disp("Building model " + string(i))
         model_name = char("model" + string(i));
-        model_path = Helper.synthesize_playground + filesep + model_name + ".slx";
+        model_path = synth.playground + filesep + model_name + ".slx";
 
         if Helper.is_synth_mode(Helper.synth_giant)
             while 1
@@ -203,7 +203,7 @@ function [roots, good_models] = synth_rounds()
         end
         model_root = model_root.report();
         roots{i} = model_root;
-        Helper.log('synth_report', report2string(i, model_root));
+        Helper.log('report', report2string(i, model_root));
 
         if synth.dry_build
             continue
@@ -215,7 +215,7 @@ function [roots, good_models] = synth_rounds()
             if additional_level
                 model_root = model_root.add_level();
             end
-            if synth.double_check && ~slx_evaluate(slx_handle)
+            if synth.double_check_file && ~slx_evaluate(slx_handle)
                 dips("Error")
             end
 
@@ -223,7 +223,7 @@ function [roots, good_models] = synth_rounds()
 
             good_models = good_models + 1;
             disp("Saved model " + string(i))
-            if synth.double_check
+            if synth.double_check_file
                 load_system(model_path)
                 model_root.is_discrepant_to_slx()
                 close_system(model_path)
@@ -232,7 +232,7 @@ function [roots, good_models] = synth_rounds()
             disp("Saving model " + string(i) + " FAILED")
             Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(i))
         end
-        delete(Helper.synthesize_playground + filesep + "*.slmx");
+        delete(synth.playground + filesep + "*.slmx");
     end
 end
 
@@ -340,8 +340,8 @@ end
 
 function start_synth_report()
     global synth
-    Helper.log('synth_report', ",,,,synth_model_count " + string(synth.model_count + " repair_level_count " + synth.repair_level_count + " synth_max_depth " + synth.max_depth + " synth_mode " + synth.mode) + " synth_force_diversity " + synth.force_diversity)
-    Helper.log('synth_report', "model_no, depth, elements, subs, unique_models, unique_subsystems");
+    Helper.log('report', ",,,,synth_model_count " + string(synth.model_count + " repair_level_count " + synth.repair_level_count + " synth_max_depth " + synth.max_depth + " synth_mode " + synth.mode) + " synth_force_diversity " + synth.force_diversity)
+    Helper.log('report', "model_no, depth, elements, subs, unique_models, unique_subsystems");
 end
 
 function bool = loadable(slx_identity)

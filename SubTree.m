@@ -58,8 +58,8 @@ classdef SubTree
         end
 
         function [obj, model_handle, additional_level] = build_root(obj, model_name)
-            global name2subinfo_complete
-            slx_id = Identity(model_name, '', Helper.synthesize_playground + filesep + model_name);
+            global name2subinfo_complete synth
+            slx_id = Identity(model_name, '', synth.playground + filesep + model_name);
             obj.synthed_identity = slx_id;
             
             
