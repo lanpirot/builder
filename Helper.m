@@ -48,63 +48,62 @@ classdef Helper
     
     methods(Static)
         function out = cfg(field, value)
-            persistent config;
-            if nargin == 1
-                if strcmp(field, 'reset')
-                    config = [];
-                elseif isfield(config, field)
-                    out = config.(field);
-                else
-                    error("cfg:FieldNotFound", "Field '%s' not found.", field);
-                end
+            persistent cfg;
+            if nargin == 1 && strcmp(field, 'reset')
+                cfg = [];
             end
-            if isempty(config)
-                assert(nargin == 0 || strcmp(field, 'reset'))
-                config = struct();
-                config.models_path = system_constants.models_path;
-                config.project_dir = system_constants.project_dir;
-                config.log_path = system_constants.project_dir;
-                mkdir(config.log_path)
-                config.project_info = config.log_path + "project_info.tsv";
-                config.modellist = config.log_path + "modellist.csv";
-                config.garbage_out = fullfile(config.log_path, "tmp_garbage");
+            if isempty(cfg)
+                assert(nargin == 0 || strcmp(field, 'reset') || strcmp(field, 'cfg'))
+                cfg = struct();
+                cfg.models_path = system_constants.models_path;
+                cfg.project_dir = system_constants.project_dir;
+                cfg.log_path = system_constants.project_dir;
+                mkdir(cfg.log_path)
+                cfg.project_info = fullfile(cfg.log_path, "project_info.tsv");
+                cfg.modellist = fullfile(cfg.log_path, "modellist.csv");
+                cfg.garbage_out = fullfile(cfg.log_path, "tmp_garbage");
             end
             if nargin == 2
-                if ismember(field, fields(config))
+                if strcmp(field, 'cfg') && isstruct(value)
+                    cfg = value;
+                    out = cfg;
+                    return
+                end
+                if ismember(field, fields(cfg))
                     error("Field in config already set in Helper.cfg!")
                 end
-                config.(field) = value;
+                cfg.(field) = value;
                 if strcmp('needs_to_be_compilable', field)
-                    config.dimensions = value;
-                    config.data_types = value;
-                    exp1path = fullfile(config.log_path, string(value));
+                    cfg.dimensions = value;
+                    cfg.data_types = value;
+                    exp1path = fullfile(cfg.log_path, string(value));
                     mkdir(exp1path)
-                    config.exp1path = exp1path;
-                    config.interface2subs = fullfile(exp1path, "interface2subs.json");
-                    config.name2subinfo_complete = fullfile(exp1path, "name2subinfo_complete.json");
-                    config.name2subinfo = fullfile(exp1path, "name2subinfo.json");
-                    config.garbage_out = fullfile(exp1path, "tmp_garbage");
-                    config.log_garbage_out = fullfile(exp1path, "log_garbage_out");
-                    config.log_eval = fullfile(exp1path, "log_eval");
-                    config.log_close = fullfile(exp1path, "log_close");
+                    cfg.exp1path = exp1path;
+                    cfg.interface2subs = fullfile(exp1path, "interface2subs.json");
+                    cfg.name2subinfo_complete = fullfile(exp1path, "name2subinfo_complete.json");
+                    cfg.name2subinfo = fullfile(exp1path, "name2subinfo.json");
+                    cfg.garbage_out = fullfile(exp1path, "tmp_garbage");
+                    cfg.log_garbage_out = fullfile(exp1path, "log_garbage_out");
+                    cfg.log_eval = fullfile(exp1path, "log_eval");
+                    cfg.log_close = fullfile(exp1path, "log_close");
                 end
-                if ismember('needs_to_be_compilable', fields(config)) && ismember('synth_mode', fields(config))
-                    exp2path = fullfile(config.exp1path, config.synth_mode);
+                if ismember('needs_to_be_compilable', fields(cfg)) && ismember('synth_mode', fields(cfg))
+                    exp2path = fullfile(cfg.exp1path, cfg.synth_mode);
                     mkdir(exp2path)
-                    config.exp2path = exp2path;
-                    config.garbage_out = fullfile(exp2path, "tmp_garbage");
-                    config.synthesize_playground = exp2path;
-                    config.synth_report = fullfile(exp2path, "synth_report.csv");
-                    config.log_garbage_out = fullfile(exp2path, "log_garbage_out");
-                    config.log_switch_up = fullfile(exp2path, "log_switch_up");
-                    config.log_compile = fullfile(exp2path, "log_compile");
-                    config.log_copy_to_missing = fullfile(exp2path, "log_copy_to_missing");
-                    config.log_synth_theory = fullfile(exp2path, "log_synth_theory");
-                    config.log_synth_practice = fullfile(exp2path, "log_synth_practice");
+                    cfg.exp2path = exp2path;
+                    cfg.garbage_out = fullfile(exp2path, "tmp_garbage");
+                    cfg.synthesize_playground = exp2path;
+                    cfg.synth_report = fullfile(exp2path, "synth_report.csv");
+                    cfg.log_garbage_out = fullfile(exp2path, "log_garbage_out");
+                    cfg.log_switch_up = fullfile(exp2path, "log_switch_up");
+                    cfg.log_compile = fullfile(exp2path, "log_compile");
+                    cfg.log_copy_to_missing = fullfile(exp2path, "log_copy_to_missing");
+                    cfg.log_synth_theory = fullfile(exp2path, "log_synth_theory");
+                    cfg.log_synth_practice = fullfile(exp2path, "log_synth_practice");
                 end
             end
             %config.mutate_playground = config.exp2path + "mutate_playground";
-            out = config;
+            out = cfg;
         end
 
         function synth_profile(synth_mode, needs_to_be_compilable, dry, check, diverse, roots_only)

@@ -1,7 +1,6 @@
 function mine(max_number_of_models)
-
     for needs_to_be_compilable = 0:1
-        [old_path,models_evaluated,subs,project_dir,modellist,origin] = startinit(needs_to_be_compilable);
+        [old_path,models_evaluated,subs,project_dir,modellist] = startinit(needs_to_be_compilable);
         if ~exist("max_number_of_models",'var')
             max_number_of_models = height(modellist.model_url);
         end
@@ -23,7 +22,7 @@ function mine(max_number_of_models)
                 end
     
                 if needs_to_be_compilable
-                    eval([model_name, '([],[],[],''compile'');']);
+                    compile_model(model_name)
                 end
                 cd(project_dir)
                 disp("Mining interfaces of model no. " + string(i) + " " + model_path)
@@ -51,13 +50,13 @@ function mine(max_number_of_models)
         interface2subs = dic_int2subs(subs);
         serialize(interface2subs);
         fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
-        cd(origin)
+        cd(Helper.cfg().origin)
     end
 end
 
 function [model_path, model_handle, model_name] = prepare_model(raw_model_url)
     model_path = string(strip(raw_model_url, "right"));
-    model_handle = load_system(model_path);
+    model_handle = load_model(model_path);
     model_name = get_param(model_handle, 'Name');
     try
         set_param(model_name, 'SimMechanicsOpenEditorOnUpdate', 'off')
@@ -272,21 +271,36 @@ function log(project_dir, file_name, message)
     Helper.log(file_name, message);
 end
 
-function [old_path,models_evaluated,subs,project_dir,modellist,origin] = startinit(needs_to_be_compilable)
-    origin = pwd;
-    addpath(origin)
+function [old_path,models_evaluated,subs,project_dir,modellist] = startinit(needs_to_be_compilable)
+    addpath(pwd)
     addpath(genpath('utils'), '-begin');
     set(0, 'DefaultFigureVisible', 'off');
     warning('off','all')
     
     old_path = path;
     disp("Starting mining process")
+    Helper.cfg();
     Helper.cfg('reset');
-    Helper.cfg('needs_to_be_compilable',needs_to_be_compilable);
+    Helper.cfg('needs_to_be_compilable', needs_to_be_compilable);
+    Helper.cfg('origin', pwd);
     Helper.reset_logs([Helper.cfg().interface2subs, Helper.cfg().name2subinfo_complete, Helper.cfg().name2subinfo, Helper.cfg().log_garbage_out, Helper.cfg().log_eval, Helper.cfg().log_close])
     models_evaluated = 0;
     subs = {};
     project_dir = Helper.cfg().project_dir;
     
     modellist = tdfread(Helper.cfg().modellist, 'tab');
+end
+
+function handle = load_model(model_name)
+    tmp = Helper.cfg();
+    save("tmp_cfg.mat", "tmp");
+    handle = load_system(model_name);
+    Helper.cfg("cfg", load("tmp_cfg.mat").tmp);
+end
+
+function compile_model(model_name)
+    tmp = Helper.cfg();
+    save("tmp_cfg.mat", "tmp");
+    eval([model_name, '([],[],[],''compile'');']);
+    Helper.cfg("cfg", load("tmp_cfg.mat").tmp);
 end
