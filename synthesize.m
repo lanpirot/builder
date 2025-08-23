@@ -7,7 +7,7 @@ function synthesize()
             Helper.cfg('reset');
             %Helper.synth_profile(profiles(synth_mode, needs_to_be_compilable, dry, check, diverse, roots_only)
             Helper.synth_profile(synth_modes{mode}, needs_to_be_compilable, 0, 0, 1, 1)
-            Helper.clean_up("Starting synthesis process", Helper.cfg().synthesize_playground, [Helper.cfg().log_synth_theory Helper.cfg().log_synth_practice Helper.cfg().synth_report])
+            Helper.clean_up("Starting synthesis process with mode " + string(synth_modes{mode}), Helper.cfg().synthesize_playground, [Helper.cfg().log_synth_theory Helper.cfg().log_synth_practice Helper.cfg().synth_report])
         
             
             name2subinfo_complete = Helper.parse_json(Helper.cfg().name2subinfo_complete);

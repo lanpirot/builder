@@ -84,6 +84,9 @@ classdef Helper
                     config.name2subinfo_complete = fullfile(exp1path, "name2subinfo_complete.json");
                     config.name2subinfo = fullfile(exp1path, "name2subinfo.json");
                     config.garbage_out = fullfile(exp1path, "tmp_garbage");
+                    config.log_garbage_out = fullfile(exp1path, "log_garbage_out");
+                    config.log_eval = fullfile(exp1path, "log_eval");
+                    config.log_close = fullfile(exp1path, "log_close");
                 end
                 if ismember('needs_to_be_compilable', fields(config)) && ismember('synth_mode', fields(config))
                     exp2path = fullfile(config.exp1path, config.synth_mode);
@@ -93,8 +96,6 @@ classdef Helper
                     config.synthesize_playground = exp2path;
                     config.synth_report = fullfile(exp2path, "synth_report.csv");
                     config.log_garbage_out = fullfile(exp2path, "log_garbage_out");
-                    config.log_eval = fullfile(exp2path, "log_eval");
-                    config.log_close = fullfile(exp2path, "log_close");
                     config.log_switch_up = fullfile(exp2path, "log_switch_up");
                     config.log_compile = fullfile(exp2path, "log_compile");
                     config.log_copy_to_missing = fullfile(exp2path, "log_copy_to_missing");

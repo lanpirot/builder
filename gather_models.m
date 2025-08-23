@@ -4,7 +4,7 @@ function gather_models(max_number_of_models)
         max_number_of_models = length(modellist);
     end
 
-    max_number_of_models = 100;
+    max_number_of_models = 10;
     rows = strings(1,max_number_of_models);
     for i = 1:max_number_of_models
         warning('off','all')
