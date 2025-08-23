@@ -1,17 +1,6 @@
 classdef Helper
+
     properties(Constant)
-        models_path = system_constants.models_path
-        project_dir = system_constants.project_dir
-        log_path = system_constants.project_dir + "logs" + filesep
-
-
-        project_info = Helper.log_path + "project_info.tsv";
-        interface2subs = Helper.log_path + "interface2subs.json"
-        name2subinfo_complete = Helper.log_path + "name2subinfo_complete.json";
-        name2subinfo = Helper.log_path + "name2subinfo.json";
-        name2subinfo_chimerable = Helper.log_path + "name2subinfo_chimerable.json";
-
-
         uuid = 'UUID';
         identity = 'IDENTITY';
         sub_name = "sub_name";
@@ -25,23 +14,6 @@ classdef Helper
         local_depth = 'LOCAL_DEPTH'
         subtree_depth = 'SUBTREE_DEPTH'
         children = 'CHILDREN'
-
-        log_garbage_out = Helper.log_path + "log_garbage_out";
-        log_eval = Helper.log_path + "log_eval";
-        log_close = Helper.log_path + "log_close";
-        log_switch_up = Helper.log_path + "log_switch_up";
-        log_compile = Helper.log_path + "log_compile";
-        log_copy_to_missing = Helper.log_path + "log_copy_to_missing";
-        log_synth_theory = Helper.log_path + "log_synth_theory";
-        log_synth_practice = Helper.log_path + "log_synth_practice";
-
-
-        modellist = Helper.log_path + "modellist.csv";
-
-        
-        garbage_out = Helper.project_dir + "tmp_garbage";
-        mutate_playground = Helper.project_dir + "mutate_playground";
-        synthesize_playground = Helper.project_dir + "synthesize_playground";
 
         %report
         num_subsystems = 'NUM_SUBSYSTEMS'
@@ -64,7 +36,7 @@ classdef Helper
         random = "RANDOM"
         shallow = "SHALLOW"
         deep = "DEEP"
-        wish_property = Helper.deep     %set to one of above to build models of a certain property for mutation
+        %wish_property = Helper.deep     %set to one of above to build models of a certain property for mutation
 
 
         synth_random =    'RANDOM';                 %just try to synthesize any model
@@ -75,17 +47,74 @@ classdef Helper
     end
     
     methods(Static)
-        function profiles(chosen, dry, check, diverse, roots_only, compilable)
+        function out = cfg(field, value)
+            persistent config;
+            if nargin == 1
+                if strcmp(field, 'reset')
+                    config = [];
+                elseif isfield(config, field)
+                    out = config.(field);
+                else
+                    error("cfg:FieldNotFound", "Field '%s' not found.", field);
+                end
+            end
+            if isempty(config)
+                assert(nargin == 0 || strcmp(field, 'reset'))
+                config = struct();
+                config.models_path = system_constants.models_path;
+                config.project_dir = system_constants.project_dir;
+                config.log_path = system_constants.project_dir + "logs" + filesep;
+                mkdir(config.log_path)
+                config.project_info = config.log_path + "project_info.tsv";
+                config.modellist = config.log_path + "modellist.csv";
+                config.garbage_out = fullfile(config.log_path, "tmp_garbage");
+            end
+            if nargin == 2
+                if ismember(field, fields(config))
+                    error("Field in config already set in Helper.cfg!")
+                end
+                config.(field) = value;
+                if strcmp('needs_to_be_compilable', field)
+                    config.dimensions = value;
+                    config.data_types = value;
+                    exp1path = fullfile(config.log_path, string(value));
+                    mkdir(exp1path)
+                    config.exp1path = exp1path;
+                    config.interface2subs = fullfile(exp1path, "interface2subs.json");
+                    config.name2subinfo_complete = fullfile(exp1path, "name2subinfo_complete.json");
+                    config.name2subinfo = fullfile(exp1path, "name2subinfo.json");
+                    config.log_garbage_out = fullfile(exp1path, "log_garbage_out");
+                    config.log_eval = fullfile(exp1path, "log_eval");
+                    config.log_close = fullfile(exp1path, "log_close");
+                    config.log_switch_up = fullfile(exp1path, "log_switch_up");
+                    config.log_compile = fullfile(exp1path, "log_compile");
+                    config.log_copy_to_missing = fullfile(exp1path, "log_copy_to_missing");
+                    config.log_synth_theory = fullfile(exp1path, "log_synth_theory");
+                    config.log_synth_practice = fullfile(exp1path, "log_synth_practice");
+                    config.garbage_out = fullfile(exp1path, "tmp_garbage");
+                end
+                if ismember('needs_to_be_compilable', fields(config)) && ismember('synth_mode', fields(config))
+                    exp2path = fullfile(config.exp1path, config.synth_mode);
+                    mkdir(exp2path)
+                    config.exp2path = exp2path;
+                    config.garbage_out = fullfile(exp2path, "tmp_garbage");
+                    config.synthesize_playground = fullfile(exp2path, "synthesized_results");
+                    config.synth_report = fullfile(config.synthesize_playground, "synth_report.csv");
+                end
+            end
+            %config.mutate_playground = config.exp2path + "mutate_playground";
+            out = config;
+        end
+
+        function synth_profile(chosen, dry, check, diverse, roots_only)
             set(0, 'RecursionLimit', 500)
             global synth
+            cfg('synth_mode', chosen)
             synth.mode = chosen;
             synth.dry_build = dry;
             synth.double_check_file = check;
             synth.force_diversity = diverse;
             synth.seed_with_roots_only = roots_only;
-            synth.needs_to_be_compilable = compilable;
-            synth.playground =  Helper.synthesize_playground + "_" + synth.needs_to_be_compilable + "_" + synth.mode;
-            synth.report = synth.playground + filesep + "synth_report.csv";
             switch chosen
                 case Helper.synth_random
                     synth.model_count = 1000;
@@ -291,37 +320,32 @@ classdef Helper
             fclose(my_fileID);
         end
 
-        function create_garbage_dir(filename)
-            mkdir(Helper.garbage_out+filename)
-            cd(Helper.garbage_out+filename)
+        function create_garbage_dir()
+            mkdir(Helper.cfg().garbage_out)
+            cd(Helper.cfg().garbage_out)
         end
 
-        function clear_garbage(filename)
+        function clear_garbage()
             try
-                rmdir(Helper.garbage_out + filename + "*", 's');
+                rmdir(Helper.cfg().garbage_out + "*", 's');
             catch ME
-                %log(Helper.project_dir, 'log_garbage_out', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                %log(Helper.cfg().project_dir, 'log_garbage_out', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
             end
-            cd(Helper.project_dir)
+            cd(Helper.cfg().project_dir)
         end
 
-        function clean_up(startmessage, playground_path, logs)
-            set(0, 'DefaultFigureVisible', 'off');
-            warning('off','all')
-            disp(startmessage)
-            mkdir(playground_path)
-            delete(playground_path + filesep + "*");
-            Helper.reset_logs(logs);
-            %clear('all');
-        end
+        %function clean_up(startmessage, playground_path, logs)
+        %    set(0, 'DefaultFigureVisible', 'off');
+        %    warning('off','all')
+        %    disp(startmessage)
+        %    mkdir(playground_path)
+        %    delete(playground_path + filesep + "*");
+        %    Helper.reset_logs(logs);
+        %    %clear('all');
+        %end
 
         function log(file_name, message)
-            global synth
-            try
-                file_name = Helper.(file_name);
-            catch
-                file_name = synth.(file_name);
-            end
+            file_name = Helper.cfg().(file_name);
             my_fileID = fopen(file_name, "a+");
             fprintf(my_fileID, "%s", replace(string(message), "\", "/") + newline);
             fclose(my_fileID);

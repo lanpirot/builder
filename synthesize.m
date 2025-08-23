@@ -1,8 +1,8 @@
 function synthesize()
     global synth name2subinfo_complete interface2subs model2id
     synth = struct();
-    %Helper.profiles(profiles(chosen, dry, check, diverse, roots_only, compilable)
-    Helper.profiles(Helper.synth_AST_model, 0, 0, 1, 1, 1)
+    %Helper.synth_profile(profiles(chosen, dry, check, diverse, roots_only)
+    Helper.synth_profile(Helper.synth_AST_model, 0, 0, 1, 1)
     Helper.clean_up("Starting synthesis process", synth.playground, [Helper.log_synth_theory Helper.log_synth_practice synth.report])
 
     

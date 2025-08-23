@@ -31,7 +31,7 @@ classdef Port
         end
 
         function obj = get_datatype(obj, handle)
-            if Helper.data_types
+            if Helper.cfg().data_types
                 if is_special_port(obj)
                     switch obj.port_type
                         case 'TriggerPort'
@@ -58,7 +58,7 @@ classdef Port
         end
 
         function dims = get_dimensions(obj, handle)
-            if Helper.dimensions
+            if Helper.cfg().dimensions
                 if is_special_port(obj)
                     if strcmp(obj.port_type, "ActionPort") ||strcmp(obj.port_type, "PMIOPort")
                         dims = Dimensions([]);
@@ -139,7 +139,7 @@ classdef Port
 
         function is_bus = check_if_bus(handle)
             params = get_param(handle,'DialogParameters');
-            if isfield(params, 'IsBusElementPort') || (Helper.dimensions && Dimensions.is_bus(get_param(handle, 'CompiledPortDimensions')))
+            if isfield(params, 'IsBusElementPort') || (Helper.cfg().dimensions && Dimensions.is_bus(get_param(handle, 'CompiledPortDimensions')))
                 is_bus = 1;
             else
                 is_bus = 0;

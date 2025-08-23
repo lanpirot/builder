@@ -4,24 +4,24 @@ function gather_models(max_number_of_models)
         max_number_of_models = length(modellist);
     end
 
-
-    for i = 6548:max_number_of_models
-        if ismember(i, [5446]) %this model is so broken, it breaks out of the try-catch block
-            continue
-        end
+    max_number_of_models = 100;
+    rows = strings(1,max_number_of_models);
+    for i = 1:max_number_of_models
+        warning('off','all')
         
         [project_url, model_url] = prepare_model(modellist, i, project_info, project_dir);
         [loadable, model_name] = try_load(model_url);
         compilable = try_compile(model_name, loadable);
         runnable = try_simulate(model_name, loadable, compilable);
         closable = try_close(model_url, model_name, loadable);
-        clean_up();
+        clean_up_internal();
 
-        row = replace(model_url + sprintf('\t') + project_url + sprintf('\t') + string(loadable) + sprintf('\t') + string(compilable) + sprintf('\t') + string(runnable) + sprintf('\t') + string(closable), "\", "/") + newline;
-        fprintf(fileID, "%s", row);
+        rows(i) = replace(model_url + sprintf('\t') + project_url + sprintf('\t') + string(loadable) + sprintf('\t') + string(compilable) + sprintf('\t') + string(runnable) + sprintf('\t') + string(closable), "\", "/") + newline;
     end
+    fprintf(fileID, "%s", rows);
     fclose(fileID);
-    disp("Saved gathered model info to " + string(Helper.modellist))
+    disp("Saved gathered model info to " + string(Helper.cfg().modellist))
+    Helper.clear_garbage();
 end
 
 
@@ -69,12 +69,16 @@ function runnable = try_simulate(model_name, loadable, compilable)
             while sim_time < 1 && toc(start_real_time) < 15
                 set_param(model_name, 'SimulationCommand', 'step')
                 sim_time = get_param(model_name, 'SimulationTime');
-            end
+             end
             runnable = double(sim_time > 0);
             set_param(model_name, 'SimulationCommand', 'stop')
         catch
         end
     end
+end
+
+function out = wrappedSim(model_name)
+    out = sim(model_name);
 end
 
 function closable = try_close(model_url, model_name, loadable)
@@ -98,7 +102,7 @@ function [project_url, model_url] = prepare_model(modellist, i, project_info, pr
     folder = strsplit(model.folder, filesep);
     %assumes, you unzipped SLNET projects to a directory each named by a number
     %did you forget a "/" at the end of the filename?
-    project_id = double(string(folder{count(Helper.project_dir, filesep) + 2}));      
+    project_id = double(string(folder{count(Helper.cfg().project_dir, filesep) + 2}));      
     
     
     project_info_row = find(project_info.path == project_id);
@@ -107,7 +111,7 @@ function [project_url, model_url] = prepare_model(modellist, i, project_info, pr
 
     model_url = string(fullfile(model.folder, model.name));
     cd(project_dir)
-    Helper.create_garbage_dir(mfilename)
+    Helper.create_garbage_dir()
 end
 
 function [project_dir, project_info, fileID, modellist] =  startinit()
@@ -118,15 +122,15 @@ function [project_dir, project_info, fileID, modellist] =  startinit()
 
 
     disp("Starting gathering process")
-    modellist = [dir(fullfile(Helper.models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.models_path, "**" + filesep + "*.mdl"))];
-    project_dir = Helper.project_dir;
-    project_info = tdfread(Helper.project_info, 'tab');
-    fileID = fopen(Helper.modellist, "w+");
+    Helper.cfg('reset');
+    modellist = [dir(fullfile(Helper.cfg().models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.cfg().models_path, "**" + filesep + "*.mdl"))];
+    project_dir = Helper.cfg().project_dir;
+    project_info = tdfread(Helper.cfg().project_info, 'tab');
+    fileID = fopen(Helper.cfg().modellist, "w+");
     fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "runnable" + sprintf("\t") + "closable" + newline);
 end
 
-function clean_up()
-    Helper.clear_garbage(mfilename);
+function clean_up_internal()
     close all force;
     try
         bdclose all

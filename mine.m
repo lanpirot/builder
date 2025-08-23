@@ -1,57 +1,58 @@
 function mine(max_number_of_models)
-    [old_path,models_evaluated,subs,project_dir,needs_to_be_compilable,modellist,origin] = startinit();
 
-
-    if ~exist("max_number_of_models",'var')
-        max_number_of_models = height(modellist.model_url);
-    end
-    for i = 1:1000 % max_number_of_models
-        path(old_path);
-    
-        if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)
-            continue
+    for needs_to_be_compilable = 0:1
+        [old_path,models_evaluated,subs,project_dir,modellist,origin] = startinit(needs_to_be_compilable);
+        if ~exist("max_number_of_models",'var')
+            max_number_of_models = height(modellist.model_url);
         end
-        Helper.create_garbage_dir(mfilename);
+        for i = 1:max_number_of_models
+            path(old_path);
         
-
-        try
-            [model_path, model_handle, model_name] = prepare_model(modellist.model_url(i, :));
-
-            if is_architecture_model(model_name) || model_is_problem_file(model_name)
-                cd(project_dir)
+            if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)
                 continue
             end
-
-            if needs_to_be_compilable
-                eval([model_name, '([],[],[],''compile'');']);
+            Helper.create_garbage_dir();
+            
+    
+            try
+                [model_path, model_handle, model_name] = prepare_model(modellist.model_url(i, :));
+    
+                if is_architecture_model(model_name) || model_is_problem_file(model_name)
+                    cd(project_dir)
+                    continue
+                end
+    
+                if needs_to_be_compilable
+                    eval([model_name, '([],[],[],''compile'');']);
+                end
+                cd(project_dir)
+                disp("Mining interfaces of model no. " + string(i) + " " + model_path)
+                subs = compute_interfaces_for_subs(subs, model_handle, model_path);
+    
+                if needs_to_be_compilable
+                    try_end(model_name);
+                end
+                try_close(model_name, model_path);
+                models_evaluated = models_evaluated + 1;
+            catch ME
+                cd(project_dir)
+                log(project_dir, 'log_eval', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                try_close(model_name, model_path);
             end
             cd(project_dir)
-            disp("Mining interfaces of model no. " + string(i) + " " + model_path)
-            subs = compute_interfaces_for_subs(subs, model_handle, model_path);
-
-            if needs_to_be_compilable
-                try_end(model_name);
-            end
-            try_close(model_name, model_path);
-            models_evaluated = models_evaluated + 1;
-        catch ME
-            cd(project_dir)
-            log(project_dir, 'log_eval', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
-            try_close(model_name, model_path);
+            Helper.clear_garbage()
+            close all force;
         end
-        cd(project_dir)
-        Helper.clear_garbage(mfilename)
-        close all force;
+        disp("We analyzed " + string(length(subs)) + " Subsystems altogether.")
+        subs = remove_skips(subs);
+        disp(string(length(subs)) + " Subsystems were taken into account (no bus ports present etc.).")
+    
+        %identity2sub = dic_id2sub(subs); %only needed for chimerability
+        interface2subs = dic_int2subs(subs);
+        serialize(interface2subs);
+        fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
+        cd(origin)
     end
-    disp("We analyzed " + string(length(subs)) + " Subsystems altogether.")
-    subs = remove_skips(subs);
-    disp(string(length(subs)) + " Subsystems were taken into account (no bus ports present etc.).")
-
-    %identity2sub = dic_id2sub(subs); %only needed for chimerability
-    interface2subs = dic_int2subs(subs);
-    serialize(interface2subs);
-    fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
-    cd(origin)
 end
 
 function [model_path, model_handle, model_name] = prepare_model(raw_model_url)
@@ -207,9 +208,9 @@ function serialize(interface2subs)
         interface2subs(ikeys(i)) = interface2subs(ikeys(i)).sort();
         subinfo = [subinfo interface2subs(ikeys(i)).less_fields().subsystems];
     end
-    Helper.file_print(Helper.name2subinfo_complete, jsonencode(subinfo));
+    Helper.file_print(Helper.cfg().name2subinfo_complete, jsonencode(subinfo));
     [ikeys, identities] = make_i2s_smaller(interface2subs);
-    Helper.file_print(Helper.interface2subs, jsonencode({ikeys, identities}))
+    Helper.file_print(Helper.cfg().interface2subs, jsonencode({ikeys, identities}))
     string_prefix = "Before";
     disp(string_prefix + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
 
@@ -218,7 +219,7 @@ function serialize(interface2subs)
     for i = 1:length(ikeys)
         subinfo = [subinfo interface2subs(ikeys(i)).remove_duplicates().subsystems];
     end
-    Helper.file_print(Helper.name2subinfo, jsonencode(subinfo));
+    Helper.file_print(Helper.cfg().name2subinfo, jsonencode(subinfo));
     disp("After" + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
 end
 
@@ -262,7 +263,7 @@ function try_close(name, model_path)
         bdclose all;
         close_system(model_path)
     catch ME
-        log(Helper.project_dir, 'log_close', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+        log(Helper.cfg().project_dir, 'log_close', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
     end
 end
 
@@ -271,7 +272,7 @@ function log(project_dir, file_name, message)
     Helper.log(file_name, message);
 end
 
-function [old_path,models_evaluated,subs,project_dir,needs_to_be_compilable,modellist,origin] = startinit()
+function [old_path,models_evaluated,subs,project_dir,modellist,origin] = startinit(needs_to_be_compilable)
     origin = pwd;
     addpath(origin)
     addpath(genpath('utils'), '-begin');
@@ -280,11 +281,12 @@ function [old_path,models_evaluated,subs,project_dir,needs_to_be_compilable,mode
     
     old_path = path;
     disp("Starting mining process")
-    Helper.reset_logs([Helper.name2subinfo, Helper.name2subinfo_chimerable, Helper.interface2subs, Helper.name2subinfo_complete, Helper.log_garbage_out, Helper.log_eval, Helper.log_close])
+    Helper.cfg('reset');
+    Helper.cfg('needs_to_be_compilable',needs_to_be_compilable);
+    Helper.reset_logs([Helper.cfg().interface2subs, Helper.cfg().name2subinfo_complete, Helper.cfg().name2subinfo, Helper.cfg().log_garbage_out, Helper.cfg().log_eval, Helper.cfg().log_close])
     models_evaluated = 0;
     subs = {};
-    project_dir = Helper.project_dir;
-    needs_to_be_compilable = Helper.needs_to_be_compilable;
+    project_dir = Helper.cfg().project_dir;
     
-    modellist = tdfread(Helper.modellist, 'tab');
+    modellist = tdfread(Helper.cfg().modellist, 'tab');
 end
