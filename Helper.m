@@ -63,7 +63,7 @@ classdef Helper
                 config = struct();
                 config.models_path = system_constants.models_path;
                 config.project_dir = system_constants.project_dir;
-                config.log_path = system_constants.project_dir + "logs" + filesep;
+                config.log_path = system_constants.project_dir;
                 mkdir(config.log_path)
                 config.project_info = config.log_path + "project_info.tsv";
                 config.modellist = config.log_path + "modellist.csv";
@@ -83,14 +83,6 @@ classdef Helper
                     config.interface2subs = fullfile(exp1path, "interface2subs.json");
                     config.name2subinfo_complete = fullfile(exp1path, "name2subinfo_complete.json");
                     config.name2subinfo = fullfile(exp1path, "name2subinfo.json");
-                    config.log_garbage_out = fullfile(exp1path, "log_garbage_out");
-                    config.log_eval = fullfile(exp1path, "log_eval");
-                    config.log_close = fullfile(exp1path, "log_close");
-                    config.log_switch_up = fullfile(exp1path, "log_switch_up");
-                    config.log_compile = fullfile(exp1path, "log_compile");
-                    config.log_copy_to_missing = fullfile(exp1path, "log_copy_to_missing");
-                    config.log_synth_theory = fullfile(exp1path, "log_synth_theory");
-                    config.log_synth_practice = fullfile(exp1path, "log_synth_practice");
                     config.garbage_out = fullfile(exp1path, "tmp_garbage");
                 end
                 if ismember('needs_to_be_compilable', fields(config)) && ismember('synth_mode', fields(config))
@@ -98,26 +90,37 @@ classdef Helper
                     mkdir(exp2path)
                     config.exp2path = exp2path;
                     config.garbage_out = fullfile(exp2path, "tmp_garbage");
-                    config.synthesize_playground = fullfile(exp2path, "synthesized_results");
-                    config.synth_report = fullfile(config.synthesize_playground, "synth_report.csv");
+                    config.synthesize_playground = exp2path;
+                    config.synth_report = fullfile(exp2path, "synth_report.csv");
+                    config.log_garbage_out = fullfile(exp2path, "log_garbage_out");
+                    config.log_eval = fullfile(exp2path, "log_eval");
+                    config.log_close = fullfile(exp2path, "log_close");
+                    config.log_switch_up = fullfile(exp2path, "log_switch_up");
+                    config.log_compile = fullfile(exp2path, "log_compile");
+                    config.log_copy_to_missing = fullfile(exp2path, "log_copy_to_missing");
+                    config.log_synth_theory = fullfile(exp2path, "log_synth_theory");
+                    config.log_synth_practice = fullfile(exp2path, "log_synth_practice");
                 end
             end
             %config.mutate_playground = config.exp2path + "mutate_playground";
             out = config;
         end
 
-        function synth_profile(chosen, dry, check, diverse, roots_only)
+        function synth_profile(synth_mode, needs_to_be_compilable, dry, check, diverse, roots_only)
             set(0, 'RecursionLimit', 500)
             global synth
-            cfg('synth_mode', chosen)
-            synth.mode = chosen;
+            Helper.cfg();
+            Helper.cfg('synth_mode', synth_mode);
+            Helper.cfg('needs_to_be_compilable', needs_to_be_compilable);
+            synth.mode = synth_mode;
+            synth.needs_to_be_compilable = needs_to_be_compilable;
             synth.dry_build = dry;
             synth.double_check_file = check;
             synth.force_diversity = diverse;
             synth.seed_with_roots_only = roots_only;
-            switch chosen
+            switch synth_mode
                 case Helper.synth_random
-                    synth.model_count = 1000;
+                    synth.model_count = 10;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -125,7 +128,7 @@ classdef Helper
                     synth.choose_retries = 10;
                     synth.max_depth = 20;
                 case Helper.synth_AST_model
-                    synth.model_count = 1000;
+                    synth.model_count = 10;
                     synth.repair_level_count = 2;
                     synth.repair_root_count = 20 * synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -133,7 +136,7 @@ classdef Helper
                     synth.choose_retries = 5;
                     synth.max_depth = 20;
                 case Helper.synth_width
-                    synth.model_count = 100;
+                    synth.model_count = 1;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = 3 * synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -142,7 +145,7 @@ classdef Helper
                     synth.min_height = 10;
                     synth.max_depth = 20;
                 case Helper.synth_giant
-                    synth.model_count = 100;
+                    synth.model_count = 1;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = 2 * synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -153,7 +156,7 @@ classdef Helper
                     synth.slnet_max_elements = 123823;                %SLNET max: 106823
                     synth.slnet_max_subs = 15301;                     %SLNET max: 13501
                 case Helper.synth_depth
-                    synth.model_count = 100;
+                    synth.model_count = 1;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = 20;
                     synth.choose_sample_size = 10;
@@ -235,7 +238,7 @@ classdef Helper
         end
 
         function num = find_num_elements_in_contained_subsystems(handle)
-            subsystems = Helper.get_contained_subsystems(handle, 1000);
+            subsystems = Helper.get_contained_subsystems(handle, 10000);
             num = length(Helper.find_elements(handle, 1));
             for i = 1:length(subsystems)
                 num = num + length(Helper.find_elements(subsystems(i), 1));
@@ -334,15 +337,15 @@ classdef Helper
             cd(Helper.cfg().project_dir)
         end
 
-        %function clean_up(startmessage, playground_path, logs)
-        %    set(0, 'DefaultFigureVisible', 'off');
-        %    warning('off','all')
-        %    disp(startmessage)
-        %    mkdir(playground_path)
-        %    delete(playground_path + filesep + "*");
-        %    Helper.reset_logs(logs);
-        %    %clear('all');
-        %end
+        function clean_up(startmessage, playground_path, logs)
+            set(0, 'DefaultFigureVisible', 'off');
+            warning('off','all')
+            disp(startmessage)
+            mkdir(playground_path)
+            delete(playground_path + filesep + "*");
+            Helper.reset_logs(logs);
+            %clear('all');
+        end
 
         function log(file_name, message)
             file_name = Helper.cfg().(file_name);
