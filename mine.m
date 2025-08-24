@@ -1,10 +1,10 @@
 function mine(max_number_of_models)
-    for needs_to_be_compilable = 0:1
-        [old_path,models_evaluated,subs,project_dir,modellist] = startinit(needs_to_be_compilable);
+    for needs_to_be_compilable = 1:1
+        [old_path,models_evaluated,subs,modellist] = startinit(needs_to_be_compilable);
         if ~exist("max_number_of_models",'var')
             max_number_of_models = height(modellist.model_url);
         end
-        for i = 1:max_number_of_models
+        for i = 3000:max_number_of_models
             path(old_path);
         
             if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)
@@ -16,15 +16,15 @@ function mine(max_number_of_models)
             try
                 [model_path, model_handle, model_name] = prepare_model(modellist.model_url(i, :));
     
-                if is_architecture_model(model_name) || model_is_problem_file(model_name)
-                    cd(project_dir)
+                if is_architecture_model(model_name) || model_is_problem_file(model_name) || endsWith(model_path, "logger.slx")
+                    cd(Helper.cfg().project_dir)
                     continue
                 end
     
                 if needs_to_be_compilable
-                    compile_model(model_name)
+                    with_preserved_cfg(@(name) eval([name, '([],[],[],''compile'');']), model_name)
                 end
-                cd(project_dir)
+                cd(Helper.cfg().project_dir)
                 disp("Mining interfaces of model no. " + string(i) + " " + model_path)
                 subs = compute_interfaces_for_subs(subs, model_handle, model_path);
     
@@ -34,11 +34,11 @@ function mine(max_number_of_models)
                 try_close(model_name, model_path);
                 models_evaluated = models_evaluated + 1;
             catch ME
-                cd(project_dir)
-                log(project_dir, 'log_eval', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
+                cd(Helper.cfg().project_dir)
+                log(Helper.cfg().project_dir, 'log_eval', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
                 try_close(model_name, model_path);
             end
-            cd(project_dir)
+            cd(Helper.cfg().project_dir)
             Helper.clear_garbage()
             close all force;
         end
@@ -56,7 +56,7 @@ end
 
 function [model_path, model_handle, model_name] = prepare_model(raw_model_url)
     model_path = string(strip(raw_model_url, "right"));
-    model_handle = load_model(model_path);
+    model_handle = with_preserved_cfg(@load_system, model_path);
     model_name = get_param(model_handle, 'Name');
     try
         set_param(model_name, 'SimMechanicsOpenEditorOnUpdate', 'off')
@@ -259,8 +259,8 @@ end
 function try_close(name, model_path)
     try_end(name)
     try
+        with_preserved_cfg(@close_system, model_path, 0);
         bdclose all;
-        close_system(model_path)
     catch ME
         log(Helper.cfg().project_dir, 'log_close', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
     end
@@ -271,7 +271,7 @@ function log(project_dir, file_name, message)
     Helper.log(file_name, message);
 end
 
-function [old_path,models_evaluated,subs,project_dir,modellist] = startinit(needs_to_be_compilable)
+function [old_path,models_evaluated,subs,modellist] = startinit(needs_to_be_compilable)
     addpath(pwd)
     addpath(genpath('utils'), '-begin');
     set(0, 'DefaultFigureVisible', 'off');
@@ -286,21 +286,23 @@ function [old_path,models_evaluated,subs,project_dir,modellist] = startinit(need
     Helper.reset_logs([Helper.cfg().interface2subs, Helper.cfg().name2subinfo_complete, Helper.cfg().name2subinfo, Helper.cfg().log_garbage_out, Helper.cfg().log_eval, Helper.cfg().log_close])
     models_evaluated = 0;
     subs = {};
-    project_dir = Helper.cfg().project_dir;
     
     modellist = tdfread(Helper.cfg().modellist, 'tab');
 end
 
-function handle = load_model(model_name)
-    tmp = Helper.cfg();
-    save("tmp_cfg.mat", "tmp");
-    handle = load_system(model_name);
-    Helper.cfg("cfg", load("tmp_cfg.mat").tmp);
-end
+function out = with_preserved_cfg(fn, varargin)
+    % Save current config
+    old_cfg = Helper.cfg();
+    save("tmp_cfg.mat", "old_cfg");
 
-function compile_model(model_name)
-    tmp = Helper.cfg();
-    save("tmp_cfg.mat", "tmp");
-    eval([model_name, '([],[],[],''compile'');']);
-    Helper.cfg("cfg", load("tmp_cfg.mat").tmp);
+    if nargout == 0
+    % Run the operation
+        fn(varargin{:});
+    else
+       out = fn(varargin{:});
+    end
+
+    % Restore config
+    loaded = load("tmp_cfg.mat", "old_cfg");
+    Helper.cfg("cfg", loaded.old_cfg);
 end
