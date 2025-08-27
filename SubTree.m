@@ -63,7 +63,8 @@ classdef SubTree
             obj.synthed_identity = slx_id;
             
             
-            close_system(slx_id.sub_name, 0)
+            Helper.with_preserved_cfg(@close_system, slx_id.sub_name, 0)
+            
 
             [slx_id, additional_level] = ModelMutator.copy_to_root(slx_id.sub_name, slx_id.model_path, obj.identity, slx_id);
             ModelMutator.make_subsystem_editable(slx_id.get_qualified_name());
@@ -71,7 +72,7 @@ classdef SubTree
             set_param(model_name, "LockLinksToLibrary", "off")
             ModelMutator.annotate(slx_id.get_qualified_name(), "Copied system from: " + obj.identity.hash() + newline + "to: " + slx_id.hash())
             if Helper.is_synth_mode(Helper.synth_giant)
-                close_system(obj.identity.model_path)
+                Helper.with_preserved_cfg(@close_system, obj.identity.model_path, 0)
             end
             
             slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
@@ -94,10 +95,10 @@ classdef SubTree
                 copy_to_interface = Interface(name2subinfo_complete{{struct(copy_to)}}.(Helper.interface));
     
                 try
-                    load_system(copy_from.model_path)
+                    Helper.with_preserved_cfg(@load_system, copy_from.model_path);
                 catch
-                    close_system(Identity.get_model_name2(copy_from.model_path));
-                    load_system(copy_from.model_path)
+                    Helper.with_preserved_cfg(@close_system, copy_from.model_path, 0);
+                    Helper.with_preserved_cfg(@load_system, copy_from.model_path);
                 end
                 mapping = copy_to_interface.get_mapping(copy_from_interface);
                 copied_element = Identity(copy_from.sub_name, copy_into.sub_parents, slx_id.model_path);
@@ -106,7 +107,7 @@ classdef SubTree
                 ModelMutator.make_subsystem_editable(copy_into.get_qualified_name());
                 ModelMutator.annotate(copy_into.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
                 if Helper.is_synth_mode(Helper.synth_giant)
-                    close_system(copy_from.model_path)
+                    Helper.with_preserved_cfg(@close_system, copy_from.model_path, 0)
                 end
             end
 

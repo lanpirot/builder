@@ -251,9 +251,9 @@ function [roots, good_models] = synth_rounds()
             good_models = good_models + 1;
             disp("Saved model " + string(good_models))
             if synth.double_check_file
-                load_system(model_path)
+                Helper.with_preserved_cfg(@load_system, model_path);
                 model_root.is_discrepant_to_slx()
-                close_system(model_path)
+                Helper.with_preserved_cfg(@close_system, model_path, 0);
             end
         catch ME
             save_time = NaN;
@@ -377,7 +377,7 @@ end
 function bool = loadable(slx_identity)
     global synth
     try
-        load_system(slx_identity)
+        Helper.with_preserved_cfg(@load_system, slx_identity);
         if ~synth.needs_to_be_compilable || compilable(slx_identity)
             bool = 1;
         end        
@@ -386,9 +386,9 @@ function bool = loadable(slx_identity)
     end
 end
 
-function slx_save(slx_handle, model_path)    
-    save_system(slx_handle, model_path)
-    close_system(slx_handle)
+function slx_save(slx_handle, model_path)
+    Helper.with_preserved_cfg(@save_system, slx_handle, model_path);
+    Helper.with_preserved_cfg(@close_system, slx_handle, 0);
 end
 
 function cp = compilable(model_name)

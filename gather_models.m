@@ -25,7 +25,7 @@ function [loadable, model_name] = try_load(model_url)
     loadable = 0;
     model_name = '';
     try
-        model_handle = load_system(model_url);
+        model_handle = Helper.with_preserved_cfg(@load_system, model_url);
         model_name = get_param(model_handle, 'Name');
         loadable = 1;
     catch
@@ -41,7 +41,7 @@ function compilable = try_compile(model_name, loadable)
         end
     
         try
-            eval([model_name, '([],[],[],''compile'');']);
+            Helper.with_preserved_cfg(@(name) eval([name, '([],[],[],''compile'');']), model_name)
             compilable = 1;
         catch
         end
@@ -81,10 +81,11 @@ function closable = try_close(model_url, model_name, loadable)
     closable = 0;
     if loadable
         try
-            close_system(model_url, 0)
+            Helper.with_preserved_cfg(@close_system, model_url, 0);
         catch            
         end
         closable = double(~bdIsLoaded(model_name));
+        bdclose all;
     end
 end
 

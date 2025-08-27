@@ -23,7 +23,8 @@ classdef ModelMutator
                 obj.original_model_path = root_model_identity.(Helper.model_path);
     
                 obj = obj.copy_version(0);
-                close_system(obj.root_model_path, 0)
+
+                Helper.with_preserved_cfg(@close_system, obj.root_model_path, 0)
             catch ME
                 Helper.log('log_construct', string(jsonencode(obj)) + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line)
                 obj.version = -1;
@@ -34,8 +35,9 @@ classdef ModelMutator
             obj.version = obj.version + 1;
             new_suffix = "v" + string(obj.version);
             %check whether the system with new system name is currently open
-            save_system(obj.model_name, extractBefore(obj.root_model_path, strlength(obj.root_model_path)-3) + new_suffix + extractAfter(obj.root_model_path, strlength(obj.root_model_path)-4))
-            close_system(obj.model_name + new_suffix)
+            new_name = extractBefore(obj.root_model_path, strlength(obj.root_model_path)-3) + new_suffix + extractAfter(obj.root_model_path, strlength(obj.root_model_path)-4);
+            Helper.with_preserved_cfg(@save_system, obj.model_name, new_name)
+            Helper.with_preserved_cfg(@close_system, obj.model_name + new_suffix, 0)
         end
 
         function obj = copy_version(obj, close_first)
@@ -43,18 +45,19 @@ classdef ModelMutator
             obj.root_model_path = Helper.mutate_playground + filesep + obj.model_name + extractAfter(obj.original_model_path,strlength(obj.original_model_path)-4);
             obj.root_model_path = char(obj.root_model_path.replace("\", "/"));
             if close_first
-                close_system(obj.root_model_path, 0)
+                Helper.with_preserved_cfg(@close_system, obj.root_model_path, 0)
             end
             delete(obj.root_model_path)
             pause(0.05);            %hacky to avoid: The requested operation cannot be performed on a file with a user-mapped section open.
             copyfile(obj.original_model_path, obj.root_model_path);
-            load_system(obj.root_model_path)
+
+            Helper.with_preserved_cfg(@load_system, obj.root_model_path);
             set_param(obj.model_name, 'Lock', 'off')
             set_param(obj.model_name, "LockLinksToLibrary", "off")%sometimes causes errors
         end
 
         function obj = switch_subs_in_model(obj, name2subinfo)
-            load_system(obj.root_model_path);
+            Helper.with_preserved_cfg(@load_system, obj.root_model_path);
             
             curr_depth = 0;
             while 1
@@ -94,7 +97,7 @@ classdef ModelMutator
                 end
                 curr_depth = curr_depth + 1;
             end
-            close_system(obj.root_model_path, 0);
+            Helper.with_preserved_cfg(@close_system, obj.root_model_path, 0)
             delete(obj.root_model_path)
         end
 
@@ -117,7 +120,7 @@ classdef ModelMutator
         
         function obj = switch_sub_with_sub(obj, old_sub, new_sub, mapping)
             copy_from = new_sub.identity;
-            load_system(copy_from.model_path)
+            Helper.with_preserved_cfg(@load_system, copy_from.model_path);
             copy_to = Identity(old_sub.identity.sub_name, Helper.change_root_parent(old_sub.identity.sub_parents, char(obj.model_name)), obj.root_model_path);
             copied_element = Identity(['sub' int2str(Helper.found_alt(1))], copy_to.sub_parents, obj.root_model_path);
             copy_to = ModelMutator.copy_SS(obj.model_name, obj.root_model_path, copy_from, copy_to, copied_element, mapping);
@@ -132,7 +135,7 @@ classdef ModelMutator
 
         function ld = loadable(obj)
             try
-                load_system(obj.root_model_path);
+                Helper.with_preserved_cfg(@load_system, obj.root_model_path);
                 ld = 1;
             catch
                 ld = 0;
@@ -319,14 +322,14 @@ classdef ModelMutator
                 %copy from root to root
                 root_model_path = root_model_path + copy_from.model_path(end-3:end);
                 copyfile(copy_from.model_path, root_model_path);
-                load_system(root_model_path);
+                Helper.with_preserved_cfg(@load_system, root_model_path);
                 copy_to = Identity(char(model_name), '', root_model_path);
             else
                 %copy from subsystem to root
-                delete(root_model_path);close_system(model_name, 0);%in mutate.m, the file exists, here
+                delete(root_model_path);Helper.with_preserved_cfg(@close_system, model_name, 0);%in mutate.m, the file exists, here
                 new_system(model_name);
-                save_system(model_name, root_model_path)
-                load_system(copy_from.model_path)
+                Helper.with_preserved_cfg(@save_system, model_name, root_model_path);
+                Helper.with_preserved_cfg(@load_system, copy_from.model_path);
 
 
                 copy_to.sub_name = model_name;

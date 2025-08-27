@@ -22,7 +22,7 @@ function mine(max_number_of_models)
                 end
     
                 if needs_to_be_compilable
-                    with_preserved_cfg(@(name) eval([name, '([],[],[],''compile'');']), model_name)
+                    Helper.with_preserved_cfg(@(name) eval([name, '([],[],[],''compile'');']), model_name)
                 end
                 cd(Helper.cfg().project_dir)
                 disp("Mining interfaces of model no. " + string(i) + " " + model_path)
@@ -56,7 +56,7 @@ end
 
 function [model_path, model_name, subsystems] = prepare_model(raw_model_url)
     model_path = string(strip(raw_model_url, "right"));
-    model_handle = with_preserved_cfg(@load_system, model_path);
+    model_handle = Helper.with_preserved_cfg(@load_system, model_path);
     model_name = get_param(model_handle, 'Name');
     try
         set_param(model_name, 'SimMechanicsOpenEditorOnUpdate', 'off')
@@ -259,7 +259,7 @@ end
 function try_close(name, model_path)
     try_end(name)
     try
-        with_preserved_cfg(@close_system, model_path, 0);
+        Helper.with_preserved_cfg(@close_system, model_path, 0);
         bdclose all;
     catch ME
         bdclose all;
@@ -289,21 +289,4 @@ function [old_path,models_evaluated,subs,modellist] = startinit(needs_to_be_comp
     subs = {};
     
     modellist = tdfread(Helper.cfg().modellist, 'tab');
-end
-
-function out = with_preserved_cfg(fn, varargin)
-    % Save current config
-    old_cfg = Helper.cfg();
-    save("tmp_cfg.mat", "old_cfg");
-
-    if nargout == 0
-    % Run the operation
-        fn(varargin{:});
-    else
-       out = fn(varargin{:});
-    end
-
-    % Restore config
-    loaded = load("tmp_cfg.mat", "old_cfg");
-    Helper.cfg("cfg", loaded.old_cfg);
 end

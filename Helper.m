@@ -348,6 +348,23 @@ classdef Helper
             %clear('all');
         end
 
+        function out = with_preserved_cfg(fn, varargin)
+            % Save current config
+            old_cfg = Helper.cfg();
+            save("tmp_cfg.mat", "old_cfg");
+        
+            if nargout == 0
+            % Run the operation
+                fn(varargin{:});
+            else
+               out = fn(varargin{:});
+            end
+        
+            % Restore config
+            loaded = load("tmp_cfg.mat", "old_cfg");
+            Helper.cfg("cfg", loaded.old_cfg);
+        end
+
         function log(file_name, message)
             file_name = Helper.cfg().(file_name);
             my_fileID = fopen(file_name, "a+");
