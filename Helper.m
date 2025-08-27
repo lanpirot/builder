@@ -118,6 +118,7 @@ classdef Helper
             synth.double_check_file = check;
             synth.force_diversity = diverse;
             synth.seed_with_roots_only = roots_only;
+            synth.time_out = 300;
             switch synth_mode
                 case Helper.synth_random
                     synth.model_count = 10;
@@ -136,25 +137,25 @@ classdef Helper
                     synth.choose_retries = 5;
                     synth.max_depth = 20;
                 case Helper.synth_width
-                    synth.model_count = 1;
+                    synth.model_count = 10;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = 3 * synth.repair_level_count;
-                    synth.choose_sample_size = 10;
+                    synth.choose_sample_size = 5;
                     synth.mutate_chances = 100;
-                    synth.choose_retries = 10;
-                    synth.min_height = 10;
-                    synth.max_depth = 20;
+                    synth.choose_retries = 5;
+                    synth.min_height = 8;
+                    synth.max_depth = 16;
                 case Helper.synth_giant
-                    synth.model_count = 1;
+                    synth.model_count = 10;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = 2 * synth.repair_level_count;
                     synth.choose_sample_size = 10;
                     synth.mutate_chances = 100;
                     synth.choose_retries = 10;
                     synth.max_depth = 20;
-                    synth.slnet_max_depth = 15;                       %SLNET max: 15
-                    synth.slnet_max_elements = 123823;                %SLNET max: 106823
-                    synth.slnet_max_subs = 15301;                     %SLNET max: 13501
+                    synth.slnet_max_depth = 5;                       %SLNET max: 15
+                    synth.slnet_max_elements = 123;                %SLNET max: 106823
+                    synth.slnet_max_subs = 153;                     %SLNET max: 13501
                 case Helper.synth_depth
                     synth.model_count = 1;
                     synth.repair_level_count = 3;

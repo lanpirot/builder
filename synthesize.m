@@ -1,15 +1,20 @@
 function synthesize()
     global synth name2subinfo_complete interface2subs model2id
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
+
     for needs_to_be_compilable = 0:1
-        for mode = 1:5
+        for mode = 3:3
+
             synth = struct();
             Helper.cfg('reset');
-            %Helper.synth_profile(profiles(synth_mode, needs_to_be_compilable, dry, check, diverse, roots_only)
-            Helper.synth_profile(synth_modes{mode}, needs_to_be_compilable, 0, 0, 1, 1)
+            dry = 1;
+            check = 0;
+            diverse = 1;
+            roots_only = 1;
+            Helper.synth_profile(synth_modes{mode}, needs_to_be_compilable, dry, check, diverse, roots_only)
             Helper.clean_up("Starting synthesis process with mode " + string(synth_modes{mode}), Helper.cfg().synthesize_playground, [Helper.cfg().log_synth_theory Helper.cfg().log_synth_practice Helper.cfg().synth_report])
-        
-            
+    
+    
             name2subinfo_complete = Helper.parse_json(Helper.cfg().name2subinfo_complete);
             name2subinfo_complete = Helper.build_sub_info(name2subinfo_complete);
             ks = name2subinfo_complete.keys();
@@ -25,11 +30,13 @@ function synthesize()
         
             interface2subs = Helper.parse_json(Helper.cfg().interface2subs);
             interface2subs = dictionary(interface2subs{1}, interface2subs{2});
-            start_synth_report()
         
             %only for a complete report about all snlnet models
             %slnet_report()
             %return
+
+
+            start_synth_report()
             
             bdclose all;
             tic
@@ -157,6 +164,8 @@ function [roots, good_models] = synth_rounds()
     
     good_models = 0;
     roots = {};
+    build_success = 1;
+
     for i = 1:synth.model_count
         name2subinfo_complete = savename2subinfo_complete;
         model2id = savemodel2id;
@@ -168,6 +177,12 @@ function [roots, good_models] = synth_rounds()
         model_name = char("model" + string(i));
         model_path = Helper.cfg().synthesize_playground + filesep + model_name + ".slx";
 
+        if build_success %only start the build_time if the last attempt was successful
+            build_start = tic;
+        end
+        global attempt_start
+        attempt_start = tic;
+
         if Helper.is_synth_mode(Helper.synth_giant)
             while 1
                 try
@@ -177,14 +192,13 @@ function [roots, good_models] = synth_rounds()
                 end
             end
             mutate_chances = synth.mutate_chances;
-            while ~double_check_root(model_root) && mutate_chances
+            while ~double_check_root(model_root) && mutate_chances && toc(attempt_start) < synth.time_out
                 [model_root, mutation_performed] = model_root.mutate_bigger();
-                fprintf("%i %i %i\n", model_root.local_depth, model_root.num_elements, model_root.num_subsystems);
                 mutate_chances = mutate_chances - 1;
                 if mutation_performed
                     mutate_chances = synth.mutate_chances;
                 end
-                %disp(report2string(i, model_root))
+                disp(report2string(i, model_root, toc(attempt_start), 0))
             end
             build_success = double_check_root(model_root);
         else
@@ -201,7 +215,7 @@ function [roots, good_models] = synth_rounds()
                 [model_root, build_success] = synth_repair([], Identity('', '', ''), 1);
             end
         end
-        
+        build_time = toc(build_start);
         
         if ~build_success
             disp("Building model " + string(i) + " FAILED")
@@ -209,13 +223,15 @@ function [roots, good_models] = synth_rounds()
         end
         model_root = model_root.report();
         roots{i} = model_root;
-        Helper.log('synth_report', report2string(i, model_root));
+        
 
         if synth.dry_build
+            Helper.log('synth_report', report2string(i, model_root, build_time, 0));
             continue
         end
         
         try
+            save_start = tic;
             disp("Saving model " + string(i) + " ...")
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
             if additional_level
@@ -226,6 +242,7 @@ function [roots, good_models] = synth_rounds()
             end
 
             slx_save(slx_handle, model_path);
+            save_time = toc(save_start);
 
             good_models = good_models + 1;
             disp("Saved model " + string(i))
@@ -235,19 +252,22 @@ function [roots, good_models] = synth_rounds()
                 close_system(model_path)
             end
         catch ME
+            save_time = NaN;
             disp("Saving model " + string(i) + " FAILED")
             Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(i))
         end
+
+        Helper.log('synth_report', report2string(i, model_root, build_time, save_time));
         delete(Helper.cfg().synthesize_playground + filesep + "*.slmx");
     end
 end
 
 function [subtree, build_success] = synth_repair(interface, not_identity, depth, AST_model)
-    global name2subinfo_complete synth
+    global name2subinfo_complete synth attempt_start
     subtree = [];
     build_success = 0;
 
-    if stop_repairing(depth)
+    if stop_repairing(depth) || synth.time_out < toc(attempt_start)
         return
     end
     max_repairs = synth.repair_level_count;
@@ -336,8 +356,8 @@ function stop = stop_repairing(depth)
     end    
 end
 
-function str = report2string(model_no, root)
-    str = string(model_no) + "," + root.local_depth + "," + root.num_elements + "," + root.num_subsystems + "," + length(root.unique_models) + "," + length(root.unique_subsystems);
+function str = report2string(model_no, root, build_time, save_time)
+    str = string(model_no) + "," + root.local_depth + "," + root.num_elements + "," + root.num_subsystems + "," + length(root.unique_models) + "," + length(root.unique_subsystems) + "," + string(build_time) + "," + string(save_time);
 end
 
 function bool = slx_evaluate(slx_identity)
@@ -347,7 +367,7 @@ end
 function start_synth_report()
     global synth
     Helper.log('synth_report', evalc('disp(synth)'))
-    Helper.log('synth_report', "model_no, depth, elements, subs, unique_models, unique_subsystems");
+    Helper.log('synth_report', "model_no, depth, elements, subs, unique_models, unique_subsystems, build_time, save_time");
 end
 
 function bool = loadable(slx_identity)

@@ -181,7 +181,7 @@ classdef SubTree
             global name2subinfo_complete
             mutation_performed = 0;
             interface = name2subinfo_complete{{struct(obj.identity)}}.(Helper.interface);
-            equivalent_obj = choose_subsystem(interface.hsh, Identity('', '', ''), obj.local_depth).recursive_subtree(name2subinfo_complete).report();
+            equivalent_obj = choose_subsystem(interface.hsh, Identity('', '', ''), NaN).recursive_subtree(name2subinfo_complete).report();
             if equivalent_obj.is_bigger(obj)
                 mutation_performed = 1;
                 obj = equivalent_obj;

@@ -1,20 +1,20 @@
 function mine(max_number_of_models)
-    for needs_to_be_compilable = 1:1
+    for needs_to_be_compilable = 0:1
         [old_path,models_evaluated,subs,modellist] = startinit(needs_to_be_compilable);
         if ~exist("max_number_of_models",'var')
             max_number_of_models = height(modellist.model_url);
         end
-        for i = 3000:max_number_of_models
+        for i = 1:max_number_of_models
             path(old_path);
         
             if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)
                 continue
             end
             Helper.create_garbage_dir();
-            
-    
+
+
             try
-                [model_path, model_handle, model_name] = prepare_model(modellist.model_url(i, :));
+                [model_path, model_name, subsystems_of_model] = prepare_model(modellist.model_url(i, :));
     
                 if is_architecture_model(model_name) || model_is_problem_file(model_name) || endsWith(model_path, "logger.slx")
                     cd(Helper.cfg().project_dir)
@@ -26,7 +26,7 @@ function mine(max_number_of_models)
                 end
                 cd(Helper.cfg().project_dir)
                 disp("Mining interfaces of model no. " + string(i) + " " + model_path)
-                subs = compute_interfaces_for_subs(subs, model_handle, model_path);
+                subs = compute_interfaces_for_subs(subs, model_path, subsystems_of_model);
     
                 if needs_to_be_compilable
                     try_end(model_name);
@@ -54,7 +54,7 @@ function mine(max_number_of_models)
     end
 end
 
-function [model_path, model_handle, model_name] = prepare_model(raw_model_url)
+function [model_path, model_name, subsystems] = prepare_model(raw_model_url)
     model_path = string(strip(raw_model_url, "right"));
     model_handle = with_preserved_cfg(@load_system, model_path);
     model_name = get_param(model_handle, 'Name');
@@ -62,6 +62,8 @@ function [model_path, model_handle, model_name] = prepare_model(raw_model_url)
         set_param(model_name, 'SimMechanicsOpenEditorOnUpdate', 'off')
     catch
     end
+    subsystems = Helper.find_subsystems(model_handle);
+    subsystems(end + 1) = model_handle;%the root subsystem
 end
 
 function bool = is_architecture_model(model_name)
@@ -236,12 +238,10 @@ function [ikeys, identities] = make_i2s_smaller(i2s)
     ikeys = ikeys';
 end
 
-function subs = compute_interfaces_for_subs(subs, model_handle, model_path)
-    subsystems = Helper.find_subsystems(model_handle);
-    subsystems(end + 1) = model_handle;%the root subsystem
-    for j = 1:length(subsystems)
-        if Subsystem.is_subsystem(subsystems(j))
-            next_sub = Subsystem(subsystems(j), model_path);
+function subs = compute_interfaces_for_subs(subs, model_path, subsystems_of_model)
+    for j = 1:length(subsystems_of_model)
+        if Subsystem.is_subsystem(subsystems_of_model(j))
+            next_sub = Subsystem(subsystems_of_model(j), model_path);
             subs{end + 1} = next_sub;
         end
     end
@@ -262,6 +262,7 @@ function try_close(name, model_path)
         with_preserved_cfg(@close_system, model_path, 0);
         bdclose all;
     catch ME
+        bdclose all;
         log(Helper.cfg().project_dir, 'log_close', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
     end
 end

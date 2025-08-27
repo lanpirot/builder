@@ -1,12 +1,13 @@
-function gather_models(max_number_of_models)
+function gather_models()
     [project_dir, project_info, fileID, modellist] =  startinit();
-    if ~exist("max_number_of_models", 'var')
-        max_number_of_models = length(modellist);
-    end
+    max_number_of_models = length(modellist);
 
-    max_number_of_models = 10;
     rows = strings(1,max_number_of_models);
     for i = 1:max_number_of_models
+        if ismember(i, [3270 3278 6528 6530])%models lead to random MATLAB hard crashes
+            continue
+            %disp(1)
+        end
         warning('off','all')
         
         [project_url, model_url] = prepare_model(modellist, i, project_info, project_dir);
@@ -100,9 +101,10 @@ function [project_url, model_url] = prepare_model(modellist, i, project_info, pr
         model.name = replace(model.name, ' ', '');
     end
     folder = strsplit(model.folder, filesep);
+
     %assumes, you unzipped SLNET projects to a directory each named by a number
     %did you forget a "/" at the end of the filename?
-    project_id = double(string(folder{count(Helper.cfg().project_dir, filesep) + 2}));      
+    project_id = double(string(folder{count(Helper.cfg().project_dir, filesep) + 3}));      
     
     
     project_info_row = find(project_info.path == project_id);

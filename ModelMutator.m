@@ -317,7 +317,8 @@ classdef ModelMutator
             additional_level = 0;
             if copy_from.is_root()
                 %copy from root to root
-                copyfile(copy_from.model_path, root_model_path + ".slx");
+                root_model_path = root_model_path + copy_from.model_path(end-3:end);
+                copyfile(copy_from.model_path, root_model_path);
                 load_system(root_model_path);
                 copy_to = Identity(char(model_name), '', root_model_path);
             else
@@ -375,11 +376,7 @@ classdef ModelMutator
             if copy_from.is_root()
                 %copy from root to subsystem
                 add_block('built-in/Subsystem', copied_element.get_qualified_name())
-                try
-                    Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
-                catch ME
-                    disp("")
-                end
+                Simulink.BlockDiagram.copyContentsToSubsystem(copy_from.get_qualified_name(), copied_element.get_qualified_name())
                 set_param(copied_element.get_qualified_name(), 'Name', copy_to.get_sub_name_for_diagram())
             else
                 %copy from subsystem to subsystem
