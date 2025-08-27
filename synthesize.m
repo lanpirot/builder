@@ -31,9 +31,10 @@ function synthesize()
             interface2subs = Helper.parse_json(Helper.cfg().interface2subs);
             interface2subs = dictionary(interface2subs{1}, interface2subs{2});
         
-            %only for a complete report about all snlnet models
-            %slnet_report()
-            %return
+            %%activate only for a complete report about all snlnet models
+            %%will get saved in a normal synth_report.csv of the current mode
+            slnet_report()
+            return
 
 
             start_synth_report()
@@ -59,7 +60,7 @@ function slnet_report()
             subtree = subtree.recursive_subtree(name2subinfo_complete);
             subtree = subtree.report();
             roots{end + 1} = subtree;
-            Helper.log('synth_report', report2string(i, subtree));
+            Helper.log('synth_report', report2string(i, subtree, NaN, NaN));
         end
     end
     coverage_report(roots, length(roots), length(roots), length(name2subinfo_complete.keys()))
@@ -361,6 +362,12 @@ function stop = stop_repairing(depth)
 end
 
 function str = report2string(model_no, root, build_time, save_time)
+    if isnan(build_time)
+        build_time = "NaN";
+    end
+    if isnan(save_time)
+        save_time = "NaN";
+    end
     str = string(model_no) + "," + root.local_depth + "," + root.num_elements + "," + root.num_subsystems + "," + length(root.unique_models) + "," + length(root.unique_subsystems) + "," + string(build_time) + "," + string(save_time);
 end
 
@@ -369,7 +376,6 @@ function bool = slx_evaluate(slx_identity)
 end
 
 function start_synth_report()
-    global synth
     Helper.log('synth_report', evalc('disp(synth)'))
     Helper.log('synth_report', "model_no, depth, elements, subs, unique_models, unique_subsystems, build_time, save_time");
 end

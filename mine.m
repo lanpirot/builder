@@ -260,11 +260,10 @@ function try_close(name, model_path)
     try_end(name)
     try
         Helper.with_preserved_cfg(@close_system, model_path, 0);
-        bdclose all;
     catch ME
-        bdclose all;
         log(Helper.cfg().project_dir, 'log_close', model_path + newline + ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line);
     end
+    bdclose all;
 end
 
 function log(project_dir, file_name, message)
