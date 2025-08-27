@@ -1,13 +1,8 @@
 function gather_models()
-    [project_dir, project_info, fileID, modellist] =  startinit();
+    [project_dir, project_info, fileID, modellist, start_num] =  startinit();
     max_number_of_models = length(modellist);
 
-    rows = strings(1,max_number_of_models);
-    for i = 1:max_number_of_models
-        if ismember(i, [3270 3278 6528 6530])%models lead to random MATLAB hard crashes
-            continue
-            %disp(1)
-        end
+    for i = start_num:max_number_of_models
         warning('off','all')
         
         [project_url, model_url] = prepare_model(modellist, i, project_info, project_dir);
@@ -17,9 +12,9 @@ function gather_models()
         closable = try_close(model_url, model_name, loadable);
         clean_up_internal();
 
-        rows(i) = replace(model_url + sprintf('\t') + project_url + sprintf('\t') + string(loadable) + sprintf('\t') + string(compilable) + sprintf('\t') + string(runnable) + sprintf('\t') + string(closable), "\", "/") + newline;
-    end
-    fprintf(fileID, "%s", rows);
+        row = replace(model_url + sprintf(",") + project_url + sprintf(",") + string(loadable) + sprintf(",") + string(compilable) + sprintf(",") + string(runnable) + sprintf(",") + string(closable), "\", "/") + newline;
+        fprintf(fileID, "%s", row);
+    end    
     fclose(fileID);
     disp("Saved gathered model info to " + string(Helper.cfg().modellist))
     Helper.clear_garbage();
@@ -116,7 +111,7 @@ function [project_url, model_url] = prepare_model(modellist, i, project_info, pr
     Helper.create_garbage_dir()
 end
 
-function [project_dir, project_info, fileID, modellist] =  startinit()
+function [project_dir, project_info, fileID, modellist, start_num] =  startinit()
     addpath(pwd)
     addpath(genpath('utils'), '-begin');
     set(0, 'DefaultFigureVisible', 'off');
@@ -128,8 +123,17 @@ function [project_dir, project_info, fileID, modellist] =  startinit()
     modellist = [dir(fullfile(Helper.cfg().models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.cfg().models_path, "**" + filesep + "*.mdl"))];
     project_dir = Helper.cfg().project_dir;
     project_info = tdfread(Helper.cfg().project_info, 'tab');
-    fileID = fopen(Helper.cfg().modellist, "w+");
-    fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "runnable" + sprintf("\t") + "closable" + newline);
+
+    if ~isfile(Helper.cfg().modellist)
+        fileID = fopen(Helper.cfg().modellist, "w+");
+        fprintf(fileID, "model_url" + sprintf(",") + "project_url" + sprintf(",") + "loadable" + sprintf(",") + "compilable" + sprintf(",") + "runnable" + sprintf(",") + "closable" + newline);
+    else
+        fileID = fopen(Helper.cfg().modellist, "a");
+    end
+    start_num = numel(strsplit(fileread(Helper.cfg().modellist), '\n'));
+    if start_num == 2
+        start_num = 1;
+    end
 end
 
 function clean_up_internal()

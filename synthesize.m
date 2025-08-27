@@ -3,7 +3,7 @@ function synthesize()
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
 
     for needs_to_be_compilable = 0:1
-        for mode = 3:3
+        for mode = 1:1
 
             synth = struct();
             Helper.cfg('reset');
@@ -112,6 +112,9 @@ function coverage_report(roots, models_synthed, model_count, sub_count)
         model_local_overlap_ratios = [];
         subsystem_local_overlap_ratios = [];
         for j = 1:length(roots)
+            if i == j
+                continue
+            end
             model_overlap = intersect(roots(i).unique_models, roots(j).unique_models);
             model_local_overlap_ratios(end + 1) = length(model_overlap) / length(roots(i).unique_models);
             if model_local_overlap_ratios(end) == 1
@@ -137,13 +140,13 @@ function coverage_report(roots, models_synthed, model_count, sub_count)
     model_medians = vertcat(overlap_ratios.model_median);
     Helper.log('synth_report', "Maximum of mean model overlaps: " + string(max(model_means)))
     Helper.log('synth_report', "Maximum of median model overlaps: " + string(max(model_medians)))
-    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + model_total_overlap + " model overlaps (max: " + string(models_synthed^2) + ").")
+    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + model_total_overlap + " model overlaps (max: " + string(models_synthed^2 - models_synthed) + ").")
 
     subsystem_means = vertcat(overlap_ratios.subsystem_mean);
     subsystem_medians = vertcat(overlap_ratios.subsystem_median);
     Helper.log('synth_report', "Maximum of mean subsystem overlaps: " + string(max(subsystem_means)))
     Helper.log('synth_report', "Maximum of median subsystem overlaps: " + string(max(subsystem_medians)))
-    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + subsystem_total_overlap + " complete subsystem overlaps (max: " + string(models_synthed^2) + ").")
+    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + subsystem_total_overlap + " complete subsystem overlaps (max: " + string(models_synthed^2 - models_synthed) + ").")
     Helper.log('synth_report', "========END REPORT END=========")
 end
 
@@ -162,19 +165,19 @@ function [roots, good_models] = synth_rounds()
     savemodel2id = model2id;
     saveinterface2subs = interface2subs;
     
-    good_models = 0;
+    good_models = 1;
     roots = {};
     build_success = 1;
 
-    for i = 1:synth.model_count
+    while good_models <= synth.model_count
         name2subinfo_complete = savename2subinfo_complete;
         model2id = savemodel2id;
         interface2subs = saveinterface2subs;
-        rng(i, 'twister')
+        rng(good_models, 'twister')
         depth_reached = 0;
 
-        disp("Building model " + string(i))
-        model_name = char("model" + string(i));
+        disp("Building model " + string(good_models))
+        model_name = char("model" + string(good_models));
         model_path = Helper.cfg().synthesize_playground + filesep + model_name + ".slx";
 
         if build_success %only start the build_time if the last attempt was successful
@@ -198,7 +201,7 @@ function [roots, good_models] = synth_rounds()
                 if mutation_performed
                     mutate_chances = synth.mutate_chances;
                 end
-                disp(report2string(i, model_root, toc(attempt_start), 0))
+                disp(report2string(good_models, model_root, toc(attempt_start), 0))
             end
             build_success = double_check_root(model_root);
         else
@@ -218,21 +221,22 @@ function [roots, good_models] = synth_rounds()
         build_time = toc(build_start);
         
         if ~build_success
-            disp("Building model " + string(i) + " FAILED")
+            disp("Building model " + string(good_models) + " FAILED")
             continue
         end
         model_root = model_root.report();
-        roots{i} = model_root;
+        roots{good_models} = model_root;
         
 
         if synth.dry_build
-            Helper.log('synth_report', report2string(i, model_root, build_time, 0));
+            Helper.log('synth_report', report2string(good_models, model_root, build_time, 0));
+            good_models = good_models + 1;
             continue
         end
         
         try
             save_start = tic;
-            disp("Saving model " + string(i) + " ...")
+            disp("Saving model " + string(good_models) + " ...")
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
             if additional_level
                 model_root = model_root.add_level();
@@ -245,7 +249,7 @@ function [roots, good_models] = synth_rounds()
             save_time = toc(save_start);
 
             good_models = good_models + 1;
-            disp("Saved model " + string(i))
+            disp("Saved model " + string(good_models))
             if synth.double_check_file
                 load_system(model_path)
                 model_root.is_discrepant_to_slx()
@@ -253,11 +257,11 @@ function [roots, good_models] = synth_rounds()
             end
         catch ME
             save_time = NaN;
-            disp("Saving model " + string(i) + " FAILED")
-            Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(i))
+            disp("Saving model " + string(good_models) + " FAILED")
+            Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models))
         end
 
-        Helper.log('synth_report', report2string(i, model_root, build_time, save_time));
+        Helper.log('synth_report', report2string(good_models, model_root, build_time, save_time));
         delete(Helper.cfg().synthesize_playground + filesep + "*.slmx");
     end
 end
