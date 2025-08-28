@@ -107,8 +107,8 @@ classdef Helper
         end
 
         function synth_profile(synth_mode, needs_to_be_compilable, dry, check, diverse, roots_only)
-            set(0, 'RecursionLimit', 500)
             global synth
+            set(0, 'RecursionLimit', 500)
             Helper.cfg();
             Helper.cfg('synth_mode', synth_mode);
             Helper.cfg('needs_to_be_compilable', needs_to_be_compilable);

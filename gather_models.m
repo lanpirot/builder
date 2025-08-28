@@ -17,6 +17,7 @@ function gather_models()
     end    
     fclose(fileID);
     disp("Saved gathered model info to " + string(Helper.cfg().modellist))
+    disp("All done!")
     Helper.clear_garbage();
 end
 
@@ -82,10 +83,10 @@ function closable = try_close(model_url, model_name, loadable)
     if loadable
         try
             Helper.with_preserved_cfg(@close_system, model_url, 0);
+            bdclose all;
         catch            
         end
         closable = double(~bdIsLoaded(model_name));
-        bdclose all;
     end
 end
 
@@ -98,14 +99,18 @@ function [project_url, model_url] = prepare_model(modellist, i, project_info, pr
     end
     folder = strsplit(model.folder, filesep);
 
-    %assumes, you unzipped SLNET projects to a directory each named by a number
-    %did you forget a "/" at the end of the filename?
-    project_id = double(string(folder{count(Helper.cfg().project_dir, filesep) + 3}));      
-    
-    
-    project_info_row = find(project_info.path == project_id);
-    project_url = project_info.url(project_info_row,:);
-    project_url = Helper.rstrip(project_url);
+    try
+        %assumes, you unzipped SLNET projects to a directory each named by a number
+        %did you forget a "/" at the end of the filename?
+        project_id = double(string(folder{count(Helper.cfg().project_dir, filesep) + 3}));      
+        
+        
+        project_info_row = find(project_info.path == project_id);
+        project_url = project_info.url(project_info_row,:);
+        project_url = Helper.rstrip(project_url);
+    catch
+        project_url = "";
+    end
 
     model_url = string(fullfile(model.folder, model.name));
     cd(project_dir)
@@ -123,13 +128,17 @@ function [project_dir, project_info, fileID, modellist, start_num] =  startinit(
     Helper.cfg('reset');
     modellist = [dir(fullfile(Helper.cfg().models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.cfg().models_path, "**" + filesep + "*.mdl"))];
     project_dir = Helper.cfg().project_dir;
-    project_info = tdfread(Helper.cfg().project_info, 'tab');
+    if isfile(Helper.cfg().project_info)
+        project_info = tdfread(Helper.cfg().project_info, 'tab');
+    else
+        project_info = [];
+    end
 
-    if ~isfile(Helper.cfg().modellist)
+    if isfile(Helper.cfg().modellist)
+        fileID = fopen(Helper.cfg().modellist, "a");
+    else
         fileID = fopen(Helper.cfg().modellist, "w+");
         fprintf(fileID, "model_url" + sprintf(",") + "project_url" + sprintf(",") + "loadable" + sprintf(",") + "compilable" + sprintf(",") + "runnable" + sprintf(",") + "closable" + newline);
-    else
-        fileID = fopen(Helper.cfg().modellist, "a");
     end
     start_num = numel(strsplit(fileread(Helper.cfg().modellist), '\n'));
     if start_num == 2
