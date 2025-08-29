@@ -59,6 +59,7 @@ classdef SubTree
 
         function [obj, model_handle, additional_level] = build_root(obj, model_name)
             global name2subinfo_complete
+            savename2subinfo_complete = name2subinfo_complete;
             slx_id = Identity(model_name, '', Helper.cfg().synthesize_playground + filesep + model_name);
             obj.synthed_identity = slx_id;
             
@@ -75,15 +76,18 @@ classdef SubTree
                 Helper.with_preserved_cfg(@close_system, obj.identity.model_path, 0)
             end
             
-            slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
+            slx_children = savename2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
                 obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, slx_id.get_qualified_name(), Identity.is_identical(Identity(slx_children(i)), obj.children{i}.identity));
             end
             model_handle = get_param(model_name, 'Handle');
+            global name2subinfo_complete
+            name2subinfo_complete = savename2subinfo_complete;
         end
 
         function obj = build_sub(obj, copy_to, slx_id, slx_parents, dry_build)
             global name2subinfo_complete
+            savename2subinfo_complete = name2subinfo_complete;
             copy_from = obj.identity;
             copy_to = Identity(copy_to);
             copy_into = Identity(copy_to.sub_name, slx_parents, slx_id.model_path);
@@ -91,13 +95,13 @@ classdef SubTree
             if dry_build
                 obj.synthed_identity = copy_into;
             else
-                copy_from_interface = Interface(name2subinfo_complete{{struct(copy_from)}}.(Helper.interface));
-                copy_to_interface = Interface(name2subinfo_complete{{struct(copy_to)}}.(Helper.interface));
+                copy_from_interface = Interface(savename2subinfo_complete{{struct(copy_from)}}.(Helper.interface));
+                copy_to_interface = Interface(savename2subinfo_complete{{struct(copy_to)}}.(Helper.interface));
     
                 try
                     Helper.with_preserved_cfg(@load_system, copy_from.model_path);
                 catch
-                    Helper.with_preserved_cfg(@close_system, copy_from.model_path, 0);
+                    Helper.with_preserved_cfg(@close_system, copy_from.get_model_name(), 0);
                     Helper.with_preserved_cfg(@load_system, copy_from.model_path);
                 end
                 mapping = copy_to_interface.get_mapping(copy_from_interface);
@@ -111,10 +115,12 @@ classdef SubTree
                 end
             end
 
-            slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
+            slx_children = savename2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
             for i = 1:length(obj.children)
                 obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, [slx_parents '/' copy_into.sub_name], Identity.is_identical(Identity(slx_children(i)), obj.children{i}.identity));
             end
+            global name2subinfo_complete
+            name2subinfo_complete = savename2subinfo_complete;
         end
 
         function obj = report(obj)

@@ -12,7 +12,7 @@ function gather_models()
         closable = try_close(model_url, model_name, loadable);
         clean_up_internal();
 
-        row = replace(model_url + sprintf(",") + project_url + sprintf(",") + string(loadable) + sprintf(",") + string(compilable) + sprintf(",") + string(runnable) + sprintf(",") + string(closable), "\", "/") + newline;
+        row = replace(model_url + sprintf("\t") + project_url + sprintf("\t") + string(loadable) + sprintf("\t") + string(compilable) + sprintf("\t") + string(runnable) + sprintf("\t") + string(closable), "\", "/") + newline;
         fprintf(fileID, "%s", row);
     end    
     fclose(fileID);
@@ -138,7 +138,7 @@ function [project_dir, project_info, fileID, modellist, start_num] =  startinit(
         fileID = fopen(Helper.cfg().modellist, "a");
     else
         fileID = fopen(Helper.cfg().modellist, "w+");
-        fprintf(fileID, "model_url" + sprintf(",") + "project_url" + sprintf(",") + "loadable" + sprintf(",") + "compilable" + sprintf(",") + "runnable" + sprintf(",") + "closable" + newline);
+        fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "runnable" + sprintf("\t") + "closable" + newline);
     end
     start_num = numel(strsplit(fileread(Helper.cfg().modellist), '\n'));
     if start_num == 2

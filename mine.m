@@ -1,10 +1,15 @@
-function mine(max_number_of_models)
-    for needs_to_be_compilable = 0:1
-        [old_path,models_evaluated,subs,modellist] = startinit(needs_to_be_compilable);
-        if ~exist("max_number_of_models",'var')
-            max_number_of_models = height(modellist.model_url);
-        end
+function mine()
+    for needs_to_be_compilable = 1:1
+        [old_path,models_evaluated,subs,modellist,models_mined] = startinit(needs_to_be_compilable);
+        max_number_of_models = height(modellist.model_url);
         for i = 1:max_number_of_models
+            if height(models_mined) >= i && models_mined.include(i) == 0
+                continue
+            end
+            
+            models_mined.include(i) = 0;
+            models_mined.number(i) = i;
+            writetable(models_mined, Helper.cfg().models_mined)
             path(old_path);
         
             if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)
@@ -41,6 +46,8 @@ function mine(max_number_of_models)
             cd(Helper.cfg().project_dir)
             Helper.clear_garbage()
             close all force;
+
+            writetable(models_mined, Helper.cfg().models_mined)
         end
         disp("We analyzed " + string(length(subs)) + " Subsystems altogether.")
         subs = remove_skips(subs);
@@ -271,7 +278,8 @@ function log(project_dir, file_name, message)
     Helper.log(file_name, message);
 end
 
-function [old_path,models_evaluated,subs,modellist] = startinit(needs_to_be_compilable)
+function [old_path,models_evaluated,subs,modellist,models_mined] = startinit(needs_to_be_compilable)
+    bdclose all;
     addpath(pwd)
     addpath(genpath('utils'), '-begin');
     set(0, 'DefaultFigureVisible', 'off');
@@ -287,5 +295,12 @@ function [old_path,models_evaluated,subs,modellist] = startinit(needs_to_be_comp
     models_evaluated = 0;
     subs = {};
     
-    modellist = tdfread(Helper.cfg().modellist, 'tab');
+    modellist = tdfread(Helper.cfg().modellist, '\t');
+
+    if ~isfile(Helper.cfg().models_mined)
+        mmID = fopen(Helper.cfg().models_mined, "w+");
+        fprintf(mmID, "number,include\n");
+        fclose(mmID);
+    end
+    models_mined = readtable(Helper.cfg().models_mined);
 end

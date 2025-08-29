@@ -2,12 +2,12 @@ function synthesize()
     global synth name2subinfo_complete interface2subs model2id
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
 
-    for needs_to_be_compilable = 0:1
+    for needs_to_be_compilable = 1:1
         for mode = 1:1
 
             synth = struct();
             Helper.cfg('reset');
-            dry = 1;
+            dry = 0;
             check = 0;
             diverse = 1;
             roots_only = 1;
@@ -33,8 +33,8 @@ function synthesize()
         
             %%activate only for a complete report about all snlnet models
             %%will get saved in a normal synth_report.csv of the current mode
-            slnet_report()
-            return
+            %slnet_report()
+            %return
 
 
             start_synth_report()
@@ -169,17 +169,19 @@ function [roots, good_models] = synth_rounds()
     good_models = 1;
     roots = {};
     build_success = 1;
+    tries = 1;
 
     while good_models <= synth.model_count
         name2subinfo_complete = savename2subinfo_complete;
         model2id = savemodel2id;
         interface2subs = saveinterface2subs;
-        rng(good_models, 'twister')
-        depth_reached = 0;
 
-        disp("Building model " + string(good_models))
+        disp("Building model " + string(good_models) + " (try: " + string(tries) + ")")
         model_name = char("model" + string(good_models));
         model_path = Helper.cfg().synthesize_playground + filesep + model_name + ".slx";
+        rng(tries, 'twister')
+        tries = tries + 1;
+        depth_reached = 0;
 
         if build_success %only start the build_time if the last attempt was successful
             build_start = tic;
@@ -264,6 +266,7 @@ function [roots, good_models] = synth_rounds()
 
         Helper.log('synth_report', report2string(good_models, model_root, build_time, save_time));
         delete(Helper.cfg().synthesize_playground + filesep + "*.slmx");
+        delete(Helper.cfg().synthesize_playground + filesep + "model*.mdl.*");
     end
 end
 
@@ -376,6 +379,7 @@ function bool = slx_evaluate(slx_identity)
 end
 
 function start_synth_report()
+    global synth
     Helper.log('synth_report', evalc('disp(synth)'))
     Helper.log('synth_report', "model_no, depth, elements, subs, unique_models, unique_subsystems, build_time, save_time");
 end
@@ -393,7 +397,22 @@ function bool = loadable(slx_identity)
 end
 
 function slx_save(slx_handle, model_path)
-    Helper.with_preserved_cfg(@save_system, slx_handle, model_path);
+    try
+        Helper.with_preserved_cfg(@save_system, slx_handle, model_path);
+    catch
+        elements = Helper.find_elements(slx_handle, 10000);
+        for i = 1:length(elements)
+            try
+                set_param(elements(i), 'PreSaveFcn', '')
+            catch
+            end
+            try
+                set_param(elements(i), 'PostSaveFcn', '')
+            catch 
+            end
+        end
+        Helper.with_preserved_cfg(@save_system, slx_handle, model_path);
+    end
     Helper.with_preserved_cfg(@close_system, slx_handle, 0);
 end
 

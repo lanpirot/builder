@@ -86,6 +86,7 @@ classdef Helper
                     cfg.log_garbage_out = fullfile(exp1path, "log_garbage_out");
                     cfg.log_eval = fullfile(exp1path, "log_eval");
                     cfg.log_close = fullfile(exp1path, "log_close");
+                    cfg.models_mined = fullfile(cfg.log_path, "models_mined.csv");
                 end
                 if ismember('needs_to_be_compilable', fields(cfg)) && ismember('synth_mode', fields(cfg))
                     exp2path = fullfile(cfg.exp1path, cfg.synth_mode);
@@ -121,7 +122,7 @@ classdef Helper
             synth.time_out = 300;
             switch synth_mode
                 case Helper.synth_random
-                    synth.model_count = 10;
+                    synth.model_count = 1000;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -350,8 +351,10 @@ classdef Helper
 
         function out = with_preserved_cfg(fn, varargin)
             % Save current config
+            global synth
             old_cfg = Helper.cfg();
             save("tmp_cfg.mat", "old_cfg");
+            save("tmp_synth.mat", "synth");
         
             if nargout == 0
             % Run the operation
@@ -361,6 +364,7 @@ classdef Helper
             end
         
             % Restore config
+            load("tmp_synth.mat", "synth");
             loaded = load("tmp_cfg.mat", "old_cfg");
             Helper.cfg("cfg", loaded.old_cfg);
         end
