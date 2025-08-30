@@ -130,7 +130,7 @@ classdef Helper
                     synth.choose_retries = 10;
                     synth.max_depth = 20;
                 case Helper.synth_AST_model
-                    synth.model_count = 10;
+                    synth.model_count = 1000;
                     synth.repair_level_count = 2;
                     synth.repair_root_count = 20 * synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -154,11 +154,11 @@ classdef Helper
                     synth.mutate_chances = 100;
                     synth.choose_retries = 10;
                     synth.max_depth = 20;
-                    synth.slnet_max_depth = 5;                       %SLNET max: 15
-                    synth.slnet_max_elements = 123;                %SLNET max: 106823
-                    synth.slnet_max_subs = 153;                     %SLNET max: 13501
+                    synth.slnet_max_depth = 15;                       %SLNET max: 15
+                    synth.slnet_max_elements = 106823;                %SLNET max: 106823
+                    synth.slnet_max_subs = 13501;                     %SLNET max: 13501
                 case Helper.synth_depth
-                    synth.model_count = 1;
+                    synth.model_count = 10;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = 20;
                     synth.choose_sample_size = 10;
@@ -350,12 +350,15 @@ classdef Helper
         end
 
         function out = with_preserved_cfg(fn, varargin)
-            % Save current config
-            global synth
-            old_cfg = Helper.cfg();
-            save("tmp_cfg.mat", "old_cfg");
-            save("tmp_synth.mat", "synth");
-        
+            global name2subinfo_complete model2id interface2subs depth_reached synth
+            
+            savename2subinfo_complete = name2subinfo_complete;
+            savemodel2id = model2id;
+            saveinterface2subs = interface2subs;
+            savedepth_reached = depth_reached;
+            savesynth = synth;
+            savecfg = Helper.cfg();
+
             if nargout == 0
             % Run the operation
                 fn(varargin{:});
@@ -363,10 +366,12 @@ classdef Helper
                out = fn(varargin{:});
             end
         
-            % Restore config
-            load("tmp_synth.mat", "synth");
-            loaded = load("tmp_cfg.mat", "old_cfg");
-            Helper.cfg("cfg", loaded.old_cfg);
+            name2subinfo_complete = savename2subinfo_complete;
+            model2id = savemodel2id;
+            interface2subs = saveinterface2subs;
+            depth_reached = savedepth_reached;
+            synth = savesynth;
+            Helper.cfg("cfg", savecfg);
         end
 
         function log(file_name, message)

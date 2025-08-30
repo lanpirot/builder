@@ -235,7 +235,7 @@ classdef ModelMutator
         function connections = get_wiring(subsystem)
             connections = struct;
             try
-            lines = get_param(subsystem, 'LineHandles');
+                lines = get_param(subsystem, 'LineHandles');
             catch ME
                 disp("")
             end

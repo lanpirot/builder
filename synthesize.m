@@ -3,7 +3,7 @@ function synthesize()
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
 
     for needs_to_be_compilable = 1:1
-        for mode = 1:1
+        for mode = 4:5
 
             synth = struct();
             Helper.cfg('reset');
@@ -161,21 +161,14 @@ function out_string = minmedmaxmedmeanstddev(l)
 end
 
 function [roots, good_models] = synth_rounds()
-    global name2subinfo_complete model2id interface2subs depth_reached synth
-    savename2subinfo_complete = name2subinfo_complete;
-    savemodel2id = model2id;
-    saveinterface2subs = interface2subs;
+    global name2subinfo_complete depth_reached synth
     
     good_models = 1;
     roots = {};
     build_success = 1;
-    tries = 1;
+    tries = 3;
 
     while good_models <= synth.model_count
-        name2subinfo_complete = savename2subinfo_complete;
-        model2id = savemodel2id;
-        interface2subs = saveinterface2subs;
-
         disp("Building model " + string(good_models) + " (try: " + string(tries) + ")")
         model_name = char("model" + string(good_models));
         model_path = Helper.cfg().synthesize_playground + filesep + model_name + ".slx";
@@ -204,7 +197,7 @@ function [roots, good_models] = synth_rounds()
                 if mutation_performed
                     mutate_chances = synth.mutate_chances;
                 end
-                disp(report2string(good_models, model_root, toc(attempt_start), 0))
+                %disp(report2string(good_models, model_root, toc(attempt_start), 0))
             end
             build_success = double_check_root(model_root);
         else
@@ -237,9 +230,9 @@ function [roots, good_models] = synth_rounds()
             continue
         end
         
-        try
+        %try
             save_start = tic;
-            disp("Saving model " + string(good_models) + " ...")
+            disp("Saving model " + string(good_models) + " ... (" + string(model_root.num_subsystems) + " Subsystems from " + string(length(model_root.unique_models)) + " unique models)")
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
             if additional_level
                 model_root = model_root.add_level();
@@ -258,14 +251,15 @@ function [roots, good_models] = synth_rounds()
                 model_root.is_discrepant_to_slx()
                 Helper.with_preserved_cfg(@close_system, model_path, 0);
             end
-        catch ME
-            save_time = NaN;
-            disp("Saving model " + string(good_models) + " FAILED")
-            Helper.log('log_synth_practice', ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models))
-        end
+        %catch ME
+        %    save_time = NaN;
+        %    disp("Saving model " + string(good_models) + " FAILED")
+        %    Helper.log('log_synth_practice',ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models) + ", try: " + string(tries))
+        %end
 
         Helper.log('synth_report', report2string(good_models, model_root, build_time, save_time));
         delete(Helper.cfg().synthesize_playground + filesep + "*.slmx");
+        delete(Helper.cfg().synthesize_playground + filesep + "*.slm.err");
         delete(Helper.cfg().synthesize_playground + filesep + "model*.mdl.*");
     end
 end
