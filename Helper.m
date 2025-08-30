@@ -57,6 +57,7 @@ classdef Helper
                 cfg = struct();
                 cfg.models_path = system_constants.models_path;
                 cfg.project_dir = system_constants.project_dir;
+                cfg.good_models_path = system_constants.good_models_path;
                 cfg.log_path = system_constants.project_dir;
                 mkdir(cfg.log_path)
                 cfg.project_info = fullfile(cfg.log_path, "project_info.tsv");
