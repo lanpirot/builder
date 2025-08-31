@@ -12,8 +12,9 @@ function gather_models()
         closable = try_close(model_url, model_name, loadable);
         clean_up_internal();
 
-        row = replace(model_url + sprintf("\t") + project_url + sprintf("\t") + string(loadable) + sprintf("\t") + string(compilable) + sprintf("\t") + string(runnable) + sprintf("\t") + string(closable), "\", "/") + newline;
-        fprintf(fileID, "%s", row);
+
+        fields = strrep({model_url, project_url, string(loadable), string(compilable), string(runnable), string(closable)}, "\", "/");
+        fprintf(fileID, "%s\n", strjoin(fields, "\t"));
     end    
     fclose(fileID);
     disp("Saved gathered model info to " + string(Helper.cfg().modellist))
@@ -83,8 +84,8 @@ function closable = try_close(model_url, model_name, loadable)
     if loadable
         try
             Helper.with_preserved_cfg(@close_system, model_url, 0);
-            bdclose all;
-        catch            
+        catch         
+            bdclose all;   
         end
         closable = double(~bdIsLoaded(model_name));
     end
@@ -126,7 +127,7 @@ function [project_dir, project_info, fileID, modellist, start_num] =  startinit(
 
     disp("Starting gathering process")
     Helper.cfg('reset');
-    modellist = [dir(fullfile(Helper.cfg().models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.cfg().models_path, "**" + filesep + "*.mdl"))];
+    modellist = [dir(fullfile(Helper.cfg().tame_models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.cfg().tame_models_path, "**" + filesep + "*.mdl"))];
     project_dir = Helper.cfg().project_dir;
     if isfile(Helper.cfg().project_info)
         project_info = tdfread(Helper.cfg().project_info, 'tab');
@@ -138,7 +139,8 @@ function [project_dir, project_info, fileID, modellist, start_num] =  startinit(
         fileID = fopen(Helper.cfg().modellist, "a");
     else
         fileID = fopen(Helper.cfg().modellist, "w+");
-        fprintf(fileID, "model_url" + sprintf("\t") + "project_url" + sprintf("\t") + "loadable" + sprintf("\t") + "compilable" + sprintf("\t") + "runnable" + sprintf("\t") + "closable" + newline);
+        headers = ["model_url", "project_url", "loadable", "compilable", "runnable", "closable"];
+        fprintf(fileID, "%s\n", strjoin(headers, "\t"));
     end
     start_num = numel(strsplit(fileread(Helper.cfg().modellist), '\n'));
     if start_num == 2
