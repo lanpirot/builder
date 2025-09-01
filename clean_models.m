@@ -58,7 +58,7 @@ function clean_models()
     
     
     
-                lock_links = {'LinkStatus', 'none'; 'Lock', 'off'; 'LockLinksToLibrary', 'off'};
+                lock_links = {'LinkStatus', 'none'; 'Lock', 'off'; 'LockLinksToLibrary', 'off'; 'Permissions', 'ReadWrite'; 'LinkStatus', 'none'; 'Lock', 'off'; 'LockLinksToLibrary', 'off'};
                 block_functions = {'OpenFcn' 'LoadFcn' 'MoveFcn' 'NameChangeFcn' 'PreCopyFcn' 'CopyFcn' 'ClipboardFcn' 'PreDeleteFcn' 'DeleteFcn' 'DestroyFcn' 'UndoDeleteFcn' 'InitFcn' 'StartFcn' 'ContinueFcn' 'PauseFcn' 'StopFcn' 'PreSaveFcn' 'PostSaveFcn' 'CloseFcn' 'ModelCloseFcn'};
                 blocks = Helper.find_elements(model);
                 for j = 2:numel(blocks)
@@ -87,7 +87,7 @@ function clean_models()
     
                 bdclose all;
             catch ME
-                if ~startsWith(ME.message, "Failed to load library") && ~startsWith(ME.message, "Failed to find")
+                if ~startsWith(ME.message, "Failed to load library") && ~startsWith(ME.message, "Cannot find library")
                     fprintf('Model %d failed: %s\nReason: %s\n', i, model_path, ME.message);
                 end
                 bdclose all;

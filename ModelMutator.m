@@ -303,11 +303,7 @@ classdef ModelMutator
         function remove_lines2(lines)
             for i = 1:length(lines)
                 if lines(i) ~= -1
-                    try
-                        delete_line(lines(i))
-                    catch
-                        disp(1)
-                    end
+                    delete_line(lines(i))
                 end
             end
         end

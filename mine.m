@@ -1,4 +1,5 @@
 function mine()
+    TODO: remove old file of other mine procedure
     for needs_to_be_compilable = 1:1
         [old_path,models_evaluated,subs,modellist,models_mined] = startinit(needs_to_be_compilable);
         max_number_of_models = height(modellist.model_url);
