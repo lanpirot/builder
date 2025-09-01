@@ -2,8 +2,8 @@ function synthesize()
     global synth name2subinfo_complete interface2subs model2id
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
 
-    for needs_to_be_compilable = 1:1
-        for mode = 4:5
+    for needs_to_be_compilable = 0:1
+        for mode = 3:5
 
             synth = struct();
             Helper.cfg('reset');
@@ -166,7 +166,7 @@ function [roots, good_models] = synth_rounds()
     good_models = 1;
     roots = {};
     build_success = 1;
-    tries = 3;
+    tries = 1;
 
     while good_models <= synth.model_count
         disp("Building model " + string(good_models) + " (try: " + string(tries) + ")")
@@ -230,7 +230,7 @@ function [roots, good_models] = synth_rounds()
             continue
         end
         
-        %try
+        try
             save_start = tic;
             disp("Saving model " + string(good_models) + " ... (" + string(model_root.num_subsystems) + " Subsystems from " + string(length(model_root.unique_models)) + " unique models)")
             [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
@@ -244,18 +244,19 @@ function [roots, good_models] = synth_rounds()
             slx_save(slx_handle, model_path);
             save_time = toc(save_start);
 
-            good_models = good_models + 1;
+            
             disp("Saved model " + string(good_models))
             if synth.double_check_file
                 Helper.with_preserved_cfg(@load_system, model_path);
                 model_root.is_discrepant_to_slx()
                 Helper.with_preserved_cfg(@close_system, model_path, 0);
             end
-        %catch ME
-        %    save_time = NaN;
-        %    disp("Saving model " + string(good_models) + " FAILED")
-        %    Helper.log('log_synth_practice',ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models) + ", try: " + string(tries))
-        %end
+            good_models = good_models + 1;
+        catch ME
+            save_time = NaN;
+            disp("Saving model " + string(good_models) + " FAILED")
+            Helper.log('log_synth_practice',ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models) + ", try: " + string(tries))
+        end
 
         Helper.log('synth_report', report2string(good_models, model_root, build_time, save_time));
         delete(Helper.cfg().synthesize_playground + filesep + "*.slmx");

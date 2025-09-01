@@ -237,7 +237,7 @@ classdef ModelMutator
             try
                 lines = get_param(subsystem, 'LineHandles');
             catch ME
-                disp("")
+                disp(1)
             end
 
             connections.in_source_ports = ModelMutator.get_wiring_of(lines.Inport, "SrcPortHandle");
@@ -303,7 +303,11 @@ classdef ModelMutator
         function remove_lines2(lines)
             for i = 1:length(lines)
                 if lines(i) ~= -1
-                    delete_line(lines(i))
+                    try
+                        delete_line(lines(i))
+                    catch
+                        disp(1)
+                    end
                 end
             end
         end
@@ -394,7 +398,11 @@ classdef ModelMutator
             ph = get_param(system.get_qualified_name(), "PortHandles");
             for i=1:length(ports.in_source_ports)
                 if ports.in_source_ports{i} ~= -1
-                    add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
+                    try
+                        add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
+                    catch ME
+                        disp(1)
+                    end
                 end
             end
             for i=1:length(ports.out_destination_ports)

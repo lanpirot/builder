@@ -39,7 +39,7 @@ function clean_models()
             end
     
             try
-                fprintf('Processing model %d of %d: %s\n', i, total_models, model_path);
+                fprintf('Cleaning model %d of %d: %s\n', i, total_models, model_path);
     
                 % Update state file
                 fid = fopen(state_file, 'w');
@@ -87,7 +87,7 @@ function clean_models()
     
                 bdclose all;
             catch ME
-                if ~startsWith(ME.message, "Failed to load library") && ~startsWith(ME.message, "Failed to load find")
+                if ~startsWith(ME.message, "Failed to load library") && ~startsWith(ME.message, "Failed to find")
                     fprintf('Model %d failed: %s\nReason: %s\n', i, model_path, ME.message);
                 end
                 bdclose all;

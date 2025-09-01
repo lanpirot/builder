@@ -1,3 +1,4 @@
+%% 
 function gather_models()
     [project_dir, project_info, fileID, modellist, start_num] =  startinit();
     max_number_of_models = length(modellist);
@@ -13,13 +14,13 @@ function gather_models()
         clean_up_internal();
 
 
-        fields = strrep({model_url, project_url, string(loadable), string(compilable), string(runnable), string(closable)}, "\", "/");
-        fprintf(fileID, "%s\n", strjoin(fields, "\t"));
+        fields = strrep(strjoin([model_url, project_url, string(loadable), string(compilable), string(runnable), string(closable)], '\t'), "\", "/");
+        fprintf(fileID, "%s\n", fields);
+        Helper.clear_garbage();
     end    
     fclose(fileID);
     disp("Saved gathered model info to " + string(Helper.cfg().modellist))
     disp("All done!")
-    Helper.clear_garbage();
 end
 
 
@@ -84,8 +85,9 @@ function closable = try_close(model_url, model_name, loadable)
     if loadable
         try
             Helper.with_preserved_cfg(@close_system, model_url, 0);
-        catch         
-            bdclose all;   
+            bdclose all;
+        catch
+            bdclose all;
         end
         closable = double(~bdIsLoaded(model_name));
     end
@@ -140,10 +142,10 @@ function [project_dir, project_info, fileID, modellist, start_num] =  startinit(
     else
         fileID = fopen(Helper.cfg().modellist, "w+");
         headers = ["model_url", "project_url", "loadable", "compilable", "runnable", "closable"];
-        fprintf(fileID, "%s\n", strjoin(headers, "\t"));
+        fprintf(fileID, "%s\n", strjoin(headers, '\t'));
     end
-    start_num = numel(strsplit(fileread(Helper.cfg().modellist), '\n'));
-    if start_num == 2
+    start_num = numel(strsplit(fileread(Helper.cfg().modellist), '\n')) + 2;
+    if start_num == 3
         start_num = 1;
     end
 end
