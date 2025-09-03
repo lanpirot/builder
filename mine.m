@@ -1,8 +1,8 @@
 function mine()
-    for needs_to_be_compilable = 0:0
+    for needs_to_be_compilable = 1:1
         [old_path,models_evaluated,subs,modellist,models_mined] = startinit(needs_to_be_compilable);
         max_number_of_models = height(modellist.model_url);
-        for i = 1:max_number_of_models
+        for i = 1:500%max_number_of_models
             if height(models_mined) >= i && models_mined.include(i) == 0
                 continue
             end
@@ -81,7 +81,7 @@ function report(interface2subs)
     % Display results
     fprintf("[%s]\n", sprintf('%d,', wrev(sort(lengths))))
     fprintf('There are %i Equivalence Classes\n', length(lengths))
-    fprintf('There are %i Singleton Equivalence Classes (%f\%)\n', sum(lengths == 1), sum(lengths == 1)/length(lengths))
+    fprintf('There are %i Singleton Equivalence Classes (%f)\n', sum(lengths == 1), sum(lengths == 1)/length(lengths))
     fprintf('Average Subsystem has %f substitution possibilities\n', sum(lengths .* (lengths - 1)) / sum(lengths))
     fprintf('Minimum Length: %d\n', minLength);
     fprintf('Maximum Length: %d\n', maxLength);
@@ -179,9 +179,6 @@ function interface2subs = dic_int2subs(subs)
     interface2subs  = configureDictionary("string", "Equivalence_class");
     for i = 1:length(subs)
         hash = subs{i}.interface.hash();
-        %Variation Point: also add a Subsystem to its number-relaxed,
-        %typed-relaxed, and dimension-relaxed classes
-        %currently it is only added to its very own class
         if interface2subs.isKey(hash)
             eq = interface2subs(hash);
             eq = eq.add_subsystem(subs{i});
@@ -190,6 +187,69 @@ function interface2subs = dic_int2subs(subs)
         end
         interface2subs(hash) = eq;
     end
+
+    %Variation Point: also add a Subsystem to its number-relaxed,
+    %typed-relaxed, and dimension-relaxed classes
+    %currently it is only added to its very own class
+    ikeys = interface2subs.keys();
+    for i = 1:length(ikeys)
+        for j = 1:length(ikeys)
+            if i ~= j && is_numbered_relaxed_equivalent(ikeys(i), ikeys(j)) % || is_type_relaxed_equivalent(ikeys(i), ikeys(j)) || is_dimension_relaxed_equivalent(ikeys(i), ikeys(j))
+                %interface2subs(ikeys(j)).subsystems = unionize(interface2subs(ikeys(i)), interface2subs(ikeys(j)));
+            end
+        end
+    end
+end
+
+
+function unioned = unionize(eq1, eq2)
+% Extract a unique identifier (e.g., 'Name') from each Subsystem object
+    names1 = cellfun(@(x) [char(x.identity.model_path) '/' x.identity.sub_parents '/' x.identity.sub_name], eq1.subsystems, 'UniformOutput', false);
+    names2 = cellfun(@(x) [char(x.identity.model_path) '/' x.identity.sub_parents '/' x.identity.sub_name], eq2.subsystems, 'UniformOutput', false);
+    
+    % Union the names
+    uniqueNames = union(names1, names2);
+    
+    % Reconstruct the cell array of Subsystem objects based on unique names
+    unioned = {};
+    for i = 1:length(uniqueNames)
+        % Find the first Subsystem object with this name in either eq1 or eq2
+        idx1 = find(cellfun(@(x) isequal([char(x.identity.model_path) '/' x.identity.sub_parents '/' x.identity.sub_name], uniqueNames{i}), eq1.subsystems), 1);
+        idx2 = find(cellfun(@(x) isequal([char(x.identity.model_path) '/' x.identity.sub_parents '/' x.identity.sub_name], uniqueNames{i}), eq2.subsystems), 1);
+        if ~isempty(idx1)
+            unioned{end+1} = eq1.subsystems{idx1};
+        elseif ~isempty(idx2)
+            unioned{end+1} = eq2.subsystems{idx2};
+        end
+    end
+end
+
+function bool = is_numbered_relaxed_equivalent(class1_hash, class2_hash)
+    % Split the input strings by commas, preserving empty entries
+    class1_in_out_special = strsplit(class1_hash, ',', 'CollapseDelimiters', false);
+    class2_in_out_special = strsplit(class2_hash, ',', 'CollapseDelimiters', false);
+    
+    % Split the first elements by semicolons and check if sub is a subset of class
+    sub_first = strsplit(class1_in_out_special{1}, ';', 'CollapseDelimiters', false);
+    class_first = strsplit(class2_in_out_special{1}, ';', 'CollapseDelimiters', false);
+    b1 = all(ismember(sub_first, class_first));
+    
+    % Split the second elements by semicolons and check if class is a subset of sub
+    sub_second = strsplit(class1_in_out_special{2}, ';', 'CollapseDelimiters', false);
+    class_second = strsplit(class2_in_out_special{2}, ';', 'CollapseDelimiters', false);
+    b2 = all(ismember(class_second, sub_second));
+    
+    % Compare the third elements directly
+    b3 = strcmp(class1_in_out_special{3}, class2_in_out_special{3});
+    
+    % Combine the results
+    bool = b1 && b2 && b3;
+    
+    % Display the results and inputs for debugging
+    if bool
+        %fprintf('Result: %d (b1: %d, b2: %d, b3: %d) | Sub: "%s" | Class: "%s"\n', bool, b1, b2, b3, class1_hash, class2_hash);
+    end
+
 end
 
 function identity2sub = dic_id2sub(subs)
