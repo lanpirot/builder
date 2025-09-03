@@ -264,18 +264,20 @@ classdef ModelMutator
             for i=1:length(lines_in)
                 line = lines_in(i);
                 if line == -1
-                    out_connection{end + 1} = -1;
+                    out_connection{end + 1} = 0;%0 means no connection
                 else
                     other_port = get_param(line, param_string);
-                    if strcmp(get_param(other_port, 'Parent'), subsystem)%are we wired to ourselves?
-                        if strcmp(param_string, 'DstPortHandle')
-                            out_connection{end + 1} = -1;
+                    op = [];
+                    for o=1:length(other_port)
+                        if strcmp(get_param(other_port(o), 'Parent'), subsystem) %check whether we are connected to ourselves, treat as special case. also only connect to it once
+                            if strcmp(param_string, "SrcPortHandle")
+                                op(end + 1) = -get_param(other_port(o), "PortNumber");%negative numbers are actual Port Numbers from self-connected block, not Port Handles
+                            end
                         else
-                            out_connection{end + 1} = [get_param(other_port, "PortNumber") get_param(other_port, "PortNumber")];%we encode ourselves as special case origin
+                            op(end + 1) = other_port(o);
                         end
-                    else
-                        out_connection{end + 1} = get_param(line, param_string);
                     end
+                    out_connection{end + 1} = op;
                 end
             end
         end
@@ -288,8 +290,8 @@ classdef ModelMutator
             end
 
             
-            ModelMutator.remove_lines2(line_handles.Inport);
             ModelMutator.remove_lines2(line_handles.Outport);
+            ModelMutator.remove_lines2(line_handles.Inport);
             ModelMutator.remove_lines2(line_handles.Enable);
             ModelMutator.remove_lines2(line_handles.Trigger);
             ModelMutator.remove_lines2(line_handles.LConn);
@@ -314,7 +316,7 @@ classdef ModelMutator
                 if lines(i) ~= -1
                     try
                         delete_line(lines(i))
-                    catch
+                    catch ME
                         disp(1)
                     end
                 end
@@ -347,15 +349,10 @@ classdef ModelMutator
 
                 copy_to.sub_name = model_name;
                 Simulink.BlockDiagram.deleteContents(copy_to.get_qualified_name())
-                % try
-                %     Simulink.SubSystem.copyContentsToBlockDiagram(copy_from.get_qualified_name(), copy_to.get_qualified_name())
-                % catch
-                    %if it is a stateflow chart or non-root allowed subsystem
-                    additional_level = 1;
-                    add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+"/"+copy_from.sub_name,'CopyOption','nolink');
-                    copy_to.sub_parents = copy_to.sub_name;
-                    copy_to.sub_name = copy_from.sub_name;                    
-                %end
+                additional_level = 1;
+                add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name()+"/"+copy_from.sub_name,'CopyOption','nolink');
+                copy_to.sub_parents = copy_to.sub_name;
+                copy_to.sub_name = copy_from.sub_name;
             end
             %set_param(copy_to.get_qualified_name(),"Lock","off")
             %ModelMutator.resolve_all_links(copy_to.get_qualified_name())
@@ -368,7 +365,7 @@ classdef ModelMutator
             for i = 1:length(subsystem_handles)
                 try
                     set_param(subsystem_handles(i),'LinkStatus','none')
-                catch
+                catch ME
                     disp(1)
                 end
             end
@@ -384,11 +381,8 @@ classdef ModelMutator
             connected_blocks = ModelMutator.get_wiring(copy_to.get_qualified_name());
             ModelMutator.make_subsystem_editable(copy_to.get_qualified_name())
             ModelMutator.remove_lines(copy_to.get_qualified_name());
-            if strcmp(copy_to.sub_name, 'OperationalStateMachine')
-                disp(copy_to.sub_parents)
-                disp("")
-            end
 
+            old_pos = get_param(copy_to.get_qualified_name(), "Position");
             delete_block(copy_to.get_qualified_name())
             if copy_from.is_root()
                 %copy from root to subsystem
@@ -399,6 +393,7 @@ classdef ModelMutator
                 %copy from subsystem to subsystem
                 add_block(copy_from.get_qualified_name(), copy_to.get_qualified_name(),'CopyOption','nolink');
             end
+            set_param(copy_to.get_qualified_name(), "Position", old_pos)
             %now, rewire
             ModelMutator.add_lines(copy_to, connected_blocks, mapping)
             %ModelMutator.resolve_all_links(copy_to.get_qualified_name())
@@ -407,12 +402,12 @@ classdef ModelMutator
         function add_lines(system, ports, mapping)
             ph = get_param(system.get_qualified_name(), "PortHandles");
             for i=1:length(ports.in_source_ports)
-                if ports.in_source_ports{i} ~= -1
+                if ports.in_source_ports{i} ~= 0
                     try
-                        if isscalar(ports.in_source_ports{i})
-                            add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
+                        if ports.in_source_ports{i} < 0%are we self-connected?
+                            add_line(system.sub_parents, ph.Outport(-ports.in_source_ports{i}), ph.Inport(mapping.inmapping(i)), 'autorouting','on')
                         else
-                            add_line(system.sub_parents, ph.Outport(ports.in_source_ports{i}(1)), ph.Inport(mapping.inmapping(i)), 'autorouting','on')
+                            add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
                         end
                     catch ME
                         disp(1)
@@ -421,9 +416,13 @@ classdef ModelMutator
             end
             for i=1:length(ports.out_destination_ports)
                 outports = ports.out_destination_ports{i};
-                if outports ~= -1
+                if outports ~= 0
                     for j=1:length(outports)
-                        add_line(system.sub_parents, ph.Outport(mapping.outmapping(i)), outports(j), 'autorouting','on')
+                        try
+                            add_line(system.sub_parents, ph.Outport(mapping.outmapping(i)), outports(j), 'autorouting','on')
+                        catch ME
+                            disp(1)
+                        end
                     end
                 end
             end
