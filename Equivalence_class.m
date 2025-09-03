@@ -1,4 +1,4 @@
-classdef Equivalence_class
+classdef Equivalence_class  < handle
     %Equivalency classes get created that hold 'equivalent' interfaces of
     %subsystems
     %'equivalent' being that the subsystems could be exchanged in the model
@@ -9,15 +9,12 @@ classdef Equivalence_class
     end
 
     methods
-        function obj = Equivalence_class(subsystem)
-            obj.hash = subsystem.interface.hash();
+        function obj = Equivalence_class(subsystem, hash)
+            obj.hash = hash;
             obj.subsystems = {subsystem};
         end
 
         function obj = add_subsystem(obj, subsystem)
-            if ~strcmp(obj.hash, subsystem.interface.hash())
-                throw(MException('Equivalence_class', 'This subsystem is not equivalent to others in class')) 
-            end
             obj.subsystems{end+1} = subsystem;
         end
 
@@ -29,8 +26,16 @@ classdef Equivalence_class
         end
 
         function obj = remove_duplicates(obj)
-            num_elements = cellfun(@(x) x.num_local_elements, obj.subsystems);
-            [~, uniqueIdx] = unique(num_elements);
+            %Variation point: other, finer Subsystem information could be included
+            %to determine duplicates
+            num_elements = cellfun(@(x) x.NUM_LOCAL_ELEMENTS, obj.subsystems, 'UniformOutput', false);
+            subtree_depth = cellfun(@(x) x.SUBTREE_DEPTH, obj.subsystems, 'UniformOutput', false);
+            num_children  = cellfun(@(x) length(x.CHILDREN), obj.subsystems, 'UniformOutput', false);
+
+            composite_keys = cellfun(@(ne, sd, nc) sprintf('%d_%d_%d', ne, sd, nc), ...
+                                     num_elements, subtree_depth, num_children, 'UniformOutput', false);
+            [~, uniqueIdx] = unique(composite_keys);
+
             obj.subsystems = obj.subsystems(uniqueIdx);
         end
 

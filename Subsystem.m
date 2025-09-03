@@ -78,11 +78,13 @@ classdef Subsystem < handle
             try
                 other_interface = other_subsystem.interface;
                 other_num_local_el = other_subsystem.num_local_elements;
+                other_subtree_depth = other_subsystem.subtree_depth;
             catch
                 other_interface = other_subsystem.(Helper.interface);
                 other_num_local_el = other_subsystem.(Helper.num_local_elements);
+                other_subtree_depth = other_subsystem.(Helper.subtree_depth);
             end
-            eq = obj.interface.is_equivalent(other_interface) && obj.num_local_elements == other_num_local_el;
+            eq = obj.interface.is_equivalent(other_interface) && obj.num_local_elements == other_num_local_el;% && obj.subtree_depth == other_subtree_depth;
         end
 
         function obj = skip_it(obj)

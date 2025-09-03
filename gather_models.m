@@ -1,4 +1,5 @@
 %% 
+%% 
 function gather_models()
     [project_dir, project_info, fileID, modellist, start_num] =  startinit();
     max_number_of_models = length(modellist);
@@ -144,7 +145,7 @@ function [project_dir, project_info, fileID, modellist, start_num] =  startinit(
         headers = ["model_url", "project_url", "loadable", "compilable", "runnable", "closable"];
         fprintf(fileID, "%s\n", strjoin(headers, '\t'));
     end
-    start_num = numel(strsplit(fileread(Helper.cfg().modellist), '\n')) + 1;
+    start_num = numel(strsplit(fileread(Helper.cfg().modellist), '\n')) + 2;
     if start_num <= 3
         start_num = 1;
     end

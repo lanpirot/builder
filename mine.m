@@ -1,6 +1,5 @@
 function mine()
-    TODO: remove old file of other mine procedure
-    for needs_to_be_compilable = 1:1
+    for needs_to_be_compilable = 0:0
         [old_path,models_evaluated,subs,modellist,models_mined] = startinit(needs_to_be_compilable);
         max_number_of_models = height(modellist.model_url);
         for i = 1:max_number_of_models
@@ -56,10 +55,46 @@ function mine()
     
         %identity2sub = dic_id2sub(subs); %only needed for chimerability
         interface2subs = dic_int2subs(subs);
-        serialize(interface2subs);
+        
+        report(interface2subs)
+        deduplied_interface2subs = serialize(interface2subs);
+        report(deduplied_interface2subs)
         fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
-        cd(Helper.cfg().origin)
+        cleanup()
     end
+end
+
+function report(interface2subs)
+    disp("========================================")
+    disp("Interface Report")
+    vals = interface2subs.values;
+    lengths = zeros(1, numel(vals));
+    for i = 1:numel(vals)
+        lengths(i) = length(vals(i).subsystems);
+    end
+    minLength = min(lengths);
+    maxLength = max(lengths);
+    medianLength = median(lengths);
+    averageLength = mean(lengths);
+    stdDevLength = std(lengths);
+    
+    % Display results
+    fprintf("[%s]\n", sprintf('%d,', wrev(sort(lengths))))
+    fprintf('There are %i Equivalence Classes\n', length(lengths))
+    fprintf('There are %i Singleton Equivalence Classes (%f\%)\n', sum(lengths == 1), sum(lengths == 1)/length(lengths))
+    fprintf('Average Subsystem has %f substitution possibilities\n', sum(lengths .* (lengths - 1)) / sum(lengths))
+    fprintf('Minimum Length: %d\n', minLength);
+    fprintf('Maximum Length: %d\n', maxLength);
+    fprintf('Median Length: %d\n', medianLength);
+    fprintf('Average Length: %.2f\n', averageLength);
+    fprintf('Standard Deviation: %.2f\n', stdDevLength);
+    figure;
+    boxplot(lengths);
+    xlabel('Equivalence\nClasses');
+    ylabel('#Members');
+    yscale('log')
+    title('Box Plot of Sample Data');
+    disp("========================================")
 end
 
 function [model_path, model_name, subsystems] = prepare_model(raw_model_url)
@@ -141,14 +176,17 @@ function interface2subs = remove_non_chimerable(interface2subs, identity2sub)
 end
 
 function interface2subs = dic_int2subs(subs)
-    interface2subs  = dictionary();
+    interface2subs  = configureDictionary("string", "Equivalence_class");
     for i = 1:length(subs)
         hash = subs{i}.interface.hash();
-        if isConfigured(interface2subs) && interface2subs.isKey(hash)
+        %Variation Point: also add a Subsystem to its number-relaxed,
+        %typed-relaxed, and dimension-relaxed classes
+        %currently it is only added to its very own class
+        if interface2subs.isKey(hash)
             eq = interface2subs(hash);
             eq = eq.add_subsystem(subs{i});
         else
-            eq = Equivalence_class(subs{i});
+            eq = Equivalence_class(subs{i}, hash);
         end
         interface2subs(hash) = eq;
     end
@@ -208,7 +246,7 @@ function [interface2subs, identity2sub] = propagate_chimerability(subs, interfac
     disp("We propagated is_chimerable to " + string(chimerable_count) + " subsystems in " + string(propagation_rounds) + " rounds.")
 end
 
-function serialize(interface2subs)
+function deduplied_interface2subs = serialize(interface2subs)
     %serialize sub_info
     subinfo = {};
     ikeys = interface2subs.keys();
@@ -224,9 +262,14 @@ function serialize(interface2subs)
     disp(string_prefix + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
 
 
+    deduplied_interface2subs = configureDictionary("string", "Equivalence_class");
+    for i = 1:length(ikeys)
+        deduplied_interface2subs(ikeys(i)) = interface2subs(ikeys(i)).remove_duplicates();
+    end
+
     subinfo = {};
     for i = 1:length(ikeys)
-        subinfo = [subinfo interface2subs(ikeys(i)).remove_duplicates().subsystems];
+        subinfo = [subinfo deduplied_interface2subs(ikeys(i)).subsystems];
     end
     Helper.file_print(Helper.cfg().name2subinfo, jsonencode(subinfo));
     disp("After" + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
@@ -239,7 +282,7 @@ function [ikeys, identities] = make_i2s_smaller(i2s)
         ids = {};
         subsi = i2s(ikeys(i)).subsystems;
         for j = 1:length(subsi)
-            ids{end + 1} = subsi{j}.identity;
+            ids{end + 1} = subsi{j}.IDENTITY;
         end
         identities{end + 1} = ids;
     end
@@ -304,4 +347,9 @@ function [old_path,models_evaluated,subs,modellist,models_mined] = startinit(nee
         fclose(mmID);
     end
     models_mined = readtable(Helper.cfg().models_mined);
+end
+
+function cleanup()
+    delete(Helper.cfg().models_mined)
+    cd(Helper.cfg().origin)
 end

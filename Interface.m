@@ -42,9 +42,16 @@ classdef Interface
         end
 
         function hash = hash(obj)
+            %variation point: enabling/disabling of order relaxation can be done here
             ip = Helper.sort_by_field(obj.inports, 'hsh');
             op = Helper.sort_by_field(obj.outports, 'hsh');
             sp = Helper.sort_by_field(obj.specialports, 'hsh');
+            
+            %ip = obj.inports;
+            %op = obj.outports;
+            %sp = obj.specialports;
+
+
             ports = [Helper.get_hash(ip) Helper.get_hash(op) Helper.get_hash(sp)];
             hash = join(ports, Helper.first_level_divider);
         end

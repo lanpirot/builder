@@ -240,10 +240,10 @@ classdef ModelMutator
                 disp(1)
             end
 
-            connections.in_source_ports = ModelMutator.get_wiring_of(lines.Inport, "SrcPortHandle");
-            connections.out_destination_ports = ModelMutator.get_wiring_of(lines.Outport, "DstPortHandle");
-            connections.Enable = ModelMutator.get_wiring_of(lines.Enable, "SrcPortHandle");
-            connections.Trigger = ModelMutator.get_wiring_of(lines.Trigger, "SrcPortHandle");
+            connections.in_source_ports = ModelMutator.get_wiring_of(lines.Inport, "SrcPortHandle", subsystem);
+            connections.out_destination_ports = ModelMutator.get_wiring_of(lines.Outport, "DstPortHandle", subsystem);
+            connections.Enable = ModelMutator.get_wiring_of(lines.Enable, "SrcPortHandle", subsystem);
+            connections.Trigger = ModelMutator.get_wiring_of(lines.Trigger, "SrcPortHandle", subsystem);
 
             connections.LConn = {};
             connections.RConn = {};
@@ -259,23 +259,32 @@ classdef ModelMutator
             connections.Reset = lines.Reset;
         end
 
-        function out_connection = get_wiring_of(lines_in, param_string)
+        function out_connection = get_wiring_of(lines_in, param_string, subsystem)
             out_connection = {};
             for i=1:length(lines_in)
                 line = lines_in(i);
                 if line == -1
                     out_connection{end + 1} = -1;
                 else
-                    out_connection{end + 1} = get_param(line, param_string);
+                    other_port = get_param(line, param_string);
+                    if strcmp(get_param(other_port, 'Parent'), subsystem)%are we wired to ourselves?
+                        if strcmp(param_string, 'DstPortHandle')
+                            out_connection{end + 1} = -1;
+                        else
+                            out_connection{end + 1} = [get_param(other_port, "PortNumber") get_param(other_port, "PortNumber")];%we encode ourselves as special case origin
+                        end
+                    else
+                        out_connection{end + 1} = get_param(line, param_string);
+                    end
                 end
             end
         end
 
         function remove_lines(subsystem)
             try
-            line_handles = get_param(subsystem, "LineHandles");
+                line_handles = get_param(subsystem, "LineHandles");
             catch ME
-                disp("")
+                disp(1)
             end
 
             
@@ -303,7 +312,11 @@ classdef ModelMutator
         function remove_lines2(lines)
             for i = 1:length(lines)
                 if lines(i) ~= -1
-                    delete_line(lines(i))
+                    try
+                        delete_line(lines(i))
+                    catch
+                        disp(1)
+                    end
                 end
             end
         end
@@ -356,6 +369,7 @@ classdef ModelMutator
                 try
                     set_param(subsystem_handles(i),'LinkStatus','none')
                 catch
+                    disp(1)
                 end
             end
         end
@@ -395,7 +409,11 @@ classdef ModelMutator
             for i=1:length(ports.in_source_ports)
                 if ports.in_source_ports{i} ~= -1
                     try
-                        add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
+                        if isscalar(ports.in_source_ports{i})
+                            add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
+                        else
+                            add_line(system.sub_parents, ph.Outport(ports.in_source_ports{i}(1)), ph.Inport(mapping.inmapping(i)), 'autorouting','on')
+                        end
                     catch ME
                         disp(1)
                     end
