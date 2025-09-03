@@ -18,19 +18,19 @@ classdef Equivalence_class  < handle
             obj.subsystems{end+1} = subsystem;
         end
 
-        function obj = sort(obj)
+        function ret = sort(obj)
             num_elements = cellfun(@(x) x.num_local_elements, obj.subsystems);
 
             [~, sortIdx] = sort(num_elements);
-            obj.subsystems = obj.subsystems(sortIdx);
+            ret = obj.subsystems(sortIdx);
         end
 
         function obj = remove_duplicates(obj)
             %Variation point: other, finer Subsystem information could be included
             %to determine duplicates
-            num_elements = cellfun(@(x) x.NUM_LOCAL_ELEMENTS, obj.subsystems, 'UniformOutput', false);
-            subtree_depth = cellfun(@(x) x.SUBTREE_DEPTH, obj.subsystems, 'UniformOutput', false);
-            num_children  = cellfun(@(x) length(x.CHILDREN), obj.subsystems, 'UniformOutput', false);
+            num_elements = cellfun(@(x) x.num_local_elements, obj.subsystems, 'UniformOutput', false);
+            subtree_depth = cellfun(@(x) x.subtree_depth, obj.subsystems, 'UniformOutput', false);
+            num_children  = cellfun(@(x) length(x.direct_children), obj.subsystems, 'UniformOutput', false);
 
             composite_keys = cellfun(@(ne, sd, nc) sprintf('%d_%d_%d', ne, sd, nc), ...
                                      num_elements, subtree_depth, num_children, 'UniformOutput', false);

@@ -2,7 +2,7 @@ function mine()
     for needs_to_be_compilable = 1:1
         [old_path,models_evaluated,subs,modellist,models_mined] = startinit(needs_to_be_compilable);
         max_number_of_models = height(modellist.model_url);
-        for i = 1:500%max_number_of_models
+        for i = 1:100%max_number_of_models
             if height(models_mined) >= i && models_mined.include(i) == 0
                 continue
             end
@@ -54,11 +54,16 @@ function mine()
         disp(string(length(subs)) + " Subsystems were taken into account (no bus ports present etc.).")
     
         %identity2sub = dic_id2sub(subs); %only needed for chimerability
-        interface2subs = dic_int2subs(subs);
-        
-        report(interface2subs)
-        deduplied_interface2subs = serialize(interface2subs);
-        report(deduplied_interface2subs)
+        interface2ids = dic_int2subs(subs);
+        report(interface2ids)
+        serialize_id2subinfo(interface2ids, "Before");
+        serialize_interface2id(interface2ids)
+
+
+        deduplied_interface2ids = deduplify(interface2ids);
+        report(deduplied_interface2ids)
+        serialize_id2subinfo(deduplied_interface2ids, "After");
+
         fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
         cleanup()
     end
@@ -194,8 +199,8 @@ function interface2subs = dic_int2subs(subs)
     ikeys = interface2subs.keys();
     for i = 1:length(ikeys)
         for j = 1:length(ikeys)
-            if i ~= j && is_numbered_relaxed_equivalent(ikeys(i), ikeys(j)) % || is_type_relaxed_equivalent(ikeys(i), ikeys(j)) || is_dimension_relaxed_equivalent(ikeys(i), ikeys(j))
-                %interface2subs(ikeys(j)).subsystems = unionize(interface2subs(ikeys(i)), interface2subs(ikeys(j)));
+            if i ~= j && is_numbered_relaxed_equivalent(ikeys(i), ikeys(j), 1) % || is_type_relaxed_equivalent(ikeys(i), ikeys(j)) || is_dimension_relaxed_equivalent(ikeys(i), ikeys(j))
+                interface2subs(ikeys(j)).subsystems = unionize(interface2subs(ikeys(i)), interface2subs(ikeys(j)));
             end
         end
     end
@@ -224,7 +229,7 @@ function unioned = unionize(eq1, eq2)
     end
 end
 
-function bool = is_numbered_relaxed_equivalent(class1_hash, class2_hash)
+function bool = is_numbered_relaxed_equivalent(class1_hash, class2_hash, off_by_k)
     % Split the input strings by commas, preserving empty entries
     class1_in_out_special = strsplit(class1_hash, ',', 'CollapseDelimiters', false);
     class2_in_out_special = strsplit(class2_hash, ',', 'CollapseDelimiters', false);
@@ -232,12 +237,12 @@ function bool = is_numbered_relaxed_equivalent(class1_hash, class2_hash)
     % Split the first elements by semicolons and check if sub is a subset of class
     sub_first = strsplit(class1_in_out_special{1}, ';', 'CollapseDelimiters', false);
     class_first = strsplit(class2_in_out_special{1}, ';', 'CollapseDelimiters', false);
-    b1 = all(ismember(sub_first, class_first));
+    b1 = all(ismember(sub_first, class_first)) && length(sub_first) + off_by_k >= length(class_first);
     
     % Split the second elements by semicolons and check if class is a subset of sub
     sub_second = strsplit(class1_in_out_special{2}, ';', 'CollapseDelimiters', false);
     class_second = strsplit(class2_in_out_special{2}, ';', 'CollapseDelimiters', false);
-    b2 = all(ismember(class_second, sub_second));
+    b2 = all(ismember(class_second, sub_second)) && length(sub_first) <= length(class_first) + off_by_k;
     
     % Compare the third elements directly
     b3 = strcmp(class1_in_out_special{3}, class2_in_out_special{3});
@@ -306,33 +311,33 @@ function [interface2subs, identity2sub] = propagate_chimerability(subs, interfac
     disp("We propagated is_chimerable to " + string(chimerable_count) + " subsystems in " + string(propagation_rounds) + " rounds.")
 end
 
-function deduplied_interface2subs = serialize(interface2subs)
-    %serialize sub_info
+function deduplified_interface2ids = deduplify(interface2ids)
+    deduplified_interface2ids = configureDictionary("string", "Equivalence_class");
+    ikeys = interface2ids.keys();
+    for i = 1:length(ikeys)
+        deduplified_interface2ids(ikeys(i)) = interface2ids(ikeys(i)).remove_duplicates();
+    end
+
     subinfo = {};
-    ikeys = interface2subs.keys();
+    for i = 1:length(ikeys)
+        subinfo = [subinfo deduplified_interface2ids(ikeys(i)).subsystems];
+    end
+end
+
+function serialize_interface2id(interface2id)
+    [ikeys, identities] = make_i2s_smaller(interface2id);
+    Helper.file_print(Helper.cfg().interface2subs, jsonencode({ikeys, identities}))
+end
+
+function serialize_id2subinfo(interface2ids, string_prefix)
+    subinfo = {};
+    ikeys = interface2ids.keys();
 
     for i = 1:length(ikeys)
-        interface2subs(ikeys(i)) = interface2subs(ikeys(i)).sort();
-        subinfo = [subinfo interface2subs(ikeys(i)).less_fields().subsystems];
+        subinfo = [subinfo interface2ids(ikeys(i)).sort()];
     end
     Helper.file_print(Helper.cfg().name2subinfo_complete, jsonencode(subinfo));
-    [ikeys, identities] = make_i2s_smaller(interface2subs);
-    Helper.file_print(Helper.cfg().interface2subs, jsonencode({ikeys, identities}))
-    string_prefix = "Before";
-    disp(string_prefix + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
-
-
-    deduplied_interface2subs = configureDictionary("string", "Equivalence_class");
-    for i = 1:length(ikeys)
-        deduplied_interface2subs(ikeys(i)) = interface2subs(ikeys(i)).remove_duplicates();
-    end
-
-    subinfo = {};
-    for i = 1:length(ikeys)
-        subinfo = [subinfo deduplied_interface2subs(ikeys(i)).subsystems];
-    end
-    Helper.file_print(Helper.cfg().name2subinfo, jsonencode(subinfo));
-    disp("After" + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(keys(interface2subs))) + " interfaces.")
+    disp(string_prefix + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(ikeys)) + " interfaces.")
 end
 
 function [ikeys, identities] = make_i2s_smaller(i2s)
@@ -342,7 +347,7 @@ function [ikeys, identities] = make_i2s_smaller(i2s)
         ids = {};
         subsi = i2s(ikeys(i)).subsystems;
         for j = 1:length(subsi)
-            ids{end + 1} = subsi{j}.IDENTITY;
+            ids{end + 1} = subsi{j}.identity;
         end
         identities{end + 1} = ids;
     end
