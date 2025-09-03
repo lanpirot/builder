@@ -237,7 +237,7 @@ classdef ModelMutator
             try
                 lines = get_param(subsystem, 'LineHandles');
             catch ME
-                disp(1)
+                keyboard
             end
 
             connections.in_source_ports = ModelMutator.get_wiring_of(lines.Inport, "SrcPortHandle", subsystem);
@@ -269,12 +269,19 @@ classdef ModelMutator
                     other_port = get_param(line, param_string);
                     op = [];
                     for o=1:length(other_port)
-                        if strcmp(get_param(other_port(o), 'Parent'), subsystem) %check whether we are connected to ourselves, treat as special case. also only connect to it once
-                            if strcmp(param_string, "SrcPortHandle")
-                                op(end + 1) = -get_param(other_port(o), "PortNumber");%negative numbers are actual Port Numbers from self-connected block, not Port Handles
+                        try
+                            if other_port(o) < 0
+                                continue
                             end
-                        else
-                            op(end + 1) = other_port(o);
+                            if strcmp(get_param(other_port(o), 'Parent'), subsystem) %check whether we are connected to ourselves, treat as special case. also only connect to it once
+                                if strcmp(param_string, "SrcPortHandle")
+                                    op(end + 1) = -get_param(other_port(o), "PortNumber");%negative numbers are actual Port Numbers from self-connected block, not Port Handles
+                                end
+                            else
+                                op(end + 1) = other_port(o);
+                            end
+                        catch ME
+                            keyboard
                         end
                     end
                     out_connection{end + 1} = op;
@@ -286,7 +293,7 @@ classdef ModelMutator
             try
                 line_handles = get_param(subsystem, "LineHandles");
             catch ME
-                disp(1)
+                keyboard
             end
 
             
@@ -316,8 +323,7 @@ classdef ModelMutator
                 if lines(i) ~= -1
                     try
                         delete_line(lines(i))
-                    catch ME
-                        disp(1)
+                    catch ME%we delete from outport first, if self-connections are present, then they will be gone for the inports, here
                     end
                 end
             end
@@ -366,7 +372,7 @@ classdef ModelMutator
                 try
                     set_param(subsystem_handles(i),'LinkStatus','none')
                 catch ME
-                    disp(1)
+                    keyboard
                 end
             end
         end
@@ -410,7 +416,7 @@ classdef ModelMutator
                             add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
                         end
                     catch ME
-                        disp(1)
+                        keyboard
                     end
                 end
             end
@@ -421,7 +427,7 @@ classdef ModelMutator
                         try
                             add_line(system.sub_parents, ph.Outport(mapping.outmapping(i)), outports(j), 'autorouting','on')
                         catch ME
-                            disp(1)
+                            keyboard
                         end
                     end
                 end
