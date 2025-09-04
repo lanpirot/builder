@@ -9,9 +9,6 @@ classdef Subsystem < handle
         local_depth = -1;
         subtree_depth = -1;
         direct_children = {};
-
-        is_chimerable = 0;  %a subsystem without buses + either a leaf subsystem or all children without buses + all children could be swapped with compatible ones from other models
-
         skip = 0;
     end
     
@@ -54,9 +51,6 @@ classdef Subsystem < handle
                 dc{end + 1} = Identity(get_param(child, 'Name'), get_param(child, 'Parent'), obj.identity.model_path);
             end
             obj.direct_children = dc;
-            if isempty(obj.direct_children)
-                obj.is_chimerable = 1;
-            end
         end
 
         function ir = is_root(obj)
@@ -90,26 +84,6 @@ classdef Subsystem < handle
                 bool = bool || any(startsWith(get_param(subs_to_test,'MaskType'),'ROS'));
             end
             obj.skip = bool;
-        end
-
-        function [obj, is_chimerable] = propagate_chimerability(obj, interface2subs, identity2sub)
-            if obj.skip
-                dips("")
-            end
-            is_chimerable = 0;
-            if obj.is_chimerable
-                return
-            end
-            for i = 1:length(obj.direct_children)
-                if ~identity2sub.isKey(obj.direct_children{i})
-                    return
-                end
-                if  ~interface2subs(identity2sub(obj.direct_children{i}).interface.hash()).is_chimerable
-                    return
-                end
-            end
-            obj.is_chimerable = 1;
-            is_chimerable = 1;
         end
     end
 

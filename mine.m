@@ -53,7 +53,6 @@ function mine()
         subs = remove_skips(subs);
         disp(string(length(subs)) + " Subsystems were taken into account (no bus ports present etc.).")
     
-        %identity2sub = dic_id2sub(subs); %only needed for chimerability
         interface2ids = dic_int2subs(subs);
         report(interface2ids)
         serialize_id2subinfo(interface2ids, "Before");
@@ -174,19 +173,6 @@ function sub = remove_missing_children(sub, i, subs)
     sub.direct_children = found_children;
 end
 
-function interface2subs = remove_non_chimerable(interface2subs, identity2sub)
-    ks = interface2subs.keys();
-    for i = 1:length(ks)
-        eq = interface2subs(ks(i));
-        eq = eq.remove_non_chimerable(identity2sub);
-        if isempty(eq) || ~eq.is_chimerable
-            interface2subs(ks(i)) = [];
-        else
-            interface2subs(ks(i)) = eq;
-        end
-    end
-end
-
 function interface2subs = dic_int2subs(subs)
     interface2subs  = configureDictionary("string", "Equivalence_class");
     for i = 1:length(subs)
@@ -284,50 +270,6 @@ function identity2sub = dic_id2sub(subs)
         end
         identity2sub(subs{i}.identity) = subs{i};
     end
-end
-
-function [interface2subs, identity2sub] = propagate_chimerability(subs, interface2subs, identity2sub)
-    %make subs-list
-    ikeys = interface2subs.keys();
-    subs2 = {};
-    for i = 1:length(subs)
-        eq = interface2subs(subs{i}.interface.hsh).subsystems;
-        for j = 1:length(eq)
-            if Identity.is_identical(eq{j}.identity, subs{i}.identity)
-                subs2{end + 1} = subs{i};
-                break
-            end
-        end
-    end
-    subs = subs2;
-
-
-    %initialize dictionary is_chimerable values with leave nodes
-    chimerable_count = 0;
-    for i = 1:length(subs)
-        if subs{i}.is_chimerable
-            chimerable_count = chimerable_count + 1;
-            interface2subs(subs{i}.interface.hash()).is_chimerable = 1;
-        end
-    end
-
-    %propagate
-    propagation_rounds = 1;
-    found_propagation = 1;
-    while found_propagation
-        propagation_rounds = propagation_rounds + 1;
-        found_propagation = 0;
-        for i = 1:length(subs)
-            [subs{i}, is_chimerable] = subs{i}.propagate_chimerability(interface2subs, identity2sub);
-            if is_chimerable
-                chimerable_count = chimerable_count + 1;
-                interface2subs(subs{i}.interface.hash()).is_chimerable = interface2subs(subs{i}.interface.hash()).check_chimerability();
-                identity2sub(subs{i}.identity).is_chimerable = 1;
-                found_propagation = 1;
-            end
-        end
-    end
-    disp("We propagated is_chimerable to " + string(chimerable_count) + " subsystems in " + string(propagation_rounds) + " rounds.")
 end
 
 function deduplified_interface2ids = deduplify(interface2ids)

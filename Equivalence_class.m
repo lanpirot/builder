@@ -4,7 +4,6 @@ classdef Equivalence_class  < handle
     %'equivalent' being that the subsystems could be exchanged in the model
     properties
         hash
-        is_chimerable = 0;          %at least two subsystems (of two different models) in this class are chimerable themselves
         subsystems;
     end
 
@@ -72,34 +71,6 @@ classdef Equivalence_class  < handle
                     index = pivot + 1;
                 end
             end
-        end
-
-        function bool = check_chimerability(obj)
-            bool = obj.is_chimerable;
-            if bool
-                return
-            end
-            for c=1:length(obj.subsystems)-1
-                if obj.subsystems{c}.is_chimerable                    
-                    for i=c+1:length(obj.subsystems)
-                        if obj.subsystems{i}.is_chimerable && ~strcmp(obj.subsystems{c}.identity.model_path, obj.subsystems{i}.identity.model_path)
-                            bool = 1;
-                            return
-                        end
-                    end
-                end
-            end
-        end
-
-        function obj = remove_non_chimerable(obj, identity2sub)
-            subsystems2 = {};
-            for i = 1:length(obj.subsystems)
-                sub = obj.subsystems{i};
-                if identity2sub(sub.identity).is_chimerable
-                    subsystems2{end + 1} = sub;
-                end
-            end
-            obj.subsystems = subsystems2;
         end
     end
 end
