@@ -1,14 +1,14 @@
-# Synthesizer of (giant) Simulink models
+# GRANDSLAM: Giant Recomposition AND Synthesis of LArge Models
 
-This is a project to synthesize Simulink models for stress testing, scaling, or giant fuzzing. You can create new models that are
-- giant sized (>500k Blocks, >100k Subsystems),
-- deep (deep Subsystem hierarchy),
-- broad (shallow, but many Subsystems),
-- have isomorphic Subsystem hierarchy to a given model,
-- are randomly built.
+This is a project for synthesizing large Simulink models for stress testing, scaling, or giant fuzzing. You can create new models that are
+- giant sized (>50k Blocks, >10k Subsystems),
+- deep (very deep Subsystem hierarchy),
+- bushy (shallow, but many Subsystems per level),
+- have isomorphic Subsystem tree to a given model,
+- are randomly synthesized.
 Each model is synthesized using a set subsystems of a corpus of models, like the SLNET-corpus, as building blocks. Suitable subsystems are puzzled together to synthesize huge models. In our case, suitable means, that the subsytems' interfaces have the same inputs and outputs. For compiling models, the types and dimensions also have to fit.
 
-You can use the (giant) synthetic models to test the scaling of your tool, or to stress test it.
+You can use these (giant) synthetic models to test the scalability of your Simulink tool, or to stress test it.
 
 
 
@@ -25,8 +25,16 @@ SLNET
       |---11027
       |---...
 
-1. In `system_constants.m` state where your `SLNET` directory is located (`models_path`) and where you want the output of the synthesizer to be stored at (`project_dir`).
-2. Next, run `gather_models.m`. As a full run of all scripts with the complete SLNET set takes literal days, we highly recommend to set the variable `max_number_of_models` (in line 3) to a lower number such as 1000 or 3000. This will also keep the amount of errors down (MATLAB is buggy and tends to crash while compiling some models.) The `gather_models.m`-script will scan the whole database for suitable models, i.e., models that are loadable/compilable/runnable. A file `modellist.csv` will be created in `project_dir`.
-3. To build the database of Subsystems and their dictionaries of meta-information, use `mine.m`. In `project_dir/0` and `project_dir/1` the files `interface2subs.json`, `name2subinfo.json` will be created. These are the dictionaries used in the synthesis. The `0` directory holds all models' subsystem information, while the `1` directory holds the subsystem information of the compilable and runnable models, only.
-4. Finally, run the `synthesize.m` script to generate the synthetic models. In `synthesize.m` you can choose which synthesize strategies you want to use or leave out in line 6. Change the modes, according to the list of modes listed in line 3. The `synthesize.m` script will create models and a report at `project_dir/<0,1>/<mode>`.
-5. Various constants for each mode can be adapted in `Helper.m` in the `synth_profile` function. You can choose how deep models should be, the time_out for stopping synthesis, etc.
+As MATLAB sometimes hard crashes, you may have to restart steps 2, and 3 a couple of times, until they completely go through. Progress is saved, even with crashes.
+
+1. In `system_constants.m` state where your `SLNET` directory is located (`models_path`), where you want the useful models stored at (`tame_models_path`)  and where you want the output of the synthesizer to be stored at (`project_dir`).
+2. Next, run `clean_models.m` to clean the models from your `models_path`, e.g., all Callbacks are removed, so that they 'behave' later. Models that misbehave at this cleaning process are filtered out.
+3. Next, run `gather_models.m`. The `gather_models.m`-script will scan all tamed models for there suitability for typed/untyped interface checks, i.e., models that are loadable/compilable/runnable. A file `modellist.csv` will be created in `project_dir` in this step.
+4. To build the database of Subsystems and their dictionaries of meta-information, use `mine.m`. In `project_dir/0` and `project_dir/1` the files `interface2subs.json`, `name2subinfo_complete.json` will be created. These are the dictionaries used in the synthesis. The `0` directory holds all models' subsystem information, while the `1` directory holds the subsystem information of the compilable and runnable models, only.
+5. Finally, run the `synthesize.m` script to generate the synthetic models. In `synthesize.m` you can choose which typed/untyped equivalence (line 7) and synthesize strategies (line 8)  you want to use or leave out. Change the modes, according to the list of modes listed in line 6. The `synthesize.m` script will create models and a report at `project_dir/<0,1>/<mode>`.
+
+
+The scripts with the current settings reproduce our paper's results, but will run for literal days. You probably want to change the number of total models that are scanned in line 32 of `clean_models.m` to something like 1000 or 3000. Further consider to change various constants in `Helper.m`'s `synth_profile` function: reduce time_outs, limit maximum depths, or the desired model count per strategy.
+
+
+We marked the *Variant points* in the scripts with a comment stating "Varition point".

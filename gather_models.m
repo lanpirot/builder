@@ -3,6 +3,8 @@
 function gather_models()
     [project_dir, fileID, modellist, start_num] =  startinit();
     max_number_of_models = length(modellist);
+    [~, idx] = sort({modellist.date});
+    modellist = modellist(idx);
 
     for i = start_num:max_number_of_models
         warning('off','all')
