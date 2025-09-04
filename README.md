@@ -34,7 +34,31 @@ As MATLAB sometimes hard crashes, you may have to restart steps 2, and 3 a coupl
 5. Finally, run the `synthesize.m` script to generate the synthetic models. In `synthesize.m` you can choose which typed/untyped equivalence (line 7) and synthesize strategies (line 8)  you want to use or leave out. Change the modes, according to the list of modes listed in line 6. The `synthesize.m` script will create models and a report at `project_dir/<0,1>/<mode>`.
 
 
+### Optional
 The scripts with the current settings reproduce our paper's results, but will run for literal days. You probably want to change the number of total models that are scanned in line 32 of `clean_models.m` to something like 1000 or 3000. Further consider to change various constants in `Helper.m`'s `synth_profile` function: reduce time_outs, limit maximum depths, or the desired model count per strategy.
 
 
 We marked the *Variant points* in the scripts with a comment stating "Varition point".
+
+We added these functions to our MATLAB path, to suppress warning and error dialogues, that otherwise will spam your screen:
+
+`cat MATLAB/warndlg.m`
+```
+function h = warndlg(varargin)
+    disp('[Suppressed warndlg]');
+    if nargout > 0
+        h = []; % return empty if output is expected
+    end
+```
+
+
+
+`errordlg.m`
+
+```
+function h = errordlg(varargin)
+    disp('[Suppressed errordlg]');
+    if nargout > 0
+        h = []; % return empty if output is expected
+    end
+```

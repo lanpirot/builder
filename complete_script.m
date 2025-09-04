@@ -1,10 +1,8 @@
 function complete_script()
+    Helper.cfg()
+
+    clean_model()
     gather_models()
     mine()
-    if Helper.remove_duplicates
-        mutate()
-    end
+    synthesize()
 end
-
-%run by using the following:
-%matlab -nodisplay -nosplash -nodesktop -r "run('gather_models()');run('complete_script()');exit;"

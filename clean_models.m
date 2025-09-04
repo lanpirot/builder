@@ -59,7 +59,7 @@ function clean_models()
     
     
                 lock_links_masks = {'LinkStatus', 'none'; 'Lock', 'off'; 'LockLinksToLibrary', 'off'; 'Permissions', 'ReadWrite'; 'LinkStatus', 'none'; 'Lock', 'off'; 'LockLinksToLibrary', 'off'; 'Mask', 'off'};
-                block_functions = {'OpenFcn' 'LoadFcn' 'MoveFcn' 'NameChangeFcn' 'PreCopyFcn' 'CopyFcn' 'ClipboardFcn' 'PreDeleteFcn' 'DeleteFcn' 'DestroyFcn' 'UndoDeleteFcn' 'InitFcn' 'StartFcn' 'ContinueFcn' 'PauseFcn' 'StopFcn' 'PreSaveFcn' 'PostSaveFcn' 'CloseFcn' 'ModelCloseFcn'};
+                block_functions = {'OpenFcn' 'LoadFcn' 'MoveFcn' 'NameChangeFcn' 'PreCopyFcn' 'CopyFcn' 'ClipboardFcn' 'PreDeleteFcn' 'DeleteFcn' 'DestroyFcn' 'UndoDeleteFcn' 'InitFcn' 'StartFcn' 'ContinueFcn' 'PauseFcn' 'StopFcn' 'PreSaveFcn' 'PostSaveFcn' 'CloseFcn' 'ModelCloseFcn', 'DeleteChildFcn', 'ErrorFcn', 'ParentCloseFcn'};
                 blocks = Helper.find_elements(model);
                 for j = 1:numel(blocks)
                     for ll = 1:size(lock_links_masks, 1)
@@ -74,6 +74,14 @@ function clean_models()
                             set_param(blocks(j), block_functions{bf}, '');
                         catch ME
                         end
+                    end
+                end
+
+                ports = find_system(model, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'Type', 'Port');
+                for p = 1:numel(ports)
+                    try
+                        set_param(ports(p), 'ConnectionCallback', '');
+                    catch ME
                     end
                 end
     
