@@ -237,7 +237,7 @@ classdef ModelMutator
             try
                 lines = get_param(subsystem, 'LineHandles');
             catch ME
-                keyboard
+                %keyboard
             end
 
             connections.in_source_ports = ModelMutator.get_wiring_of(lines.Inport, "SrcPortHandle", subsystem);
@@ -281,7 +281,7 @@ classdef ModelMutator
                                 op(end + 1) = other_port(o);
                             end
                         catch ME
-                            keyboard
+                            %keyboard
                         end
                     end
                     out_connection{end + 1} = op;
@@ -293,7 +293,7 @@ classdef ModelMutator
             try
                 line_handles = get_param(subsystem, "LineHandles");
             catch ME
-                keyboard
+                %keyboard
             end
 
             
@@ -372,7 +372,7 @@ classdef ModelMutator
                 try
                     set_param(subsystem_handles(i),'LinkStatus','none')
                 catch ME
-                    keyboard
+                    %keyboard
                 end
             end
         end
@@ -384,8 +384,11 @@ classdef ModelMutator
             catch
                 copy_to.sub_name = [copy_to.sub_name  ' synthed'];
             end
+            ModelMutator.make_subsystem_editable(copy_to.get_qualified_name())            
             connected_blocks = ModelMutator.get_wiring(copy_to.get_qualified_name());
-            ModelMutator.make_subsystem_editable(copy_to.get_qualified_name())
+            if strcmp(strrep(copy_to.get_qualified_name,newline,''), 'model3/variant dependent/variant dependent Test Control_1/3-phase Programmable Source/VariationSubSystem/PID Controller/Output Delay')
+                %keyboard
+            end
             ModelMutator.remove_lines(copy_to.get_qualified_name());
 
             old_pos = get_param(copy_to.get_qualified_name(), "Position");
@@ -416,7 +419,7 @@ classdef ModelMutator
                             add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
                         end
                     catch ME
-                        keyboard
+                        %keyboard
                     end
                 end
             end
@@ -427,7 +430,7 @@ classdef ModelMutator
                         try
                             add_line(system.sub_parents, ph.Outport(mapping.outmapping(i)), outports(j), 'autorouting','on')
                         catch ME
-                            keyboard
+                            %keyboard
                         end
                     end
                 end

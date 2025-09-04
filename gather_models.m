@@ -1,13 +1,13 @@
 %% 
 %% 
 function gather_models()
-    [project_dir, project_info, fileID, modellist, start_num] =  startinit();
+    [project_dir, fileID, modellist, start_num] =  startinit();
     max_number_of_models = length(modellist);
 
-    for i = start_num:max_number_of_models
+    for i = start_num:20
         warning('off','all')
         
-        [project_url, model_url] = prepare_model(modellist, i, project_info, project_dir);
+        model_url = prepare_model(modellist, i, project_dir);
         [loadable, model_name] = try_load(model_url);
         compilable = try_compile(model_name, loadable);
         runnable = try_simulate(model_name, loadable, compilable);
@@ -15,13 +15,11 @@ function gather_models()
         clean_up_internal();
 
 
-        fields = strrep(strjoin([model_url, project_url, string(loadable), string(compilable), string(runnable), string(closable)], '\t'), "\", "/");
+        fields = strrep(strjoin([model_url, string(loadable), string(compilable), string(runnable), string(closable)], '\t'), "\", "/");
         fprintf(fileID, "%s\n", fields);
         Helper.clear_garbage();
     end    
-    fclose(fileID);
-    disp("Saved gathered model info to " + string(Helper.cfg().modellist))
-    disp("All done!")
+    end_clean_up(fileID)
 end
 
 
@@ -94,26 +92,12 @@ function closable = try_close(model_url, model_name, loadable)
     end
 end
 
-function [project_url, model_url] = prepare_model(modellist, i, project_info, project_dir)
+function model_url = prepare_model(modellist, i, project_dir)
     disp("Now gathering model no. " + string(i) + " " + string(modellist(i).name))
     model = modellist(i);
     if contains(model.name, ' ')
         movefile([model.folder filesep model.name], [model.folder filesep replace(model.name, ' ', '')])
         model.name = replace(model.name, ' ', '');
-    end
-    folder = strsplit(model.folder, filesep);
-
-    try
-        %assumes, you unzipped SLNET projects to a directory each named by a number
-        %did you forget a "/" at the end of the filename?
-        project_id = double(string(folder{count(Helper.cfg().project_dir, filesep) + 3}));      
-        
-        
-        project_info_row = find(project_info.path == project_id);
-        project_url = project_info.url(project_info_row,:);
-        project_url = Helper.rstrip(project_url);
-    catch
-        project_url = "";
     end
 
     model_url = string(fullfile(model.folder, model.name));
@@ -121,7 +105,7 @@ function [project_url, model_url] = prepare_model(modellist, i, project_info, pr
     Helper.create_garbage_dir()
 end
 
-function [project_dir, project_info, fileID, modellist, start_num] =  startinit()
+function [project_dir, fileID, modellist, start_num] =  startinit()
     addpath(pwd)
     addpath(genpath('utils'), '-begin');
     set(0, 'DefaultFigureVisible', 'off');
@@ -132,23 +116,22 @@ function [project_dir, project_info, fileID, modellist, start_num] =  startinit(
     Helper.cfg('reset');
     modellist = [dir(fullfile(Helper.cfg().tame_models_path, "**" + filesep + "*.slx")); dir(fullfile(Helper.cfg().tame_models_path, "**" + filesep + "*.mdl"))];
     project_dir = Helper.cfg().project_dir;
-    if isfile(Helper.cfg().project_info)
-        project_info = tdfread(Helper.cfg().project_info, 'tab');
-    else
-        project_info = [];
-    end
 
     if isfile(Helper.cfg().modellist)
         fileID = fopen(Helper.cfg().modellist, "a");
+        fprintf(fileID, "%s\n", strjoin(["broken_model" "0" "0" "0" "0"], '\t'));
     else
         fileID = fopen(Helper.cfg().modellist, "w+");
-        headers = ["model_url", "project_url", "loadable", "compilable", "runnable", "closable"];
+        headers = ["model_url", "loadable", "compilable", "runnable", "closable"];
         fprintf(fileID, "%s\n", strjoin(headers, '\t'));
     end
-    start_num = numel(strsplit(fileread(Helper.cfg().modellist), '\n')) + 2;
-    if start_num <= 3
-        start_num = 1;
-    end
+    start_num = count(fileread(Helper.cfg().modellist),newline);
+end
+
+function end_clean_up(fileID)
+    fclose(fileID);
+    disp("Saved gathered model info to " + string(Helper.cfg().modellist))
+    disp("All done!")
 end
 
 function clean_up_internal()

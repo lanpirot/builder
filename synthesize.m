@@ -1,10 +1,16 @@
 function synthesize()
+    warning('off', 'all')
+    set(0, 'DefaultFigureVisible', 'off');
+
     global synth name2subinfo_complete interface2subs model2id
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
+    
 
-    for needs_to_be_compilable = 0:1
-        for mode = 1:5
-
+    for needs_to_be_compilable = 0:0
+        for mode = 5:5
+            if mode == 4
+                continue
+            end
             synth = struct();
             Helper.cfg('reset');
             dry = 0;
@@ -237,9 +243,6 @@ function [roots, good_models] = synth_rounds()
             if additional_level
                 model_root = model_root.add_level();
             end
-            if synth.double_check_file && ~slx_evaluate(slx_handle)
-                dips("Error")
-            end
 
             slx_save(slx_handle, model_path);
             save_time = toc(save_start);
@@ -256,6 +259,7 @@ function [roots, good_models] = synth_rounds()
             save_time = NaN;
             disp("Saving model " + string(good_models) + " FAILED")
             Helper.log('log_synth_practice',ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models) + ", try: " + string(tries))
+            %keyboard
         end
 
         Helper.log('synth_report', report2string(good_models, model_root, build_time, save_time));

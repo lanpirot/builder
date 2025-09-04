@@ -9,9 +9,13 @@ classdef Equivalence_class  < handle
     end
 
     methods
-        function obj = Equivalence_class(subsystem, hash)
+        function obj = Equivalence_class(subsystemS, hash)
             obj.hash = hash;
-            obj.subsystems = {subsystem};
+            if iscell(subsystemS)
+                obj.subsystems = subsystemS;
+            else
+                obj.subsystems = {subsystemS};
+            end
         end
 
         function obj = add_subsystem(obj, subsystem)
@@ -25,7 +29,7 @@ classdef Equivalence_class  < handle
             ret = obj.subsystems(sortIdx);
         end
 
-        function obj = remove_duplicates(obj)
+        function ret = remove_duplicates(obj)
             %Variation point: other, finer Subsystem information could be included
             %to determine duplicates
             num_elements = cellfun(@(x) x.num_local_elements, obj.subsystems, 'UniformOutput', false);
@@ -36,7 +40,7 @@ classdef Equivalence_class  < handle
                                      num_elements, subtree_depth, num_children, 'UniformOutput', false);
             [~, uniqueIdx] = unique(composite_keys);
 
-            obj.subsystems = obj.subsystems(uniqueIdx);
+            ret = Equivalence_class(obj.subsystems(uniqueIdx), obj.hash);
         end
 
         function obj = less_fields(obj)

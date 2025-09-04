@@ -139,16 +139,16 @@ classdef Helper
                     synth.choose_retries = 5;
                     synth.max_depth = 20;
                 case Helper.synth_width
-                    synth.model_count = 10;
+                    synth.model_count = 100;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = 3 * synth.repair_level_count;
                     synth.choose_sample_size = 5;
                     synth.mutate_chances = 100;
                     synth.choose_retries = 5;
                     synth.min_height = 8;
-                    synth.max_depth = 16;
+                    synth.max_depth = 12;
                 case Helper.synth_giant
-                    synth.model_count = 10;
+                    synth.model_count = 100;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = 2 * synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -159,7 +159,7 @@ classdef Helper
                     synth.slnet_max_elements = 106823;                %SLNET max: 106823
                     synth.slnet_max_subs = 13501;                     %SLNET max: 13501
                 case Helper.synth_depth
-                    synth.model_count = 10;
+                    synth.model_count = 100;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = 20;
                     synth.choose_sample_size = 10;
@@ -185,9 +185,7 @@ classdef Helper
         end
 
         function name2subinfo = build_sub_info(name2subinfo)
-            name2subinfo = name2subinfo';
-            sub_identities = extractfield(name2subinfo, Helper.identity);
-            
+            name2subinfo = name2subinfo';            
 
             sub_identities = extractfield(name2subinfo, Helper.identity);    
             sub_interfaces = extractfield(name2subinfo, Helper.interface);
@@ -199,11 +197,8 @@ classdef Helper
             
             sub_info = [sub_identities; sub_interfaces; sub_num_local_elements; local_depths; subtree_depth; children];
             sub_info = cell2struct(sub_info, {Helper.identity, Helper.interface, Helper.num_local_elements, Helper.local_depth, Helper.subtree_depth, Helper.children});
-            out = {};
-            for i=1:length(sub_info)
-                out{end + 1} = sub_info(i);
-            end
-            name2subinfo = dictionary(sub_identities, out);
+            out = num2cell(sub_info);
+            name2subinfo = dictionary(sub_identities', out);
         end
 
         function subsystems = find_subsystems(handle, depth)

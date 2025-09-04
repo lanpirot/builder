@@ -58,10 +58,10 @@ function clean_models()
     
     
     
-                lock_links = {'LinkStatus', 'none'; 'Lock', 'off'; 'LockLinksToLibrary', 'off'; 'Permissions', 'ReadWrite'; 'LinkStatus', 'none'; 'Lock', 'off'; 'LockLinksToLibrary', 'off'};
+                lock_links = {'LinkStatus', 'none'; 'Lock', 'off'; 'LockLinksToLibrary', 'off'; 'Permissions', 'ReadWrite'; 'LinkStatus', 'none'; 'Lock', 'off'; 'LockLinksToLibrary', 'off'; 'Mask', 'off'};
                 block_functions = {'OpenFcn' 'LoadFcn' 'MoveFcn' 'NameChangeFcn' 'PreCopyFcn' 'CopyFcn' 'ClipboardFcn' 'PreDeleteFcn' 'DeleteFcn' 'DestroyFcn' 'UndoDeleteFcn' 'InitFcn' 'StartFcn' 'ContinueFcn' 'PauseFcn' 'StopFcn' 'PreSaveFcn' 'PostSaveFcn' 'CloseFcn' 'ModelCloseFcn'};
                 blocks = Helper.find_elements(model);
-                for j = 2:numel(blocks)
+                for j = 1:numel(blocks)
                     for ll = 1:size(lock_links, 1)
                         try
                             set_param(blocks(j), lock_links{ll, 1}, lock_links{ll, 2});
