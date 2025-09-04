@@ -4,18 +4,20 @@ function gather_models()
     [project_dir, fileID, modellist, start_num] =  startinit();
     max_number_of_models = length(modellist);
 
-    for i = start_num:20
+    for i = start_num:max_number_of_models
         warning('off','all')
         
         model_url = prepare_model(modellist, i, project_dir);
         [loadable, model_name] = try_load(model_url);
+
+        [num_els, num_subs, depth] = try_measure(model_name);
         compilable = try_compile(model_name, loadable);
         runnable = try_simulate(model_name, loadable, compilable);
         closable = try_close(model_url, model_name, loadable);
         clean_up_internal();
 
 
-        fields = strrep(strjoin([model_url, string(loadable), string(compilable), string(runnable), string(closable)], '\t'), "\", "/");
+        fields = strrep(strjoin([model_url, string(loadable), string(compilable), string(runnable), string(closable), string(num_els), string(num_subs), string(depth)], '\t'), "\", "/");
         fprintf(fileID, "%s\n", fields);
         Helper.clear_garbage();
     end    
@@ -32,6 +34,12 @@ function [loadable, model_name] = try_load(model_url)
         loadable = 1;
     catch
     end
+end
+
+function [num_els, num_subs, depth] = try_measure(model_name)
+    num_els = length(Helper.find_elements(model_name));
+    num_subs = length(Helper.find_subsystems(model_name));
+    depth = Helper.find_subtree_depth(model_name);
 end
 
 function compilable = try_compile(model_name, loadable)
@@ -119,10 +127,10 @@ function [project_dir, fileID, modellist, start_num] =  startinit()
 
     if isfile(Helper.cfg().modellist)
         fileID = fopen(Helper.cfg().modellist, "a");
-        fprintf(fileID, "%s\n", strjoin(["broken_model" "0" "0" "0" "0"], '\t'));
+        fprintf(fileID, "%s\n", strjoin(["broken_model" "NaN" "NaN" "NaN" "NaN" "NaN" "NaN" "NaN"], '\t'));
     else
         fileID = fopen(Helper.cfg().modellist, "w+");
-        headers = ["model_url", "loadable", "compilable", "runnable", "closable"];
+        headers = ["model_url", "loadable", "compilable", "runnable", "closable", "num_els", "num_subs", "depth"];
         fprintf(fileID, "%s\n", strjoin(headers, '\t'));
     end
     start_num = count(fileread(Helper.cfg().modellist),newline);

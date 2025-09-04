@@ -225,7 +225,7 @@ classdef Helper
             depth = 0;
             last_length = 0;
             while 1
-                next_length = length(find_system(handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth));
+                next_length = length(find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth));
                 if next_length > last_length
                     last_length = next_length;
                 else
