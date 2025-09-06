@@ -28,6 +28,7 @@ classdef Interface
             end
         end
 
+        %we only found busses in 3 compiling models, so we just don't bother
         function obj = update_busses(obj)
             % tmp_inports = [];
             % for i = 1:length(obj.inports)

@@ -40,7 +40,7 @@ function synthesize()
 
             start_synth_report()
             
-            bdclose all;
+            %bdclose all;
             tic
             [roots, models_synthed] = synth_rounds();
             disp("Total time building/saving " + toc)
@@ -198,7 +198,7 @@ function [roots, good_models] = synth_rounds()
                 if mutation_performed
                     mutate_chances = synth.mutate_chances;
                 end
-                %disp(report2string(good_models, model_root, toc(attempt_start), 0))
+                disp(report2string(good_models, model_root, toc(attempt_start), 0))
             end
             build_success = double_check_root(model_root);
         else
@@ -257,10 +257,10 @@ function [roots, good_models] = synth_rounds()
             %keyboard
         end
 
-        Helper.log('synth_report', report2string(good_models, model_root, build_time, save_time));
+        Helper.log('synth_report', report2string(good_models-1, model_root, build_time, save_time));
         delete(Helper.cfg().synthesize_playground + filesep + "*.slmx");
         delete(Helper.cfg().synthesize_playground + filesep + "*.slm.err");
-        delete(Helper.cfg().synthesize_playground + filesep + "model*.mdl.*");
+        delete(Helper.cfg().synthesize_playground + filesep + "*.mdl.*");
     end
 end
 

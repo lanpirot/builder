@@ -84,7 +84,7 @@ classdef Port
             else
                 hsh = obj.data_type;
             end
-            hsh = hsh + Helper.third_level_divider + obj.dimensions.hash() + Helper.second_level_divider;
+            hsh = hsh + Helper.third_level_divider + obj.dimensions.hash();
         end
 
         function hshpn = hashplusname(obj, handle)

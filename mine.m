@@ -12,7 +12,7 @@ function mine()
             writetable(models_mined, Helper.cfg().models_mined)
             path(old_path);
         
-            if (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)
+            if isnan(modellist.compilable(i)) || (needs_to_be_compilable && ~modellist.compilable(i)) || ~modellist.loadable(i) || ~modellist.closable(i)
                 continue
             end
             Helper.create_garbage_dir();
@@ -55,20 +55,21 @@ function mine()
     
         interface2ids = dic_int2subs(subs);
         report(interface2ids)
-        serialize_id2subinfo(interface2ids, "Before");
+        serialize_id2subinfo(interface2ids, Helper.cfg().name2subinfo_complete, "Before");
         serialize_interface2id(interface2ids)
 
 
         deduplied_interface2ids = deduplify(interface2ids);
         report(deduplied_interface2ids)
-        relax_on = false;
+        relax_on = needs_to_be_compilable && false;%activate relaxation here
         if relax_on
             relaxed_interface2ids = deduplify(relax(deduplied_interface2ids));
             report(relaxed_interface2ids)
         else
             relaxed_interface2ids = deduplied_interface2ids;
         end
-        serialize_id2subinfo(relaxed_interface2ids, "After");
+        %serialize_id2subinfo(relaxed_interface2ids, Helper.cfg().name2subinfo, "After");
+        %serialize_interface2id(relaxed_interface2ids)
 
         fprintf("\nFinished! %i models evaluated out of %i\n", models_evaluated, height(modellist.model_url))
         cleanup()
@@ -79,18 +80,36 @@ function report(interface2subs)
     disp("========================================")
     disp("Interface Report")
     vals = interface2subs.values;
-    lengths = zeros(1, numel(vals));
-    for i = 1:numel(vals)
-        lengths(i) = length(vals(i).subsystems);
-    end
-    minLength = min(lengths);
-    maxLength = max(lengths);
-    medianLength = median(lengths);
-    averageLength = mean(lengths);
-    stdDevLength = std(lengths);
+
+    lengths = arrayfun(@(x) length(x.subsystems), vals);
+    [sortedLengths, sortIdx] = sort(lengths); % Get sorted indices
+    sortedVals = wrev(vals(sortIdx));
+    sortedLengths = wrev(sortedLengths);
+
+    minLength = min(sortedLengths);
+    maxLength = max(sortedLengths);
+    medianLength = median(sortedLengths);
+    averageLength = mean(sortedLengths);
+    stdDevLength = std(sortedLengths);
+
+    uniqueModelPathCounts = zeros(length(sortedVals), 1);
+    % Loop over each element in vals
+    for i = 1:length(sortedVals)
+        % Extract all model_paths for the current val
+        modelPaths = strings(1, length(sortedVals(i).subsystems));
+        for j = 1:length(sortedVals(i).subsystems)
+            % Append the model_path to the cell array
+            modelPaths{j} = char(sortedVals(i).subsystems{j}.identity.model_path);
+        end
+        uniqueModelPathCounts(i) = length(unique(modelPaths));
+    end    
     
     % Display results
-    fprintf("[%s]\n", sprintf('%d,', wrev(sort(lengths))))
+    fprintf("[%s]\n", sprintf('%d,', sortedLengths))
+    fprintf("[%s]\n", sprintf('%d,', uniqueModelPathCounts))
+    fprintf("[%s]\n", sprintf('%s#', sortedVals.hash))
+
+
     fprintf('There are %i Equivalence Classes\n', length(lengths))
     fprintf('There are %i Singleton Equivalence Classes (%f)\n', sum(lengths == 1), sum(lengths == 1)/length(lengths))
     fprintf('Average Subsystem has %f substitution possibilities\n', sum(lengths .* (lengths - 1)) / sum(lengths))
@@ -99,12 +118,6 @@ function report(interface2subs)
     fprintf('Median Length: %d\n', medianLength);
     fprintf('Average Length: %.2f\n', averageLength);
     fprintf('Standard Deviation: %.2f\n', stdDevLength);
-    figure;
-    boxplot(lengths);
-    xlabel('Equivalence\nClasses');
-    ylabel('#Members');
-    yscale('log')
-    title('Box Plot of Sample Data');
     disp("========================================")
 end
 
@@ -252,7 +265,7 @@ function bool = is_subsequence(sub, super)
     j = 1;
     while i <= length(sub)
         if ismember(sub(i), super(j:end))
-            j = find(strcmp(super(j:end), sub(i)), 1);
+            j = find(strcmp(super(j:end), sub(i)), 1) + j;
         else
             bool = false;
             return
@@ -285,14 +298,14 @@ function serialize_interface2id(interface2id)
     Helper.file_print(Helper.cfg().interface2subs, jsonencode({ikeys, identities}))
 end
 
-function serialize_id2subinfo(interface2ids, string_prefix)
+function serialize_id2subinfo(interface2ids, file_name, string_prefix)
     subinfo = {};
     ikeys = interface2ids.keys();
 
     for i = 1:length(ikeys)
         subinfo = [subinfo interface2ids(ikeys(i)).sort()];
     end
-    Helper.file_print(Helper.cfg().name2subinfo_complete, jsonencode(subinfo));
+    Helper.file_print(file_name, jsonencode(subinfo));
     disp(string_prefix + " deleting duplicates, " + string(length(subinfo)) + " subsystems remain in " + string(length(ikeys)) + " interfaces.")
 end
 

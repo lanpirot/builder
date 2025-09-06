@@ -13,7 +13,7 @@ classdef Helper
         num_local_elements = 'NUM_LOCAL_ELEMENTS'
         local_depth = 'LOCAL_DEPTH'
         subtree_depth = 'SUBTREE_DEPTH'
-        children = 'CHILDREN'
+        children = 'DIRECT_CHILDREN'
 
         %report
         num_subsystems = 'NUM_SUBSYSTEMS'
@@ -155,9 +155,15 @@ classdef Helper
                     synth.mutate_chances = 100;
                     synth.choose_retries = 10;
                     synth.max_depth = 20;
-                    synth.slnet_max_depth = 15;                       %SLNET max: 15
-                    synth.slnet_max_elements = 106823;                %SLNET max: 106823
-                    synth.slnet_max_subs = 13501;                     %SLNET max: 13501
+                    if synth.needs_to_be_compilable
+                        synth.slnet_max_depth =     7;           
+                        synth.slnet_max_elements =  1122;              
+                        synth.slnet_max_subs =      146;      
+                    else
+                        synth.slnet_max_depth =     17;
+                        synth.slnet_max_elements =  108523;
+                        synth.slnet_max_subs =      15800;
+                    end
                 case Helper.synth_depth
                     synth.model_count = 100;
                     synth.repair_level_count = 3;
@@ -165,8 +171,12 @@ classdef Helper
                     synth.choose_sample_size = 10;
                     synth.mutate_chances = 100;
                     synth.choose_retries = 5;
-                    synth.min_depth = 50;
-                    synth.max_depth = 150;
+                    if synth.needs_to_be_compilable
+                        synth.min_depth = 30;
+                    else
+                        synth.min_depth = 50;
+                    end
+                    synth.max_depth = 200;
                     set(0, 'RecursionLimit', 5000)
             end
         end
@@ -187,13 +197,13 @@ classdef Helper
         function name2subinfo = build_sub_info(name2subinfo)
             name2subinfo = name2subinfo';            
 
-            sub_identities = extractfield(name2subinfo, Helper.identity);    
-            sub_interfaces = extractfield(name2subinfo, Helper.interface);
+            sub_identities = extractfield(name2subinfo, lower(Helper.identity));
+            sub_interfaces = extractfield(name2subinfo, lower(Helper.interface));
         
-            sub_num_local_elements = num2cell(extractfield(name2subinfo, Helper.num_local_elements));
-            local_depths = num2cell(extractfield(name2subinfo, Helper.local_depth));
-            subtree_depth = num2cell(extractfield(name2subinfo, Helper.subtree_depth));
-            children = extractfield(name2subinfo, Helper.children);    
+            sub_num_local_elements = num2cell(extractfield(name2subinfo, lower(Helper.num_local_elements)));
+            local_depths = num2cell(extractfield(name2subinfo, lower(Helper.local_depth)));
+            subtree_depth = num2cell(extractfield(name2subinfo, lower(Helper.subtree_depth)));
+            children = extractfield(name2subinfo, lower(Helper.children));    
             
             sub_info = [sub_identities; sub_interfaces; sub_num_local_elements; local_depths; subtree_depth; children];
             sub_info = cell2struct(sub_info, {Helper.identity, Helper.interface, Helper.num_local_elements, Helper.local_depth, Helper.subtree_depth, Helper.children});
