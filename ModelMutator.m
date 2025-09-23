@@ -329,12 +329,105 @@ classdef ModelMutator
             end
         end
 
-        function copy_to = copy_SS(model_name, model_path, copy_from, copy_to, copied_element, mapping)
-            if copy_to.is_root()
-                copy_to = ModelMutator.copy_to_root(model_name, model_path, copy_from, copy_to);
-            else
-                copy_to = ModelMutator.copy_to_non_root(copy_to, copy_from, copied_element, mapping);
+        function resolve_all_links(sys_name)
+            handle = get_param(sys_name,'handle');
+            subsystem_handles = Helper.find_subsystems(handle);
+            for i = 1:length(subsystem_handles)
+                try
+                    set_param(subsystem_handles(i),'LinkStatus','none')
+                catch ME
+                    %keyboard
+                end
             end
+        end
+
+        function add_ports(from, to)
+            connections = ModelMutator.get_wiring(from);
+            for i = 1:numel(connections.in_source_ports)
+                add_block('built-in/Inport', to+"/In"+i)
+            end
+            for i = 1:numel(connections.out_destination_ports)
+                add_block('built-in/Outport', to+"/Out"+i)
+            end
+            if ~isempty(connections.Enable)
+                add_block('built-in/Enable', to+"/EnablePort")
+            end
+            if ~isempty(connections.Trigger)
+                add_block('built-in/Trigger', to+"/TriggerPort")
+            end
+            if ~isempty(connections.Ifaction)
+                add_block('built-in/Ifaction', to+"/IfactionPort")
+            end
+            if ~isempty(connections.Reset)
+                add_block('built-in/Reset', to+"/ResetPort")
+            end
+        end
+
+        function number = get_number(block, inout, number, mappings)
+            for m=1:numel(mappings)
+                if strcmp(block, mappings(m).copy_from.identity.get_qualified_name)
+                    if strcmp(inout, 'src')
+                        number = mappings.mapping.outmapping(number);
+                    else
+                        number = mappings.mapping.inmapping(number);
+                    end
+                    return
+                end
+            end
+        end
+
+        function holes = copy_SS(copy_from, copy_to, children)
+            if copy_to.is_root()
+                new_system(copy_to.sub_name);
+            end
+            
+
+            if ~bdIsLoaded(copy_from.sub_name)
+                load_system(copy_from.model_path)%TODO remove me much later
+            end
+            inner_blocks = Helper.find_elements(copy_from.get_qualified_name(), 1);
+
+            for i = 1:numel(inner_blocks)
+                block_fullname = inner_blocks{i};
+                if strcmp(get_param(block_fullname, 'Type'), 'block_diagram')
+                    continue
+                end
+                split_name = strsplit(block_fullname, '/');
+                block_fullname_new = copy_to.get_qualified_name()+"/"+split_name{end};
+
+                blocked = 0;
+                for m = 1:numel(mappings)
+                    if strcmp(block_fullname, mappings(m).copy_to.identity.get_qualified_name)
+                        add_block('built-in/Subsystem', block_fullname_new);
+                        set_param(block_fullname_new, 'Position', get_param(block_fullname, 'Position'));
+                        ModelMutator.add_ports(block_fullname, block_fullname_new);
+                        blocked = 1;
+                        break
+                    end
+                end
+                if blocked
+                    continue
+                end                
+                add_block(block_fullname, block_fullname_new, 'CopyOption', 'nolink');
+            end
+
+            inner_lines = Helper.find_lines(copy_from.get_qualified_name, 1);
+            for i = 1:numel(inner_lines)
+                src_port_handle = get_param(inner_lines, 'SrcPortHandle');
+                src_block = get_param(src_port_handle, 'Parent');
+                split_name = strsplit(src_block, '/');
+                src_block_new = split_name{end};
+                src_block_number = ModelMutator.get_number(src_block, 'src', get_param(src_port_handle, 'PortNumber'), mappings);
+
+                dst_port_handle = get_param(inner_lines, 'DstPortHandle');
+                dst_block = get_param(dst_port_handle, 'Parent');
+                split_name = strsplit(dst_block, '/');
+                dst_block_new = split_name{end};
+                dst_block_number = ModelMutator.get_number(dst_block, 'dst', get_param(dst_port_handle, 'PortNumber'), mappings);
+
+                add_line(copy_to.get_model_name, src_block_new+"/"+num2str(src_block_number), dst_block_new+"/"+num2str(dst_block_number));
+            end
+            ModelMutator.annotate(copy_to.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
         end
 
         function [copy_to, additional_level] = copy_to_root(model_name, root_model_path, copy_from, copy_to)
@@ -360,21 +453,7 @@ classdef ModelMutator
                 copy_to.sub_parents = copy_to.sub_name;
                 copy_to.sub_name = copy_from.sub_name;
             end
-            %set_param(copy_to.get_qualified_name(),"Lock","off")
-            %ModelMutator.resolve_all_links(copy_to.get_qualified_name())
             %we don't need to rewire the inputs/outputs after copying
-        end
-
-        function resolve_all_links(sys_name)
-            handle = get_param(sys_name,'handle');
-            subsystem_handles = Helper.find_subsystems(handle);
-            for i = 1:length(subsystem_handles)
-                try
-                    set_param(subsystem_handles(i),'LinkStatus','none')
-                catch ME
-                    %keyboard
-                end
-            end
         end
 
         function copy_to = copy_to_non_root(copy_to, copy_from, copied_element, mapping)
@@ -405,7 +484,6 @@ classdef ModelMutator
             set_param(copy_to.get_qualified_name(), "Position", old_pos)
             %now, rewire
             ModelMutator.add_lines(copy_to, connected_blocks, mapping)
-            %ModelMutator.resolve_all_links(copy_to.get_qualified_name())
         end
 
         function add_lines(system, ports, mapping)

@@ -57,59 +57,25 @@ classdef SubTree
             end
         end
 
-        function [obj, model_handle, additional_level] = build_root(obj, model_name)
-            global name2subinfo_complete
-            slx_id = Identity(model_name, '', Helper.cfg().synthesize_playground + filesep + model_name);
-            obj.synthed_identity = slx_id;
-            
-            
-            Helper.with_preserved_cfg(@close_system, slx_id.sub_name, 0)
-            
 
-            [slx_id, additional_level] = ModelMutator.copy_to_root(slx_id.sub_name, slx_id.model_path, obj.identity, slx_id);
-            ModelMutator.make_subsystem_editable(slx_id.get_qualified_name());
-            set_param(model_name, 'Lock', 'off')
-            set_param(model_name, "LockLinksToLibrary", "off")
-            ModelMutator.annotate(slx_id.get_qualified_name(), "Copied system from: " + obj.identity.hash() + newline + "to: " + slx_id.hash())
+
+
+
+        function [obj, model_handle] = build(obj, copy_to)
+            copy_from = obj.identity;
+            holes = ModelMutator.copy_SS(copy_from, copy_to, obj.children);
+            obj.synthed_identity = copy_to;
             
-            slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
-            for i = 1:length(obj.children)
-                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, slx_id.get_qualified_name(), Identity.is_identical(Identity(slx_children(i)), obj.children{i}.identity));
+            
+            for i = 1:numel(obj.children)
+                [obj.children{i}, ~] = obj.children{i}.build(holes(i));
             end
             model_handle = get_param(model_name, 'Handle');
         end
 
-        function obj = build_sub(obj, copy_to, slx_id, slx_parents, dry_build)
-            global name2subinfo_complete
-            copy_from = obj.identity;
-            copy_to = Identity(copy_to);
-            copy_into = Identity(copy_to.sub_name, slx_parents, slx_id.model_path);
 
-            if dry_build
-                obj.synthed_identity = copy_into;
-            else
-                copy_from_interface = Interface(name2subinfo_complete{{struct(copy_from)}}.(Helper.interface));
-                copy_to_interface = Interface(name2subinfo_complete{{struct(copy_to)}}.(Helper.interface));
-    
-                try
-                    Helper.with_preserved_cfg(@load_system, copy_from.model_path);
-                catch
-                    Helper.with_preserved_cfg(@close_system, copy_from.get_model_name(), 0);
-                    Helper.with_preserved_cfg(@load_system, copy_from.model_path);
-                end
-                mapping = copy_to_interface.get_mapping(copy_from_interface);
-                copied_element = Identity(copy_from.sub_name, copy_into.sub_parents, slx_id.model_path);
-                copy_into = ModelMutator.copy_to_non_root(copy_into, copy_from, copied_element, mapping);
-                obj.synthed_identity = copy_into;
-                ModelMutator.make_subsystem_editable(copy_into.get_qualified_name());
-                ModelMutator.annotate(copy_into.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
-            end
 
-            slx_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
-            for i = 1:length(obj.children)
-                obj.children{i} = obj.children{i}.build_sub(slx_children(i), slx_id, [slx_parents '/' copy_into.sub_name], Identity.is_identical(Identity(slx_children(i)), obj.children{i}.identity));
-            end
-        end
+        
 
         function obj = report(obj)
             global name2subinfo_complete model2id

@@ -36,7 +36,6 @@ classdef Helper
         random = "RANDOM"
         shallow = "SHALLOW"
         deep = "DEEP"
-        %wish_property = Helper.deep     %set to one of above to build models of a certain property for mutation
 
 
         synth_random =    'RANDOM';                 %just try to synthesize any model
@@ -229,6 +228,14 @@ classdef Helper
 
         function ports = find_ports(subsystem_handle, block_type_string)
             ports = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',1, 'BlockType',block_type_string);
+        end
+
+        function lines = find_lines(subsystem_handle, depth)
+            if ~exist('depth', 'var')
+                lines = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'Type','line');
+            else
+                lines = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth, 'Type','line');
+            end
         end
 
         function depth = find_subtree_depth(handle)

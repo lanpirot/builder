@@ -1,14 +1,15 @@
 function synthesize()
     warning('off', 'all')
     set(0, 'DefaultFigureVisible', 'off');
+    bdclose all;
 
     global synth name2subinfo_complete interface2subs model2id
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
     for needs_to_be_compilable = 1:1
-        for mode = 1:5
+        for mode = 3:5
             synth = struct();
             Helper.cfg('reset');
-            dry = 1;
+            dry = 0;
             check = 0;
             diverse = 1;
             roots_only = 1;
@@ -34,7 +35,7 @@ function synthesize()
             interface2subs = dictionary(interface2subs{1}, interface2subs{2});
     
             tic
-            if ~dry
+            if ~dry && dry
                 opened = 0;
                 keys = name2subinfo_complete.keys();
                 for k=1:numel(keys)
@@ -187,7 +188,7 @@ function [roots, good_models] = synth_rounds()
     save_fail = 0;
 
     while good_models < synth.model_count
-        tries = tries + 1;
+        tries = tries + 100;
         disp("Building model " + string(good_models+1) + " (try: " + string(tries) + ")")
         model_name = char("model" + string(good_models+1));
         model_path = Helper.cfg().synthesize_playground + filesep + model_name + ".slx";
@@ -248,14 +249,25 @@ function [roots, good_models] = synth_rounds()
             good_models = good_models + 1;
         else
         
-            try
+            %try
                 save_start = tic;
                 disp("Saving model " + string(good_models+1) + " ... (" + string(model_root.num_subsystems) + " Subsystems from " + string(length(model_root.unique_models)) + " unique models)")
-                [model_root, slx_handle, additional_level] = model_root.build_root(model_name);
-                if additional_level
+
+
+
+                
+                [model_root, slx_handle] = model_root.build(Identity(model_name, '', Helper.cfg().synthesize_playground + filesep + model_name));
+                if ~model_root.is_root()
                     model_root = model_root.add_level();
                 end
     
+
+
+
+
+
+
+
                 slx_save(slx_handle, model_path);
                 save_time = toc(save_start);
     
@@ -267,13 +279,13 @@ function [roots, good_models] = synth_rounds()
                     Helper.with_preserved_cfg(@close_system, model_path, 0);
                 end
                 good_models = good_models + 1;
-            catch ME
+            %catch ME
                 save_fail = save_fail + 1;
                 save_time = NaN;
                 disp("Saving model " + string(good_models+1) + " FAILED")
                 Helper.log('log_synth_practice',ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models) + ", try: " + string(tries))
                 %keyboard
-            end
+            %end
             Helper.log('synth_report', report2string(good_models, model_root, build_time, save_time));
         end
 
