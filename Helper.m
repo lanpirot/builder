@@ -133,7 +133,7 @@ classdef Helper
                 case Helper.synth_AST_model
                     synth.model_count = 1000;
                     synth.repair_level_count = 2;
-                    synth.repair_root_count = 20 * synth.repair_level_count;
+                    synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 10;
                     synth.mutate_chances = 100;
                     synth.choose_retries = 5;
@@ -141,7 +141,7 @@ classdef Helper
                 case Helper.synth_width
                     synth.model_count = 100;
                     synth.repair_level_count = 3;
-                    synth.repair_root_count = 3 * synth.repair_level_count;
+                    synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 5;
                     synth.mutate_chances = 100;
                     synth.choose_retries = 5;
@@ -150,7 +150,7 @@ classdef Helper
                 case Helper.synth_giant
                     synth.model_count = 100;
                     synth.repair_level_count = 3;
-                    synth.repair_root_count = 2 * synth.repair_level_count;
+                    synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 10;
                     synth.mutate_chances = 100;
                     synth.choose_retries = 10;
@@ -167,7 +167,7 @@ classdef Helper
                 case Helper.synth_depth
                     synth.model_count = 100;
                     synth.repair_level_count = 3;
-                    synth.repair_root_count = 20;
+                    synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 10;
                     synth.mutate_chances = 100;
                     synth.choose_retries = 5;
@@ -176,7 +176,7 @@ classdef Helper
                     else
                         synth.min_depth = 50;
                     end
-                    synth.max_depth = 200;
+                    synth.max_depth = 100;
                     set(0, 'RecursionLimit', 5000)
             end
         end
