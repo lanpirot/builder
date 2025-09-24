@@ -138,7 +138,7 @@ classdef Helper
                     synth.choose_retries = 5;
                     synth.max_depth = 20;
                 case Helper.synth_width
-                    synth.model_count = 100;
+                    synth.model_count = 10;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 5;
@@ -147,7 +147,7 @@ classdef Helper
                     synth.min_height = 8;
                     synth.max_depth = 12;
                 case Helper.synth_giant
-                    synth.model_count = 100;
+                    synth.model_count = 10;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -164,7 +164,7 @@ classdef Helper
                         synth.slnet_max_subs =      15800;
                     end
                 case Helper.synth_depth
-                    synth.model_count = 100;
+                    synth.model_count = 10;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -257,6 +257,17 @@ classdef Helper
             num = length(Helper.find_elements(handle, 1));
             for i = 1:length(subsystems)
                 num = num + length(Helper.find_elements(subsystems(i), 1));
+            end
+        end
+
+        function path = full_path(varargin)
+            path = '';
+            for v = 1:numel(varargin)
+                if isempty(path)
+                    path = varargin{v};
+                else
+                    path = [path '/' varargin{v}];
+                end
             end
         end
 

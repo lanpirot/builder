@@ -62,15 +62,25 @@ classdef SubTree
 
 
         function [obj, model_handle] = build(obj, copy_to)
+            global name2subinfo_complete
+
             copy_from = obj.identity;
-            holes = ModelMutator.copy_SS(copy_from, copy_to, obj.children);
+            original_children = name2subinfo_complete{{struct(obj.identity)}}.(Helper.children);
+            new_children = obj.children;
+            
+
+            holes = ModelMutator.copy_SS(copy_from, copy_to, original_children, new_children);
             obj.synthed_identity = copy_to;
             
             
+            
+            
             for i = 1:numel(obj.children)
-                [obj.children{i}, ~] = obj.children{i}.build(holes(i));
+                %id = Identity(new_children{i}.identity.sub_name, Helper.full_path(copy_to.sub_parents, copy_to.sub_name), copy_to.model_path);
+                id = Identity(holes{i}, Helper.full_path(copy_to.sub_parents, copy_to.sub_name), copy_to.model_path);
+                [obj.children{i}, ~] = obj.children{i}.build(id);
             end
-            model_handle = get_param(model_name, 'Handle');
+            model_handle = obj.synthed_identity.get_model_name;
         end
 
 

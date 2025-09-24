@@ -344,61 +344,86 @@ classdef ModelMutator
         function add_ports(from, to)
             connections = ModelMutator.get_wiring(from);
             for i = 1:numel(connections.in_source_ports)
-                add_block('built-in/Inport', to+"/In"+i)
+                add_block('built-in/Inport', to+"/TmpTMPIn"+i)
             end
             for i = 1:numel(connections.out_destination_ports)
-                add_block('built-in/Outport', to+"/Out"+i)
+                add_block('built-in/Outport', to+"/TmpTMPOut"+i)
             end
             if ~isempty(connections.Enable)
-                add_block('built-in/Enable', to+"/EnablePort")
+                add_block(Helper.find_ports(from, 'EnablePort'), to+"/EnablePort")
             end
             if ~isempty(connections.Trigger)
-                add_block('built-in/Trigger', to+"/TriggerPort")
+                add_block(Helper.find_ports(from, 'TriggerPort'), to+"/TriggerPort")
             end
             if ~isempty(connections.Ifaction)
-                add_block('built-in/Ifaction', to+"/IfactionPort")
+                add_block(Helper.find_ports(from, 'ActionPort'), to+"/ActionPort")
             end
             if ~isempty(connections.Reset)
-                add_block('built-in/Reset', to+"/ResetPort")
+                add_block(Helper.find_ports(from, 'ResetPort'), to+"/ResetPort")
             end
         end
 
-        function number = get_number(block, inout, number, mappings)
-            for m=1:numel(mappings)
-                if strcmp(block, mappings(m).copy_from.identity.get_qualified_name)
-                    if strcmp(inout, 'src')
-                        number = mappings.mapping.outmapping(number);
-                    else
-                        number = mappings.mapping.inmapping(number);
+        function [new_block_name, number] = get_number(block, new_block_name, inout, number, original_children, new_children, dst_port_handle)
+            if exist('dst_port_handle', 'var') && contains('triggerenableifaction', get_param(dst_port_handle, 'PortType'))
+                switch get_param(dst_port_handle, 'PortType')
+                    case 'trigger'
+                        number = 'trigger';
+                    case 'enable'
+                        number = 'enable';
+                    case 'ifaction'
+                        number = 'ifaction';
+                    otherwise
+                        keyboard
+                end
+            end
+
+            global name2subinfo_complete
+            for m=1:numel(original_children)
+                id = Identity(original_children(m));
+                if strcmp(block, id.get_qualified_name)
+                    old_interface = Interface(name2subinfo_complete{{struct(id)}}.(Helper.interface));
+                    new_interface = Interface(name2subinfo_complete{{struct(new_children{m}.identity)}}.(Helper.interface));
+                    mapping = old_interface.get_mapping(new_interface);
+                    if isnumeric(number)
+                        if strcmp(inout, 'src')
+                            number = mapping.outmapping(number);
+                        else
+                            number = mapping.inmapping(number);
+                        end
+                    end
+                    new_block_name = original_children(m).actual_name;
+                    if isempty(new_block_name)
+                        new_block_name = replace(id.sub_name, '//', '#');
                     end
                     return
                 end
             end
         end
 
-        function holes = copy_SS(copy_from, copy_to, children)
+        function holes = copy_SS(copy_from, copy_to, original_children, new_children)
+            global seen_gotos
+            holes = {};
             if copy_to.is_root()
                 new_system(copy_to.sub_name);
             end
-            
 
-            if ~bdIsLoaded(copy_from.sub_name)
-                load_system(copy_from.model_path)%TODO remove me much later
+            if ~bdIsLoaded(copy_from.get_model_name)
+                load_system(copy_from.model_path)
             end
-            inner_blocks = Helper.find_elements(copy_from.get_qualified_name(), 1);
-
-            for i = 1:numel(inner_blocks)
+            
+            inner_blocks = find_system(copy_from.get_qualified_name, 'LookUnderMasks', 'on', 'FollowLinks','on', 'Variants','AllVariants', 'IncludeCommented', 'on', 'SearchDepth', 1);
+            for i = 2:numel(inner_blocks)
                 block_fullname = inner_blocks{i};
-                if strcmp(get_param(block_fullname, 'Type'), 'block_diagram')
-                    continue
-                end
-                split_name = strsplit(block_fullname, '/');
-                block_fullname_new = copy_to.get_qualified_name()+"/"+split_name{end};
+                split_name = replace(get_param(inner_blocks{i}, 'Name'), '/', '#');
 
                 blocked = 0;
-                for m = 1:numel(mappings)
-                    if strcmp(block_fullname, mappings(m).copy_to.identity.get_qualified_name)
-                        add_block('built-in/Subsystem', block_fullname_new);
+                for m = 1:numel(original_children)
+                    if strcmp(split_name, replace(original_children(m).sub_name, '//', '#'))
+                        block_fullname_new = [copy_to.get_qualified_name() '/' replace(new_children{m}.identity.sub_name, '//', '#') '_' num2str(i) '_snth'];
+                        h = add_block('built-in/Subsystem', block_fullname_new);
+                        block_fullname_new = Helper.full_path(get_param(h, 'Parent'), get_param(h, 'Name'));
+                        original_children(m).actual_name = get_param(h, 'Name');
+                        holes{end + 1} = get_param(h, 'Name');
                         set_param(block_fullname_new, 'Position', get_param(block_fullname, 'Position'));
                         ModelMutator.add_ports(block_fullname, block_fullname_new);
                         blocked = 1;
@@ -407,25 +432,95 @@ classdef ModelMutator
                 end
                 if blocked
                     continue
-                end                
-                add_block(block_fullname, block_fullname_new, 'CopyOption', 'nolink');
+                end
+                block_fullname_new = [copy_to.get_qualified_name() '/' split_name];
+                if copy_to.is_root() || ~contains('InportOutportTriggerPortEnablePortActionPort', get_param(block_fullname, 'BlockType'))
+                    try
+                        add_block(block_fullname, block_fullname_new, 'CopyOption', 'nolink');
+                    catch ME
+                        switch get_param(block_fullname, "Blocktype")
+                            case 'TransportDelay'
+                                add_block(['simulink/Quick Insert/Discrete/Discrete' newline 'Transfer Fcn'], block_fullname_new, 'CopyOption', 'nolink');
+                            case 'TransferFcn'
+                                add_block(['simulink/Quick Insert/Discrete/Discrete' newline 'Transfer Fcn'], block_fullname_new, 'CopyOption', 'nolink');
+                            case 'Integrator'
+                                add_block(['simulink/Discrete/Discrete-Time' newline 'Integrator'], block_fullname_new, 'CopyOption', 'nolink');
+                            otherwise
+                                keyboard
+                        end
+                    end
+                    if strcmp(get_param(block_fullname_new, "Blocktype"), 'Goto')
+                        tag = get_param(block_fullname_new, "GotoTag");
+                        if ismember(tag, seen_gotos)
+                            tag = [tag num2str(length(seen_gotos))];
+                            set_param(block_fullname_new, "GotoTag", tag);
+                        end
+                        seen_gotos{end+1} = tag;
+                    end
+                else
+                    present_ports = Helper.find_ports(copy_to.get_qualified_name, get_param(block_fullname, 'BlockType'));
+                    if isscalar(present_ports)
+                        set_param(present_ports, 'Name', split_name);
+                    else
+                        set_param(present_ports(str2double(get_param(block_fullname, 'Port'))), 'Name', split_name);
+                    end
+                end
+                set_param(Helper.full_path(copy_to.get_qualified_name, split_name), 'Position', get_param(block_fullname, 'Position'))
             end
 
             inner_lines = Helper.find_lines(copy_from.get_qualified_name, 1);
             for i = 1:numel(inner_lines)
-                src_port_handle = get_param(inner_lines, 'SrcPortHandle');
+                inner_line = inner_lines(i);
+                src_port_handle = get_param(inner_line, 'SrcPortHandle');
+                if src_port_handle < 0
+                    continue
+                end
                 src_block = get_param(src_port_handle, 'Parent');
-                split_name = strsplit(src_block, '/');
-                src_block_new = split_name{end};
-                src_block_number = ModelMutator.get_number(src_block, 'src', get_param(src_port_handle, 'PortNumber'), mappings);
+                src_block_new = replace(get_param(src_block, 'Name'), '/', '#');
+                [src_block_new, src_block_number] = ModelMutator.get_number(src_block, src_block_new, 'src', get_param(src_port_handle, 'PortNumber'), original_children, new_children);
 
-                dst_port_handle = get_param(inner_lines, 'DstPortHandle');
+                dst_port_handle = get_param(inner_line, 'DstPortHandle');
+                if length(dst_port_handle) > 1 || dst_port_handle < 0
+                    continue
+                end
+
                 dst_block = get_param(dst_port_handle, 'Parent');
-                split_name = strsplit(dst_block, '/');
-                dst_block_new = split_name{end};
-                dst_block_number = ModelMutator.get_number(dst_block, 'dst', get_param(dst_port_handle, 'PortNumber'), mappings);
+                dst_block_new = replace(get_param(dst_block, 'Name'), '/', '#');
+                [dst_block_new, dst_block_number] = ModelMutator.get_number(dst_block, dst_block_new, 'dst', get_param(dst_port_handle, 'PortNumber'), original_children, new_children, dst_port_handle);
+                
 
-                add_line(copy_to.get_model_name, src_block_new+"/"+num2str(src_block_number), dst_block_new+"/"+num2str(dst_block_number));
+
+                switch get_param(src_port_handle, 'PortType')
+                    case 'outport'
+                        try
+                            add_line(copy_to.get_qualified_name, Helper.full_path(src_block_new, num2str(src_block_number)), Helper.full_path(dst_block_new, num2str(dst_block_number)), 'autorouting', 'on');
+                        catch ME
+                            if contains('TriggerPortEnablePort', get_param(Helper.full_path(copy_to.get_qualified_name, src_block_new), 'BlockType'))
+                                set_param(Helper.full_path(copy_to.get_qualified_name, src_block_new), 'ShowoutputPort', 'on');
+                                add_line(copy_to.get_qualified_name, Helper.full_path(src_block_new, num2str(src_block_number)), Helper.full_path(dst_block_new, num2str(dst_block_number)), 'autorouting', 'on');
+                            else
+                                keyboard
+                            end
+                        end
+                    case 'state'
+                        add_line(copy_to.get_qualified_name, Helper.full_path(src_block_new, 'state'), Helper.full_path(dst_block_new, num2str(dst_block_number)), 'autorouting', 'on');
+                    case 'connection'
+                        p1 = get_param(Helper.full_path(copy_to.get_qualified_name, src_block_new), "PortHandles");
+                        if ismember(get_param(src_port_handle, 'Handle'), get_param(src_block, 'PortHandles').LConn)
+                            p1 = p1.LConn(src_block_number);
+                        else
+                            p1 = p1.RConn(src_block_number);
+                        end
+                        p2 = get_param(Helper.full_path(copy_to.get_qualified_name, dst_block_new), "PortHandles");
+                        if ismember(get_param(dst_port_handle, 'Handle'), get_param(dst_block, 'PortHandles').LConn)
+                            p2 = p2.LConn(dst_block_number);
+                        else
+                            p2 = p2.RConn(dst_block_number);
+                        end
+                        add_line(copy_to.get_qualified_name, p1, p2, 'autorouting', 'on');
+                    otherwise
+                        keyboard
+                end
             end
             ModelMutator.annotate(copy_to.get_qualified_name(), "Copied system from: " + copy_from.hash() + newline + "to: " + copy_to.hash())
         end
@@ -492,9 +587,9 @@ classdef ModelMutator
                 if ports.in_source_ports{i} ~= 0
                     try
                         if ports.in_source_ports{i} < 0%are we self-connected?
-                            add_line(system.sub_parents, ph.Outport(-ports.in_source_ports{i}), ph.Inport(mapping.inmapping(i)), 'autorouting','on')
+                            add_line(system.sub_parents, ph.Outport(-ports.in_source_ports{i}), ph.Inport(mapping.inmapping(i)), 'autorouting','on');
                         else
-                            add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on')
+                            add_line(system.sub_parents, ports.in_source_ports{i}, ph.Inport(mapping.inmapping(i)), 'autorouting','on');
                         end
                     catch ME
                         %keyboard
@@ -506,7 +601,7 @@ classdef ModelMutator
                 if outports ~= 0
                     for j=1:length(outports)
                         try
-                            add_line(system.sub_parents, ph.Outport(mapping.outmapping(i)), outports(j), 'autorouting','on')
+                            add_line(system.sub_parents, ph.Outport(mapping.outmapping(i)), outports(j), 'autorouting','on');
                         catch ME
                             %keyboard
                         end

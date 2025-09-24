@@ -1,12 +1,12 @@
 function synthesize()
     warning('off', 'all')
     set(0, 'DefaultFigureVisible', 'off');
-    bdclose all;
+    %bdclose all;
 
     global synth name2subinfo_complete interface2subs model2id
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
-    for needs_to_be_compilable = 1:1
-        for mode = 3:5
+    for needs_to_be_compilable = 0:1
+        for mode = 5:5
             synth = struct();
             Helper.cfg('reset');
             dry = 0;
@@ -34,6 +34,7 @@ function synthesize()
             interface2subs = Helper.parse_json(Helper.cfg().interface2subs);
             interface2subs = dictionary(interface2subs{1}, interface2subs{2});
     
+            bdclose all;
             tic
             if ~dry && dry
                 opened = 0;
@@ -42,7 +43,7 @@ function synthesize()
                     [~, name, ~] = fileparts(keys{k}.model_path);
                     if ~bdIsLoaded(name)
                         opened = opened + 1;
-                        fprintf("%s, %i/%i\n", tic, opened, numel(keys))
+                        fprintf("%f, %i/%i\n", toc, opened, numel(keys))
                         load_system(keys{k}.model_path)
                     end
                 end
@@ -179,7 +180,7 @@ end
 function [roots, good_models] = synth_rounds()
     global name2subinfo_complete depth_reached synth
     
-    good_models = 0;
+    good_models = 3;
     roots = {};
     build_success = 1;
     tries = 0;
@@ -188,7 +189,10 @@ function [roots, good_models] = synth_rounds()
     save_fail = 0;
 
     while good_models < synth.model_count
-        tries = tries + 100;
+        global seen_gotos
+        seen_gotos = {};
+
+        tries = tries + 1;
         disp("Building model " + string(good_models+1) + " (try: " + string(tries) + ")")
         model_name = char("model" + string(good_models+1));
         model_path = Helper.cfg().synthesize_playground + filesep + model_name + ".slx";
@@ -255,9 +259,9 @@ function [roots, good_models] = synth_rounds()
 
 
 
-                
-                [model_root, slx_handle] = model_root.build(Identity(model_name, '', Helper.cfg().synthesize_playground + filesep + model_name));
-                if ~model_root.is_root()
+                id = Identity(model_name, '', Helper.cfg().synthesize_playground + filesep + model_name);
+                [model_root, slx_handle] = model_root.build(id);
+                if ~model_root.identity.is_root()
                     model_root = model_root.add_level();
                 end
     
@@ -280,10 +284,12 @@ function [roots, good_models] = synth_rounds()
                 end
                 good_models = good_models + 1;
             %catch ME
+                bdclose("model"+string(good_models+1))
                 save_fail = save_fail + 1;
                 save_time = NaN;
                 disp("Saving model " + string(good_models+1) + " FAILED")
-                Helper.log('log_synth_practice',ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models) + ", try: " + string(tries))
+                
+                %Helper.log('log_synth_practice',ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models) + ", try: " + string(tries))
                 %keyboard
             %end
             Helper.log('synth_report', report2string(good_models, model_root, build_time, save_time));
