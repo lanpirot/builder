@@ -138,7 +138,7 @@ classdef Helper
                     synth.choose_retries = 5;
                     synth.max_depth = 20;
                 case Helper.synth_width
-                    synth.model_count = 10;
+                    synth.model_count = 100;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 5;
@@ -147,7 +147,7 @@ classdef Helper
                     synth.min_height = 8;
                     synth.max_depth = 12;
                 case Helper.synth_giant
-                    synth.model_count = 10;
+                    synth.model_count = 100;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -164,7 +164,7 @@ classdef Helper
                         synth.slnet_max_subs =      15800;
                     end
                 case Helper.synth_depth
-                    synth.model_count = 10;
+                    synth.model_count = 100;
                     synth.repair_level_count = 3;
                     synth.repair_root_count = synth.repair_level_count;
                     synth.choose_sample_size = 10;
@@ -210,6 +210,9 @@ classdef Helper
             name2subinfo = dictionary(sub_identities', out);
         end
 
+
+
+        %TODO: 'IncludeCommented', 'on'
         function subsystems = find_subsystems(handle, depth)
             if ~exist('depth', 'var')
                 subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode

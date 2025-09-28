@@ -77,6 +77,8 @@ function clean_models()
                     end
                 end
 
+                
+                %%TODO: get into Helper
                 ports = find_system(model, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'Type', 'Port');
                 for p = 1:numel(ports)
                     try

@@ -5,7 +5,8 @@ function synthesize()
 
     global synth name2subinfo_complete interface2subs model2id
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
-    for needs_to_be_compilable = 0:1
+    for needs_to_be_compilable = 0:0
+        loaded = 0;
         for mode = 5:5
             synth = struct();
             Helper.cfg('reset');
@@ -34,16 +35,17 @@ function synthesize()
             interface2subs = Helper.parse_json(Helper.cfg().interface2subs);
             interface2subs = dictionary(interface2subs{1}, interface2subs{2});
     
-            bdclose all;
+            
             tic
-            if ~dry && dry
-                opened = 0;
+            if ~loaded && ~dry
+                loaded = 1;
+                opened_models = 0;
                 keys = name2subinfo_complete.keys();
                 for k=1:numel(keys)
                     [~, name, ~] = fileparts(keys{k}.model_path);
                     if ~bdIsLoaded(name)
-                        opened = opened + 1;
-                        fprintf("%f, %i/%i\n", toc, opened, numel(keys))
+                        opened_models = opened_models + 1;
+                        fprintf("%f, %i/%i\n", toc, opened_models, numel(keys))
                         load_system(keys{k}.model_path)
                     end
                 end
@@ -58,10 +60,10 @@ function synthesize()
 
             start_synth_report()
             tic
-            [roots, models_synthed] = synth_rounds();
+            [roots, good_models] = synth_rounds();
             disp("Total time building/saving " + toc)
-            disp(".slx-synthesis file saved " + models_synthed + " times.")
-            coverage_report(roots, models_synthed, length(models), length(ks))
+            disp(".slx-synthesis file saved " + good_models + " times.")
+            coverage_report(roots, good_models, length(models), length(ks))
         end
     end
 end
@@ -83,7 +85,7 @@ function slnet_report()
     coverage_report(roots, length(roots), length(roots), length(name2subinfo_complete.keys()))
 end
 
-function coverage_report(roots, models_synthed, model_count, sub_count)
+function coverage_report(roots, good_models, slnet_model_count, slnet_sub_count)
     start_synth_report();
     Helper.log('synth_report', "========END REPORT:=========");
     Helper.log('synth_report', "Total elapsed time: " + string(toc));
@@ -116,23 +118,33 @@ function coverage_report(roots, models_synthed, model_count, sub_count)
     %how many models are covered
     all_models = horzcat(roots.unique_models);
     unique_models = unique(all_models);
-    Helper.log('synth_report', "Ratio of models covered: " + string(length(unique_models) / model_count) + " (of " + model_count + " models)");
+    Helper.log('synth_report', "Ratio of models covered: " + string(length(unique_models) / slnet_model_count) + " (of " + slnet_model_count + " models)");
     %how many subsystems are covered
     all_subs = horzcat(roots.unique_subsystems);
     unique_subs = unique(all_subs);
-    Helper.log('synth_report', "Ratio of subsystems covered: " + string(length(unique_subs)/sub_count) + " (of " + sub_count + " subsystems)")
+    Helper.log('synth_report', "Ratio of subsystems covered: " + string(length(unique_subs)/slnet_sub_count) + " (of " + slnet_sub_count + " subsystems)")
 
     %what is the overlap between models
-    overlap_ratios = struct;
+    jaccardM = [];
+    jaccardS = [];
+
+    for i = 1:length(roots)
+        for j = i+1:length(roots)
+            jaccardM(end + 1) = length(intersect(roots(i).unique_models, roots(j).unique_models)) / length(union(roots(i).unique_models, roots(j).unique_models));
+            jaccardS(end + 1) = length(intersect(roots(i).unique_subsystems, roots(j).unique_subsystems)) / length(union(roots(i).unique_subsystems, roots(j).unique_subsystems));
+        end
+    end
+
+    Helper.log('synth_report', "The mean Jaccard Distance (models) is: " + string(1 - sum(jaccardM)/length(jaccardM)));
+    Helper.log('synth_report', "The mean Jaccard Distance (subsystems) is: " + string(1 - sum(jaccardS)/length(jaccardS)));
+
+
     model_total_overlap = 0;
     subsystem_total_overlap = 0;
     for i = 1:length(roots)
         model_local_overlap_ratios = [];
         subsystem_local_overlap_ratios = [];
-        for j = 1:length(roots)
-            if i == j
-                continue
-            end
+        for j = i+1:length(roots)
             model_overlap = intersect(roots(i).unique_models, roots(j).unique_models);
             model_local_overlap_ratios(end + 1) = length(model_overlap) / length(roots(i).unique_models);
             if model_local_overlap_ratios(end) == 1
@@ -145,26 +157,10 @@ function coverage_report(roots, models_synthed, model_count, sub_count)
                 subsystem_total_overlap = subsystem_total_overlap + 1;
             end
         end
-        overlap_ratios(end + 1).model_mean = mean(model_local_overlap_ratios);
-        overlap_ratios(end).model_median = median(model_local_overlap_ratios);
-        overlap_ratios(end).subsystem_mean = mean(subsystem_local_overlap_ratios);
-        overlap_ratios(end).subsystem_median = median(subsystem_local_overlap_ratios);
     end
 
-    if models_synthed == 0
-        models_synthed = length(roots);
-    end
-    model_means = vertcat(overlap_ratios.model_mean);
-    model_medians = vertcat(overlap_ratios.model_median);
-    Helper.log('synth_report', "Maximum of mean model overlaps: " + string(max(model_means)))
-    Helper.log('synth_report', "Maximum of median model overlaps: " + string(max(model_medians)))
-    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + model_total_overlap + " model overlaps (max: " + string(models_synthed^2 - models_synthed) + ").")
-
-    subsystem_means = vertcat(overlap_ratios.subsystem_mean);
-    subsystem_medians = vertcat(overlap_ratios.subsystem_median);
-    Helper.log('synth_report', "Maximum of mean subsystem overlaps: " + string(max(subsystem_means)))
-    Helper.log('synth_report', "Maximum of median subsystem overlaps: " + string(max(subsystem_medians)))
-    Helper.log('synth_report', "In our set of " + string(models_synthed) + " models, we had " + subsystem_total_overlap + " complete subsystem overlaps (max: " + string(models_synthed^2 - models_synthed) + ").")
+    Helper.log('synth_report', "In our set of " + string(good_models) + " models, we had " + model_total_overlap + " model overlaps (max: " + string((good_models^2 - good_models)/2) + ").")
+    Helper.log('synth_report', "In our set of " + string(good_models) + " models, we had " + subsystem_total_overlap + " complete subsystem overlaps (max: " + string((good_models^2 - good_models)/2) + ").")
     Helper.log('synth_report', "========END REPORT END=========")
 end
 
@@ -180,7 +176,7 @@ end
 function [roots, good_models] = synth_rounds()
     global name2subinfo_complete depth_reached synth
     
-    good_models = 3;
+    good_models = 0;
     roots = {};
     build_success = 1;
     tries = 0;
@@ -253,7 +249,7 @@ function [roots, good_models] = synth_rounds()
             good_models = good_models + 1;
         else
         
-            %try
+            try
                 save_start = tic;
                 disp("Saving model " + string(good_models+1) + " ... (" + string(model_root.num_subsystems) + " Subsystems from " + string(length(model_root.unique_models)) + " unique models)")
 
@@ -271,9 +267,9 @@ function [roots, good_models] = synth_rounds()
 
 
 
-
-                slx_save(slx_handle, model_path);
                 save_time = toc(save_start);
+                slx_save(slx_handle, model_path);
+                
     
                 
                 disp("Saved model " + string(good_models+1))
@@ -283,15 +279,15 @@ function [roots, good_models] = synth_rounds()
                     Helper.with_preserved_cfg(@close_system, model_path, 0);
                 end
                 good_models = good_models + 1;
-            %catch ME
+            catch ME
                 bdclose("model"+string(good_models+1))
                 save_fail = save_fail + 1;
                 save_time = NaN;
                 disp("Saving model " + string(good_models+1) + " FAILED")
                 
-                %Helper.log('log_synth_practice',ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models) + ", try: " + string(tries))
+                Helper.log('log_synth_practice',ME.identifier + " " + ME.message + newline + string(ME.stack(1).file) + ", Line: " + ME.stack(1).line + ", Model-no: " + string(good_models) + ", try: " + string(tries))
                 %keyboard
-            %end
+            end
             Helper.log('synth_report', report2string(good_models, model_root, build_time, save_time));
         end
 

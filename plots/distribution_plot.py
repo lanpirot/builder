@@ -51,9 +51,9 @@ def plotter(sizes, models, labels_cleaned, save_file=None, height=3.333):
     )
 
     ax.yaxis.grid(True, linestyle='--', which='major', color='gray', alpha=0.75, zorder=0)
+    ax.xaxis.grid(False)
     ax.set_xticks(range(maxx))
     ax.set_xticklabels(labels_cleaned, rotation=90, fontsize=17)
-    ax.set_xlabel("Equivalence Classes")
     ax.set_ylabel("Count")
 
     # Adjust y-axis limit
