@@ -7,7 +7,7 @@ function synthesize()
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
     for needs_to_be_compilable = 0:0
         loaded = 0;
-        for mode = 5:5
+        for mode = 4:4
             synth = struct();
             Helper.cfg('reset');
             dry = 0;

@@ -78,8 +78,7 @@ function clean_models()
                 end
 
                 
-                %%TODO: get into Helper
-                ports = find_system(model, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'Type', 'Port');
+                ports = find_system(model, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'IncludeCommented', 'on', 'Variants','AllVariants', 'Type', 'Port');
                 for p = 1:numel(ports)
                     try
                         set_param(ports(p), 'ConnectionCallback', '');

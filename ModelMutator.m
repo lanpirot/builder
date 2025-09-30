@@ -137,7 +137,7 @@ classdef ModelMutator
                                         save_system(bdroot(block_fullname))
                                         continue
                                     end
-                                    keyboard
+                                    %keyboard
                             end
                         end
                         if strcmp(get_param(block_fullname_new, "Blocktype"), 'Goto')

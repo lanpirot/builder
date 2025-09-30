@@ -57,10 +57,12 @@ classdef Helper
                 cfg.models_path = system_constants.models_path;
                 cfg.project_dir = system_constants.project_dir;
                 cfg.tame_models_path = system_constants.tame_models_path;
+                cfg.synthed_models_path = system_constants.synthed_models_path;
                 cfg.log_path = system_constants.project_dir;
                 mkdir(cfg.log_path)
                 cfg.project_info = fullfile(cfg.log_path, "project_info.tsv");
                 cfg.modellist = fullfile(cfg.log_path, "modellist.csv");
+                cfg.synthed_modellist = fullfile(cfg.synthed_models_path, "modellist.csv");
                 cfg.garbage_out = fullfile(cfg.log_path, "tmp_garbage");
             end
             if nargin == 2
@@ -212,32 +214,31 @@ classdef Helper
 
 
 
-        %TODO: 'IncludeCommented', 'on'
         function subsystems = find_subsystems(handle, depth)
             if ~exist('depth', 'var')
-                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
+                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'IncludeCommented', 'on', 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
             else
-                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth, 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
+                subsystems = find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'IncludeCommented', 'on', 'SearchDepth',depth, 'BlockType','SubSystem'); %FollowLinks for building mode, without for clone find mode
             end
         end
 
         function elements = find_elements(subsystem_handle, depth)
             if ~exist('depth', 'var')
-                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'Variants','AllVariants');
+                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'IncludeCommented', 'on', 'Variants','AllVariants');
             else
-                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth);
+                elements = find_system(subsystem_handle, 'LookUnderMasks', 'on', 'FollowLinks','on', 'IncludeCommented', 'on', 'Variants','AllVariants', 'SearchDepth',depth);
             end
         end
 
         function ports = find_ports(subsystem_handle, block_type_string)
-            ports = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',1, 'BlockType',block_type_string);
+            ports = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'IncludeCommented', 'on', 'Variants','AllVariants', 'SearchDepth',1, 'BlockType',block_type_string);
         end
 
         function lines = find_lines(subsystem_handle, depth)
             if ~exist('depth', 'var')
-                lines = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'Type','line');
+                lines = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'IncludeCommented', 'on', 'Variants','AllVariants', 'Type','line');
             else
-                lines = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth, 'Type','line');
+                lines = find_system(subsystem_handle, 'FindAll','on', 'LookUnderMasks','on', 'FollowLinks','on', 'IncludeCommented', 'on', 'Variants','AllVariants', 'SearchDepth',depth, 'Type','line');
             end
         end
 
@@ -245,7 +246,7 @@ classdef Helper
             depth = 0;
             last_length = 0;
             while 1
-                next_length = length(find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'Variants','AllVariants', 'SearchDepth',depth));
+                next_length = length(find_system(handle, 'LookUnderMasks','on', 'FollowLinks','on', 'IncludeCommented', 'on', 'Variants','AllVariants', 'SearchDepth',depth));
                 if next_length > last_length
                     last_length = next_length;
                 else

@@ -1,5 +1,5 @@
 function mine()
-    for needs_to_be_compilable = 1:1
+    for needs_to_be_compilable = 0:0
         [old_path,models_evaluated,subs,modellist,models_mined] = startinit(needs_to_be_compilable);
         max_number_of_models = height(modellist.model_url);
         for i = 1:max_number_of_models
