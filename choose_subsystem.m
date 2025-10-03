@@ -95,8 +95,12 @@ function subsystem = sample_and_choose(depth, subsystems, property)
             choice_num = alt_choice_num;
         end
     end
-
-    subsystem = SubTree(choice.IDENTITY, name2subinfo_complete);
+    
+    if strcmp(synth.mode, Helper.synth_giant)
+        subsystem = GSubTree(choice.IDENTITY, name2subinfo_complete);
+    else
+        subsystem = SubTree(choice.IDENTITY, name2subinfo_complete);
+    end
     return
 end
 

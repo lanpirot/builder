@@ -62,7 +62,7 @@ classdef Helper
                 mkdir(cfg.log_path)
                 cfg.project_info = fullfile(cfg.log_path, "project_info.tsv");
                 cfg.modellist = fullfile(cfg.log_path, "modellist.csv");
-                cfg.synthed_modellist = fullfile(cfg.synthed_models_path, "modellist.csv");
+                cfg.synthed_modellist = fullfile(cfg.synthed_models_path, "modellist_synthed.csv");
                 cfg.garbage_out = fullfile(cfg.log_path, "tmp_garbage");
             end
             if nargin == 2

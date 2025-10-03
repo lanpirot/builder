@@ -216,7 +216,7 @@ function [roots, good_models] = synth_rounds()
                 if mutation_performed
                     mutate_chances = synth.mutate_chances;
                 end
-                disp(report2string(good_models+1, model_root, toc(attempt_start), 0))
+                %disp(report2string(good_models+1, model_root, toc(attempt_start), 0))
             end
             build_success = double_check_root(model_root);
         else

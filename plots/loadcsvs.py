@@ -42,7 +42,7 @@ def extract_csv_part(filepath):
 def process_directory(directory):
     all_dfs = []
     for filepath in glob.glob(os.path.join(directory, '**', 'synth_report.csv'), recursive=True):
-        if '/archive2/' not in filepath:
+        if '/archive3/' not in filepath:
             continue
         try:
             df = extract_csv_part(filepath)
