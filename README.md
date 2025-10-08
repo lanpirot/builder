@@ -1,4 +1,4 @@
-Find the data (synthesized models, intermediate results) of this project here: [![DOI](https://zenodo.org/badge/808521433.svg)](https://10.5281/zenodo.17296885).
+Find the data (synthesized models, intermediate results) of this project here: [![DOI](https://zenodo.org/badge/808521433.svg)](https://10.5281/zenodo.17296885)
 
 # GRANDSLAM: Linearly Scalable Model Synthesis
 
@@ -33,6 +33,7 @@ We reported a number of bugs to Mathworks, so maybe you won't experience as many
 
 ## Usage
 We used the model collection [SLNET](https://zenodo.org/records/5259648) for GRANDSLAM. Have the model collection unzipped at some location `models_path` into directories (names of directories are numbers), like this: 
+```
 SLNET
 |---SLNET_GitHub
 |     |---100042416
@@ -43,6 +44,7 @@ SLNET
       |---10439
       |---11027
       |---...
+```
 
 As MATLAB sometimes hard crashes, you may have to restart steps 2, and 3 a couple of times, until they completely go through. Progress is saved, even with crashes.
 
