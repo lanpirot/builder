@@ -1,6 +1,6 @@
 Find the data (synthesized models, intermediate results) of this project here: [![DOI](https://zenodo.org/badge/808521433.svg)](https://10.5281/zenodo.17296885)
 
-# GRANDSLAM: Linearly Scalable Model Synthesis
+# TITLE
 
 This is a project for synthesizing large Simulink models for stress testing, scaling, or giant fuzzing. In its standard settings, you can create new models that are syntactically valid and
 - giant sized (>100k Blocks, >15k Subsystems), the strategy that produces these is GIANT,
@@ -10,7 +10,7 @@ This is a project for synthesizing large Simulink models for stress testing, sca
 - are randomly synthesized, the strategy is RANDOM.
 Each model is synthesized using a set of subsystems of a corpus of models, like the SLNET-corpus, as building blocks. Suitable subsystems are puzzled together to synthesize (huge) models. 
 
-You can also create new models with GRANDSLAM that are compilable or simulatable. These models are much smaller and currently not all of the synthesis attempts will result in a compilable/simulatable model.
+You can also create new models with TITLE that are compilable or simulatable. These models are much smaller and currently not all of the synthesis attempts will result in a compilable/simulatable model.
 
 You can use the synthetic models to test the scalability of Simulink, or your Simulink tool, or to fuzz them.
 
@@ -23,8 +23,8 @@ You can look up various properties of the models in either `modellist_synthed.cs
 
 
 ## ⚠ Disclaimer ⚠
-⚠ This is not a normal replication package. ⚠ Our approach is inherently fuzzing Simulink in various of its operations: loading, simulating, copying, saving, closing with a diverse and challenging corpus such as SLNET. 
-If you follow our instructions below, most likely you will experience program errors, hard crashes of MATLAB/Simulink, or even system-critical memory leaks. So caution is advised. 
+⚠ This is not a normal replication package. ⚠ Our approach is inherently fuzzing Simulink in various of its operations: loading, simulating, copying, saving, closing. All this with a diverse and challenging corpus such as SLNET. 
+If you follow our instructions below, most likely you will experience program errors, hard crashes of MATLAB/Simulink, or even system-critical memory leaks! So caution is advised.
 Keeping that in mind, most of our scripts are designed to pick up their work, where they hard crashed the last time. 
 So usually, restarting the script; restarting MATLAB and then restarting the script; restarting your PC, then MATLAB, then the script should skip over the bug to continue the work.
 We reported a number of bugs to Mathworks, so maybe you won't experience as many issues as we did in the most current MATLAB/Simulink version.
@@ -32,7 +32,7 @@ We reported a number of bugs to Mathworks, so maybe you won't experience as many
 
 
 ## Usage
-We used the model collection [SLNET](https://zenodo.org/records/5259648) for GRANDSLAM. Have the model collection unzipped at some location `models_path` into directories (names of directories are numbers), like this: 
+We used the model collection [SLNET](https://zenodo.org/records/5259648) for TITLE. Have the model collection unzipped at some location `models_path` into directories (names of directories are numbers), like this: 
 ```
 SLNET
 |---SLNET_GitHub
