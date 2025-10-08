@@ -22,8 +22,8 @@ This package comes with 4,600 synthesized models of various shapes and sizes. 60
 You can look up various properties of the models in either `modellist_synthed.csv` or `X/STRATEGY/synth_report.csv` where `X=0` or `X=1` and `STRATEGY` is one of our strategy names.
 
 
-## Disclaimer
-This is not a replication package. Our approach is inherently fuzzing Simulink in various of its operations: loading, simulating, copying, saving, closing with a diverse and challenging corpus such as SLNET. 
+## ⚠ Disclaimer ⚠
+⚠ This is not a normal replication package. ⚠ Our approach is inherently fuzzing Simulink in various of its operations: loading, simulating, copying, saving, closing with a diverse and challenging corpus such as SLNET. 
 If you follow our instructions below, most likely you will experience program errors, hard crashes of MATLAB/Simulink, or even system-critical memory leaks. So caution is advised. 
 Keeping that in mind, most of our scripts are designed to pick up their work, where they hard crashed the last time. 
 So usually, restarting the script; restarting MATLAB and then restarting the script; restarting your PC, then MATLAB, then the script should skip over the bug to continue the work.
