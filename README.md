@@ -1,6 +1,6 @@
 Find the data (synthesized models, intermediate results) of this project here: [![DOI](https://zenodo.org/badge/808521433.svg)](https://10.5281/zenodo.17296885)
 
-# GRANDSLAM
+# TITLE
 
 This is a project for synthesizing large Simulink models for stress testing, scaling, or giant fuzzing. In its standard settings, you can create new models that are syntactically valid and
 - giant sized (>100k Blocks, >15k Subsystems), the strategy that produces these is GIANT,
@@ -10,7 +10,7 @@ This is a project for synthesizing large Simulink models for stress testing, sca
 - are randomly synthesized, the strategy is RANDOM.
 Each model is synthesized using a set of subsystems of a corpus of models, like the SLNET-corpus, as building blocks. Suitable subsystems are puzzled together to synthesize (huge) models. 
 
-You can also create new models with GRANDSLAM that are compilable or simulatable. These models are much smaller and currently not all of the synthesis attempts will result in a compilable/simulatable model.
+You can also create new models with TITLE that are compilable or simulatable. These models are much smaller and currently not all of the synthesis attempts will result in a compilable/simulatable model.
 
 You can use the synthetic models to test the scalability of Simulink, or your Simulink tool, or to fuzz them.
 
@@ -32,7 +32,7 @@ We reported a number of bugs to Mathworks, so maybe you won't experience as many
 
 
 ## Usage
-We used the model collection [SLNET](https://zenodo.org/records/5259648) for GRANDSLAM. Have the model collection unzipped at some location `models_path` into directories (names of directories are numbers), like this: 
+We used the model collection [SLNET](https://zenodo.org/records/5259648) for TITLE. Have the model collection unzipped at some location `models_path` into directories (names of directories are numbers), like this: 
 ```
 SLNET
 |---SLNET_GitHub
