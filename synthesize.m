@@ -5,12 +5,12 @@ function synthesize()
 
     global synth name2subinfo_complete interface2subs model2id
     synth_modes = {Helper.synth_random, Helper.synth_AST_model, Helper.synth_width, Helper.synth_giant, Helper.synth_depth};
-    for needs_to_be_compilable = 0:0
+    for needs_to_be_compilable = 0:1
         loaded = 0;
-        for mode = 4:4
+        for mode = 1:5
             synth = struct();
             Helper.cfg('reset');
-            dry = 0;
+            dry = 1;
             check = 0;
             diverse = 1;
             roots_only = 1;
