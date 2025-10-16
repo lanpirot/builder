@@ -55,6 +55,16 @@ As MATLAB sometimes hard crashes, you may have to restart steps 2, and 3 a coupl
 5. Finally, run the `synthesize.m` script to generate the synthetic models. In `synthesize.m` you can choose which typed/untyped equivalence (line 8) and synthesize strategies (line 9)  you want to use or leave out. Change the modes, according to the list of modes listed in line 7. The `synthesize.m` script will create models and a report at `project_dir/<0,1>/<mode>/synth_report.csv`.
 
 
+
+
+## System Requirements
+If your system has:
+- more than 120GB of RAM, you can run `synthesize.m` as is
+- between 70GB and 120GB of RAM you should probably only synthesize for one mode combination only (lines 8 and 10 in `synthesize.m` should be modified like `for needs_to_be_compilable = X:X` and `for mode = Y:Y`) and then do a restart of MATLAB before attempting the next
+- if you have less than 70GB of RAM, you should change line 40 in `synthesize.m` to be `if ~loaded && ~dry && dry` to comment out the preloading of the SLNET set. You also have to uncomment the lines 229-231 in `ModelMutator.m` and lines 95-97 in `GSubTree.m`.
+
+
+
 ### Optional
 We used the current settings to produce the results given in our paper. Our scripts ran for days though. You probably want to change the number of total models that are scanned in line 32 of `clean_models.m` to something like 1000 or 3000 (will work good for statically correct models). Further consider to change various constants in `Helper.m`'s `synth_profile` function: reduce time_outs, limit maximum depths, or the desired model count per strategy.
 
