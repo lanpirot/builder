@@ -90,3 +90,12 @@ function h = errordlg(varargin)
         h = []; % return empty if output is expected
     end
 ```
+
+
+### Minor Scripts and Data Files for the plots and tables
+- `checkcompilabilitysimulability.m` is used for finding the last two columns of Table III
+- `scalability.m` creates the raw data for Table V
+- the python scripts in `plots` create Figures 5, 6, 7, 8, Table V
+- raw data in `modellist.csv` is used for Table I
+- data for Table II is in the output of script `mine.m`
+- the first six rows of Table III are output by `synthesize.m`

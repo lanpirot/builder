@@ -1,6 +1,6 @@
 %% 
 %% 
-function rq24()
+function checkcompilablesimulable()
     [project_dir, fileID, modellist, start_num] =  startinit();
     max_number_of_models = length(modellist);
     [~, idx] = sort({modellist.date});
